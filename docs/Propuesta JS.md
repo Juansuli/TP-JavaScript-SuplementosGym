@@ -28,7 +28,7 @@ El sistema se trata de un sitio web especializado en la comercialización de sup
 
 ### Modelo
 
-![DER](img/der Update.png)
+![DER](img/der.png)
 
 ## Alcance Funcional
 
