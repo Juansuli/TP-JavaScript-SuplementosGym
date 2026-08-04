@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ingresar — DOSIS</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap nav-inner">
+    <a class="brand" href="home.html">DO<span>SIS</span></a>
+    <nav class="nav-links">
+      <a href="home.html#catalogo">Catálogo</a>
+      <a href="home.html#ia">Cómo funciona</a>
+      <a href="login.html" class="is-active">Ingresar</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="icon-btn" href="carrito.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+        <span class="tabnum">Pedido</span>
+        <span class="cart-count tabnum">2</span>
+      </a>
+      <button class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mobileNav" aria-label="Abrir menú">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+    </div>
+  </div>
+  <nav class="mobile-nav wrap" id="mobileNav">
+    <a href="home.html#catalogo">Catálogo</a>
+    <a href="home.html#ia">Cómo funciona</a>
+    <a href="login.html">Ingresar</a>
+  </nav>
+</header>
+
+<main class="auth-page">
+  <div class="wrap-narrow">
+    <p class="eyebrow">Cuenta</p>
+    <h1 class="page-title">Bienvenido a DOSIS</h1>
+
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button type="button" data-tab="ingresar" class="is-active">Ingresar</button>
+        <button type="button" data-tab="registro">Crear cuenta</button>
+      </div>
+
+      <!-- ===================== INGRESAR ===================== -->
+      <form class="auth-panel is-active" data-panel="ingresar">
+        <div class="field">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" placeholder="tu@email.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="login-pass">Contraseña</label>
+          <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-accent">Ingresar</button>
+        <a class="btn btn-text" href="#">¿Olvidaste tu contraseña?</a>
+      </form>
+
+      <!-- ===================== CREAR CUENTA ===================== -->
+      <!-- Los campos de acá abajo son exactamente los atributos de las
+           entidades "usuario" y "cliente" del DER, agrupados para que
+           el formulario no sea una lista larga sin orden. -->
+      <form class="auth-panel" data-panel="registro">
+
+        <p class="form-section-title">Cuenta</p>
+        <div class="field">
+          <label for="reg-email">Email</label>
+          <input type="email" id="reg-email" placeholder="tu@email.com" autocomplete="email">
+        </div>
+        <div class="field-row cols-2">
+          <div class="field">
+            <label for="reg-nombre">Nombre</label>
+            <input type="text" id="reg-nombre" placeholder="Juan">
+          </div>
+          <div class="field">
+            <label for="reg-apellido">Apellido</label>
+            <input type="text" id="reg-apellido" placeholder="Pérez">
+          </div>
+        </div>
+        <div class="field">
+          <label for="reg-pass">Contraseña</label>
+          <input type="password" id="reg-pass" placeholder="••••••••" autocomplete="new-password">
+        </div>
+
+        <p class="form-section-title">Perfil físico</p>
+        <div class="field-row cols-2">
+          <div class="field">
+            <label for="reg-nacimiento">Fecha de nacimiento</label>
+            <input type="date" id="reg-nacimiento">
+          </div>
+          <div class="field">
+            <label for="reg-genero">Género</label>
+            <select id="reg-genero">
+              <option>Femenino</option>
+              <option>Masculino</option>
+              <option>Otro / prefiero no decir</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field">
+            <label for="reg-peso">Peso (kg)</label>
+            <input type="number" id="reg-peso" placeholder="78">
+          </div>
+          <div class="field">
+            <label for="reg-altura">Altura (cm)</label>
+            <input type="number" id="reg-altura" placeholder="178">
+          </div>
+        </div>
+
+        <p class="form-section-title">Entrenamiento</p>
+        <div class="field">
+          <label for="reg-deporte">Deporte u ocupación física</label>
+          <input type="text" id="reg-deporte" placeholder="Musculación">
+        </div>
+        <div class="field-row cols-2">
+          <div class="field">
+            <label for="reg-dias">Días de entrenamiento por semana</label>
+            <input type="number" id="reg-dias" placeholder="4" min="0" max="7">
+          </div>
+          <div class="field">
+            <label for="reg-objetivo">Objetivo</label>
+            <select id="reg-objetivo">
+              <option>Hipertrofia</option>
+              <option>Pérdida de grasa</option>
+              <option>Rendimiento deportivo</option>
+              <option>Mantenimiento</option>
+            </select>
+          </div>
+        </div>
+
+        <p class="form-section-title">Entrega</p>
+        <div class="field">
+          <label for="reg-direccion">Dirección de entrega</label>
+          <input type="text" id="reg-direccion" placeholder="Calle, número, ciudad">
+        </div>
+
+        <button type="submit" class="btn btn-accent">Crear cuenta</button>
+      </form>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a class="brand" href="home.html">DO<span>SIS</span></a>
+      <p>Suplementos deportivos con sugerencia de dosis calculada por IA según tu perfil y tu entrenamiento.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Tienda</h4>
+      <ul>
+        <li><a href="home.html#catalogo">Catálogo</a></li>
+        <li><a href="home.html#ia">Cómo funciona la IA</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Cuenta</h4>
+      <ul>
+        <li><a href="login.html">Ingresar</a></li>
+        <li><a href="carrito.html">Mi pedido</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Ayuda</h4>
+      <ul>
+        <li><a href="#">Envíos</a></li>
+        <li><a href="#">Contacto</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 DOSIS</span>
+    <span>Mockup de diseño — sin lógica de backend conectada</span>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
