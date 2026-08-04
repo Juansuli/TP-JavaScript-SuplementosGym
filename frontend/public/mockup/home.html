@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DOSIS — Suplementos calculados por IA</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap nav-inner">
+    <a class="brand" href="home.html">DO<span>SIS</span></a>
+    <nav class="nav-links">
+      <a href="#catalog">Catálogo</a>
+      <a href="#how-it-works">Cómo funciona</a>
+      <a href="login.html">Ingresar</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="icon-btn" href="carrito.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+        <span class="tabnum">Pedido</span>
+        <span class="cart-count tabnum">2</span>
+      </a>
+      <!-- This button is only visible on mobile (see .menu-toggle in styles.css).
+           script.js listens for the click and shows/hides #mobileNav -->
+      <button class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mobileNav" aria-label="Abrir menú">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+    </div>
+  </div>
+  <nav class="mobile-nav wrap" id="mobileNav">
+    <a href="#catalog">Catálogo</a>
+    <a href="#how-it-works">Cómo funciona</a>
+    <a href="login.html">Ingresar</a>
+  </nav>
+</header>
+
+<main>
+  <!-- ===================== HERO ===================== -->
+  <section class="hero wrap">
+    <div class="hero-copy">
+      <p class="eyebrow">Suplementos + IA</p>
+      <h1>Tu perfil<br>arma <em>tu dosis</em>.</h1>
+      <p class="lede">Cargá tu objetivo, tus días de entrenamiento y tu peso. La IA arma la combinación de suplementos que necesitás — no la que más vende.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#how-it-works">Consultar con la IA</a>
+        <a class="btn btn-ghost" href="#catalog">Ver catálogo</a>
+      </div>
+    </div>
+
+    <!-- This is a fixed (hardcoded) example of what a real AI-generated
+         suggestion would look like. Once the backend exists, this data
+         will come from the sugerencia_IA table instead of being
+         written here by hand. -->
+    <div class="ai-panel" aria-label="Ejemplo de sugerencia generada por la IA">
+      <div class="panel-head">
+        <span class="panel-eyebrow">Sugerencia IA</span>
+        <span class="panel-id tabnum">#00248</span>
+      </div>
+      <dl class="panel-profile">
+        <div><dt>Objetivo</dt><dd>Hipertrofia</dd></div>
+        <div><dt>Entrena</dt><dd class="tabnum">4 d/sem</dd></div>
+        <div><dt>Peso</dt><dd class="tabnum">78 kg</dd></div>
+      </dl>
+      <ul class="panel-items">
+        <li>
+          <span class="qty tabnum">1 scoop</span>
+          <span class="item">Whey Concentrada Vainilla</span>
+          <span class="tag">24 g proteína · post-entreno</span>
+        </li>
+        <li>
+          <span class="qty tabnum">5 g</span>
+          <span class="item">Creatina Monohidratada</span>
+          <span class="tag">todos los días · cualquier horario</span>
+        </li>
+        <li>
+          <span class="qty tabnum">1 cáp</span>
+          <span class="item">Multivitamínico Deportivo</span>
+          <span class="tag">con el desayuno</span>
+        </li>
+      </ul>
+      <a class="btn btn-accent panel-cta" href="carrito.html">Agregar sugerencia al pedido</a>
+    </div>
+  </section>
+
+  <!-- ===================== 3 STEPS ===================== -->
+  <section class="steps wrap" id="how-it-works">
+    <div class="section-head">
+      <h2>Cómo se arma tu dosis</h2>
+      <p>Tres pasos, en orden: primero tu perfil, después el cruce de datos, al final la sugerencia lista para pedir.</p>
+    </div>
+    <ol class="steps-list">
+      <li>
+        <span class="step-n tabnum">01</span>
+        <h3>Contás tu perfil</h3>
+        <p>Objetivo, deporte y días de entrenamiento por semana.</p>
+      </li>
+      <li>
+        <span class="step-n tabnum">02</span>
+        <h3>La IA cruza los datos</h3>
+        <p>Compara tu perfil con la ficha nutricional de cada producto del catálogo.</p>
+      </li>
+      <li>
+        <span class="step-n tabnum">03</span>
+        <h3>Recibís tu dosis</h3>
+        <p>Cantidad y momento de toma, lista para agregar al pedido con un clic.</p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ===================== CATALOG ===================== -->
+  <!-- These 6 cards are example (hardcoded) data. Once the backend
+       exists, this will come from a fetch to the products API and a
+       card will be generated per product. All 6 titles link to the
+       same sample producto.html for now. -->
+  <section class="catalog wrap" id="catalog">
+    <div class="section-head">
+      <h2>Lo más pedido</h2>
+      <p>Ficha nutricional real de cada producto, sin relleno.</p>
+    </div>
+    <div class="grid">
+
+      <article class="card">
+        <div class="card-top">
+          <span class="card-tag">24 G PROT / PORC.</span>
+          <span class="card-price tabnum">$24.900</span>
+        </div>
+        <a class="card-title" href="producto.html">Whey Concentrada Vainilla</a>
+        <p class="card-desc">900 g · 30 porciones</p>
+        <dl class="card-macros">
+          <div><dt>Proteína</dt><dd class="tabnum">24 g</dd></div>
+          <div><dt>BCAA</dt><dd class="tabnum">5.5 g</dd></div>
+          <div><dt>Energía</dt><dd class="tabnum">120 kcal</dd></div>
+        </dl>
+        <button class="btn btn-outline card-cta">Agregar</button>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <span class="card-tag">5 G / PORC.</span>
+          <span class="card-price tabnum">$18.500</span>
+        </div>
+        <a class="card-title" href="producto.html">Creatina Monohidratada</a>
+        <p class="card-desc">300 g · 60 porciones</p>
+        <dl class="card-macros">
+          <div><dt>Creatina</dt><dd class="tabnum">5 g</dd></div>
+          <div><dt>Azúcar</dt><dd class="tabnum">0 g</dd></div>
+          <div><dt>Sabor</dt><dd>Neutro</dd></div>
+        </dl>
+        <button class="btn btn-outline card-cta">Agregar</button>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <span class="card-tag">200 MG CAFEÍNA</span>
+          <span class="card-price tabnum">$21.300</span>
+        </div>
+        <a class="card-title" href="producto.html">Pre-Entreno Cítrico</a>
+        <p class="card-desc">300 g · 30 porciones</p>
+        <dl class="card-macros">
+          <div><dt>Cafeína</dt><dd class="tabnum">200 mg</dd></div>
+          <div><dt>Beta-Alanina</dt><dd class="tabnum">3.2 g</dd></div>
+          <div><dt>Citrulina</dt><dd class="tabnum">6 g</dd></div>
+        </dl>
+        <button class="btn btn-outline card-cta">Agregar</button>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <span class="card-tag">5 G BCAA / PORC.</span>
+          <span class="card-price tabnum">$16.700</span>
+        </div>
+        <a class="card-title" href="producto.html">BCAA 2:1:1 Frutos Rojos</a>
+        <p class="card-desc">400 g · 40 porciones</p>
+        <dl class="card-macros">
+          <div><dt>BCAA</dt><dd class="tabnum">5 g</dd></div>
+          <div><dt>Grasa</dt><dd class="tabnum">0 g</dd></div>
+          <div><dt>Energía</dt><dd class="tabnum">15 kcal</dd></div>
+        </dl>
+        <button class="btn btn-outline card-cta">Agregar</button>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <span class="card-tag">14 VITAMINAS</span>
+          <span class="card-price tabnum">$12.400</span>
+        </div>
+        <a class="card-title" href="producto.html">Multivitamínico Deportivo</a>
+        <p class="card-desc">60 cápsulas · 60 porciones</p>
+        <dl class="card-macros">
+          <div><dt>Toma</dt><dd class="tabnum">1 cáp</dd></div>
+          <div><dt>Frecuencia</dt><dd>Diaria</dd></div>
+          <div><dt>Con</dt><dd>Desayuno</dd></div>
+        </dl>
+        <button class="btn btn-outline card-cta">Agregar</button>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <span class="card-tag">10 G COLÁGENO</span>
+          <span class="card-price tabnum">$19.900</span>
+        </div>
+        <a class="card-title" href="producto.html">Colágeno Hidrolizado</a>
+        <p class="card-desc">300 g · 30 porciones</p>
+        <dl class="card-macros">
+          <div><dt>Colágeno</dt><dd class="tabnum">10 g</dd></div>
+          <div><dt>Vitamina C</dt><dd class="tabnum">40 mg</dd></div>
+          <div><dt>Sabor</dt><dd>Pomelo</dd></div>
+        </dl>
+        <button class="btn btn-outline card-cta">Agregar</button>
+      </article>
+
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a class="brand" href="home.html">DO<span>SIS</span></a>
+      <p>Suplementos deportivos con sugerencia de dosis calculada por IA según tu perfil y tu entrenamiento.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Tienda</h4>
+      <ul>
+        <li><a href="#catalog">Catálogo</a></li>
+        <li><a href="#how-it-works">Cómo funciona la IA</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Cuenta</h4>
+      <ul>
+        <li><a href="login.html">Ingresar</a></li>
+        <li><a href="carrito.html">Mi pedido</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Ayuda</h4>
+      <ul>
+        <li><a href="#">Envíos</a></li>
+        <li><a href="#">Contacto</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 DOSIS</span>
+    <span>Mockup de diseño — sin lógica de backend conectada</span>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

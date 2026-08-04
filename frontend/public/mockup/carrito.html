@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tu pedido — DOSIS</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap nav-inner">
+    <a class="brand" href="home.html">DO<span>SIS</span></a>
+    <nav class="nav-links">
+      <a href="home.html#catalog">Catálogo</a>
+      <a href="home.html#how-it-works">Cómo funciona</a>
+      <a href="login.html">Ingresar</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="icon-btn" href="carrito.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+        <span class="tabnum">Pedido</span>
+        <span class="cart-count tabnum">3</span>
+      </a>
+      <button class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mobileNav" aria-label="Abrir menú">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+    </div>
+  </div>
+  <nav class="mobile-nav wrap" id="mobileNav">
+    <a href="home.html#catalog">Catálogo</a>
+    <a href="home.html#how-it-works">Cómo funciona</a>
+    <a href="login.html">Ingresar</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <nav class="breadcrumbs" aria-label="Miga de pan">
+    <a href="home.html">Inicio</a>
+    <span>/</span>
+    <span class="current">Tu pedido</span>
+  </nav>
+
+  <div class="cart-page">
+    <div>
+      <h1 class="page-title">Tu pedido</h1>
+
+      <!-- 3 example order lines. Each one maps to a row of the
+           pedido_producto entity in the DER: producto + cantidad +
+           precio_unitario + subtotal. -->
+      <div class="cart-list">
+
+        <div class="cart-item">
+          <div class="cart-item-thumb" aria-hidden="true"></div>
+          <div>
+            <p class="cart-item-name">Whey Concentrada Vainilla</p>
+            <p class="cart-item-meta">900 g · sugerido por la IA</p>
+          </div>
+          <div class="cart-item-price">
+            <span class="unit tabnum">$24.900 c/u</span>
+            <span class="subtotal tabnum">$24.900</span>
+          </div>
+          <div class="cart-item-actions">
+            <div class="stepper">
+              <button type="button" data-step="-1" aria-label="Restar cantidad">−</button>
+              <span class="qty-value tabnum">1</span>
+              <button type="button" data-step="1" aria-label="Sumar cantidad">+</button>
+            </div>
+            <a class="remove-link" href="#">Quitar</a>
+          </div>
+        </div>
+
+        <div class="cart-item">
+          <div class="cart-item-thumb" aria-hidden="true"></div>
+          <div>
+            <p class="cart-item-name">Creatina Monohidratada</p>
+            <p class="cart-item-meta">300 g · sugerido por la IA</p>
+          </div>
+          <div class="cart-item-price">
+            <span class="unit tabnum">$18.500 c/u</span>
+            <span class="subtotal tabnum">$18.500</span>
+          </div>
+          <div class="cart-item-actions">
+            <div class="stepper">
+              <button type="button" data-step="-1" aria-label="Restar cantidad">−</button>
+              <span class="qty-value tabnum">1</span>
+              <button type="button" data-step="1" aria-label="Sumar cantidad">+</button>
+            </div>
+            <a class="remove-link" href="#">Quitar</a>
+          </div>
+        </div>
+
+        <div class="cart-item">
+          <div class="cart-item-thumb" aria-hidden="true"></div>
+          <div>
+            <p class="cart-item-name">Multivitamínico Deportivo</p>
+            <p class="cart-item-meta">60 cápsulas · sugerido por la IA</p>
+          </div>
+          <div class="cart-item-price">
+            <span class="unit tabnum">$12.400 c/u</span>
+            <span class="subtotal tabnum">$12.400</span>
+          </div>
+          <div class="cart-item-actions">
+            <div class="stepper">
+              <button type="button" data-step="-1" aria-label="Restar cantidad">−</button>
+              <span class="qty-value tabnum">1</span>
+              <button type="button" data-step="1" aria-label="Sumar cantidad">+</button>
+            </div>
+            <a class="remove-link" href="#">Quitar</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <aside class="order-summary">
+      <h2>Resumen</h2>
+      <div class="summary-row">
+        <span>Subtotal</span>
+        <span class="amount tabnum">$55.800</span>
+      </div>
+      <!-- This discount comes from the "descuento" entity in the DER,
+           based on the client's category (e.g. frequent buyers). -->
+      <div class="summary-row discount">
+        <span>Descuento cliente (10%)</span>
+        <span class="amount tabnum">−$5.580</span>
+      </div>
+      <div class="summary-total">
+        <span>Total</span>
+        <span class="amount tabnum">$50.220</span>
+      </div>
+
+      <div class="option-group">
+        <h3>Método de pago</h3>
+        <label class="option-card">
+          <input type="radio" name="pago" checked>
+          <span>Tarjeta de crédito o débito</span>
+        </label>
+        <label class="option-card">
+          <input type="radio" name="pago">
+          <span>Transferencia bancaria</span>
+        </label>
+        <label class="option-card">
+          <input type="radio" name="pago">
+          <span>Efectivo al retirar en el local</span>
+        </label>
+      </div>
+
+      <div class="field field-spaced">
+        <label for="address">Dirección de entrega</label>
+        <input type="text" id="address" placeholder="Calle, número, ciudad" value="Av. Pellegrini 250, Rosario">
+      </div>
+
+      <a class="btn btn-accent" href="#">Confirmar pedido</a>
+    </aside>
+  </div>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a class="brand" href="home.html">DO<span>SIS</span></a>
+      <p>Suplementos deportivos con sugerencia de dosis calculada por IA según tu perfil y tu entrenamiento.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Tienda</h4>
+      <ul>
+        <li><a href="home.html#catalog">Catálogo</a></li>
+        <li><a href="home.html#how-it-works">Cómo funciona la IA</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Cuenta</h4>
+      <ul>
+        <li><a href="login.html">Ingresar</a></li>
+        <li><a href="carrito.html">Mi pedido</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Ayuda</h4>
+      <ul>
+        <li><a href="#">Envíos</a></li>
+        <li><a href="#">Contacto</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 DOSIS</span>
+    <span>Mockup de diseño — sin lógica de backend conectada</span>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

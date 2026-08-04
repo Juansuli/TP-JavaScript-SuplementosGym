@@ -1,0 +1,37 @@
+# Dependencies (reinstalled with "npm install", no need to commit them)
+node_modules/
+
+# Environment variables: contain sensitive data (db user/password,
+# tokens, etc). ".env.example" is committed as a template, never
+# anyone's real ".env".
+.env
+.env.local
+.env.*.local
+
+# Builds / generated folders
+dist/
+dist-ssr/
+build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Claude Code's working folder (local config and sessions, not part of
+# the project)
+.claude/
+
+# Editor / IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup files that draw.io / Google Docs sometimes leave behind on save
+*.bkp
+.$*
