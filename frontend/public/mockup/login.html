@@ -12,8 +12,8 @@
   <div class="wrap nav-inner">
     <a class="brand" href="home.html">DO<span>SIS</span></a>
     <nav class="nav-links">
-      <a href="home.html#catalogo">Catálogo</a>
-      <a href="home.html#ia">Cómo funciona</a>
+      <a href="home.html#catalog">Catálogo</a>
+      <a href="home.html#how-it-works">Cómo funciona</a>
       <a href="login.html" class="is-active">Ingresar</a>
     </nav>
     <div class="nav-actions">
@@ -28,8 +28,8 @@
     </div>
   </div>
   <nav class="mobile-nav wrap" id="mobileNav">
-    <a href="home.html#catalogo">Catálogo</a>
-    <a href="home.html#ia">Cómo funciona</a>
+    <a href="home.html#catalog">Catálogo</a>
+    <a href="home.html#how-it-works">Cómo funciona</a>
     <a href="login.html">Ingresar</a>
   </nav>
 </header>
@@ -41,12 +41,12 @@
 
     <div class="auth-card">
       <div class="auth-tabs">
-        <button type="button" data-tab="ingresar" class="is-active">Ingresar</button>
-        <button type="button" data-tab="registro">Crear cuenta</button>
+        <button type="button" data-tab="login" class="is-active">Ingresar</button>
+        <button type="button" data-tab="register">Crear cuenta</button>
       </div>
 
-      <!-- ===================== INGRESAR ===================== -->
-      <form class="auth-panel is-active" data-panel="ingresar">
+      <!-- ===================== LOGIN ===================== -->
+      <form class="auth-panel is-active" data-panel="login">
         <div class="field">
           <label for="login-email">Email</label>
           <input type="email" id="login-email" placeholder="tu@email.com" autocomplete="email">
@@ -59,11 +59,11 @@
         <a class="btn btn-text" href="#">¿Olvidaste tu contraseña?</a>
       </form>
 
-      <!-- ===================== CREAR CUENTA ===================== -->
-      <!-- Los campos de acá abajo son exactamente los atributos de las
-           entidades "usuario" y "cliente" del DER, agrupados para que
-           el formulario no sea una lista larga sin orden. -->
-      <form class="auth-panel" data-panel="registro">
+      <!-- ===================== REGISTER ===================== -->
+      <!-- The fields below are exactly the attributes of the "usuario"
+           and "cliente" entities from the DER, grouped so the form
+           isn't just one long unordered list. -->
+      <form class="auth-panel" data-panel="register">
 
         <p class="form-section-title">Cuenta</p>
         <div class="field">
@@ -72,12 +72,12 @@
         </div>
         <div class="field-row cols-2">
           <div class="field">
-            <label for="reg-nombre">Nombre</label>
-            <input type="text" id="reg-nombre" placeholder="Juan">
+            <label for="reg-firstname">Nombre</label>
+            <input type="text" id="reg-firstname" placeholder="Juan">
           </div>
           <div class="field">
-            <label for="reg-apellido">Apellido</label>
-            <input type="text" id="reg-apellido" placeholder="Pérez">
+            <label for="reg-lastname">Apellido</label>
+            <input type="text" id="reg-lastname" placeholder="Pérez">
           </div>
         </div>
         <div class="field">
@@ -88,12 +88,12 @@
         <p class="form-section-title">Perfil físico</p>
         <div class="field-row cols-2">
           <div class="field">
-            <label for="reg-nacimiento">Fecha de nacimiento</label>
-            <input type="date" id="reg-nacimiento">
+            <label for="reg-birthdate">Fecha de nacimiento</label>
+            <input type="date" id="reg-birthdate">
           </div>
           <div class="field">
-            <label for="reg-genero">Género</label>
-            <select id="reg-genero">
+            <label for="reg-gender">Género</label>
+            <select id="reg-gender">
               <option>Femenino</option>
               <option>Masculino</option>
               <option>Otro / prefiero no decir</option>
@@ -102,28 +102,28 @@
         </div>
         <div class="field-row cols-2">
           <div class="field">
-            <label for="reg-peso">Peso (kg)</label>
-            <input type="number" id="reg-peso" placeholder="78">
+            <label for="reg-weight">Peso (kg)</label>
+            <input type="number" id="reg-weight" placeholder="78">
           </div>
           <div class="field">
-            <label for="reg-altura">Altura (cm)</label>
-            <input type="number" id="reg-altura" placeholder="178">
+            <label for="reg-height">Altura (cm)</label>
+            <input type="number" id="reg-height" placeholder="178">
           </div>
         </div>
 
         <p class="form-section-title">Entrenamiento</p>
         <div class="field">
-          <label for="reg-deporte">Deporte u ocupación física</label>
-          <input type="text" id="reg-deporte" placeholder="Musculación">
+          <label for="reg-sport">Deporte u ocupación física</label>
+          <input type="text" id="reg-sport" placeholder="Musculación">
         </div>
         <div class="field-row cols-2">
           <div class="field">
-            <label for="reg-dias">Días de entrenamiento por semana</label>
-            <input type="number" id="reg-dias" placeholder="4" min="0" max="7">
+            <label for="reg-training-days">Días de entrenamiento por semana</label>
+            <input type="number" id="reg-training-days" placeholder="4" min="0" max="7">
           </div>
           <div class="field">
-            <label for="reg-objetivo">Objetivo</label>
-            <select id="reg-objetivo">
+            <label for="reg-goal">Objetivo</label>
+            <select id="reg-goal">
               <option>Hipertrofia</option>
               <option>Pérdida de grasa</option>
               <option>Rendimiento deportivo</option>
@@ -134,8 +134,8 @@
 
         <p class="form-section-title">Entrega</p>
         <div class="field">
-          <label for="reg-direccion">Dirección de entrega</label>
-          <input type="text" id="reg-direccion" placeholder="Calle, número, ciudad">
+          <label for="reg-address">Dirección de entrega</label>
+          <input type="text" id="reg-address" placeholder="Calle, número, ciudad">
         </div>
 
         <button type="submit" class="btn btn-accent">Crear cuenta</button>
@@ -153,8 +153,8 @@
     <div class="footer-col">
       <h4>Tienda</h4>
       <ul>
-        <li><a href="home.html#catalogo">Catálogo</a></li>
-        <li><a href="home.html#ia">Cómo funciona la IA</a></li>
+        <li><a href="home.html#catalog">Catálogo</a></li>
+        <li><a href="home.html#how-it-works">Cómo funciona la IA</a></li>
       </ul>
     </div>
     <div class="footer-col">

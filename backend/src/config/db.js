@@ -1,16 +1,16 @@
-// Configuración de la conexión a MySQL.
-// Por ahora se usa mysql2 "a mano" (sin ORM, todavía no decidido cuál
-// usar). Cuando se elija uno (Sequelize, Prisma, etc.) este archivo va
-// a cambiar, pero el resto del código no debería enterarse de eso: los
-// controllers solo van a usar lo que exporta este archivo.
+// MySQL connection setup.
+// For now this uses mysql2 directly (no ORM yet — not decided which
+// one to use). Once one is picked (Sequelize, Prisma, etc.) this file
+// is what changes, but the rest of the code shouldn't need to know
+// about that: controllers only use whatever this file exports.
 
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-// Un "pool" reutiliza conexiones en vez de abrir una nueva por cada
-// consulta, que es mucho más caro. Los datos reales (host, usuario,
-// contraseña) viven en el archivo .env, que no se sube al repositorio
-// (ver .gitignore) — acá solo se leen esas variables.
+// A "pool" reuses connections instead of opening a new one for every
+// query, which is much more expensive. The real credentials (host,
+// user, password) live in the .env file, which is never committed to
+// the repo (see .gitignore) — this only reads those variables.
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 3306,

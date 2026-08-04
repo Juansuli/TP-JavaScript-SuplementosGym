@@ -1,20 +1,19 @@
-// Controller de prueba: solo confirma que el servidor está levantado y,
-// si puede, que la conexión a la base de datos también funciona.
-// Sirve como punto de partida para copiar el mismo patrón (routes ->
-// controller) cuando se agreguen los controllers reales (producto,
-// cliente, pedido, etc.).
+// Test controller: just confirms the server is up and, if possible,
+// that the database connection also works. It's meant as a starting
+// point to copy the same pattern (routes -> controller) once the real
+// controllers get added (producto, cliente, pedido, etc.).
 
 const db = require('../config/db');
 
 async function checkHealth(req, res) {
   try {
     await db.query('SELECT 1');
-    res.json({ status: 'ok', db: 'conectada' });
+    res.json({ status: 'ok', db: 'connected' });
   } catch (error) {
-    // Si la base de datos no está configurada todavía, el servidor
-    // igual responde (para poder probar el resto de la API), solo
-    // avisa que la conexión falló.
-    res.json({ status: 'ok', db: 'sin conexión', detalle: error.message });
+    // If the database isn't configured yet, the server still
+    // responds (so the rest of the API can be tested), it just
+    // reports that the connection failed.
+    res.json({ status: 'ok', db: 'not connected', detail: error.message });
   }
 }
 

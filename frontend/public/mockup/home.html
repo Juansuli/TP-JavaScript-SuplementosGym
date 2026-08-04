@@ -12,8 +12,8 @@
   <div class="wrap nav-inner">
     <a class="brand" href="home.html">DO<span>SIS</span></a>
     <nav class="nav-links">
-      <a href="#catalogo">Catálogo</a>
-      <a href="#ia">Cómo funciona</a>
+      <a href="#catalog">Catálogo</a>
+      <a href="#how-it-works">Cómo funciona</a>
       <a href="login.html">Ingresar</a>
     </nav>
     <div class="nav-actions">
@@ -22,16 +22,16 @@
         <span class="tabnum">Pedido</span>
         <span class="cart-count tabnum">2</span>
       </a>
-      <!-- Este botón solo se ve en mobile (ver .menu-toggle en styles.css).
-           script.js escucha el click y muestra/oculta #mobileNav -->
+      <!-- This button is only visible on mobile (see .menu-toggle in styles.css).
+           script.js listens for the click and shows/hides #mobileNav -->
       <button class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mobileNav" aria-label="Abrir menú">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
       </button>
     </div>
   </div>
   <nav class="mobile-nav wrap" id="mobileNav">
-    <a href="#catalogo">Catálogo</a>
-    <a href="#ia">Cómo funciona</a>
+    <a href="#catalog">Catálogo</a>
+    <a href="#how-it-works">Cómo funciona</a>
     <a href="login.html">Ingresar</a>
   </nav>
 </header>
@@ -44,15 +44,15 @@
       <h1>Tu perfil<br>arma <em>tu dosis</em>.</h1>
       <p class="lede">Cargá tu objetivo, tus días de entrenamiento y tu peso. La IA arma la combinación de suplementos que necesitás — no la que más vende.</p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href="#ia">Consultar con la IA</a>
-        <a class="btn btn-ghost" href="#catalogo">Ver catálogo</a>
+        <a class="btn btn-primary" href="#how-it-works">Consultar con la IA</a>
+        <a class="btn btn-ghost" href="#catalog">Ver catálogo</a>
       </div>
     </div>
 
-    <!-- Esto es un ejemplo fijo (hardcodeado) de cómo se vería una
-         sugerencia real generada por la IA. Cuando haya backend, estos
-         datos van a venir de la tabla sugerencia_IA en vez de estar
-         escritos acá a mano. -->
+    <!-- This is a fixed (hardcoded) example of what a real AI-generated
+         suggestion would look like. Once the backend exists, this data
+         will come from the sugerencia_IA table instead of being
+         written here by hand. -->
     <div class="ai-panel" aria-label="Ejemplo de sugerencia generada por la IA">
       <div class="panel-head">
         <span class="panel-eyebrow">Sugerencia IA</span>
@@ -84,8 +84,8 @@
     </div>
   </section>
 
-  <!-- ===================== 3 PASOS ===================== -->
-  <section class="steps wrap" id="ia">
+  <!-- ===================== 3 STEPS ===================== -->
+  <section class="steps wrap" id="how-it-works">
     <div class="section-head">
       <h2>Cómo se arma tu dosis</h2>
       <p>Tres pasos, en orden: primero tu perfil, después el cruce de datos, al final la sugerencia lista para pedir.</p>
@@ -109,12 +109,12 @@
     </ol>
   </section>
 
-  <!-- ===================== CATÁLOGO ===================== -->
-  <!-- Estas 6 tarjetas son datos de ejemplo (hardcodeados). Cuando
-       exista el backend, esto va a salir de un fetch a la API de
-       productos y se va a generar una tarjeta por cada producto.
-       Los 6 títulos linkean a la misma producto.html de ejemplo. -->
-  <section class="catalog wrap" id="catalogo">
+  <!-- ===================== CATALOG ===================== -->
+  <!-- These 6 cards are example (hardcoded) data. Once the backend
+       exists, this will come from a fetch to the products API and a
+       card will be generated per product. All 6 titles link to the
+       same sample producto.html for now. -->
+  <section class="catalog wrap" id="catalog">
     <div class="section-head">
       <h2>Lo más pedido</h2>
       <p>Ficha nutricional real de cada producto, sin relleno.</p>
@@ -224,8 +224,8 @@
     <div class="footer-col">
       <h4>Tienda</h4>
       <ul>
-        <li><a href="#catalogo">Catálogo</a></li>
-        <li><a href="#ia">Cómo funciona la IA</a></li>
+        <li><a href="#catalog">Catálogo</a></li>
+        <li><a href="#how-it-works">Cómo funciona la IA</a></li>
       </ul>
     </div>
     <div class="footer-col">

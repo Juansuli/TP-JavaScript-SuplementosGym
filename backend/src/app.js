@@ -1,6 +1,7 @@
-// Acá se arma la aplicación Express: middlewares + rutas. No se levanta
-// el servidor en este archivo (eso lo hace server.js) para poder
-// testear la app sin necesidad de que esté escuchando en un puerto.
+// This is where the Express application gets assembled: middlewares +
+// routes. The server isn't started in this file (that's server.js's
+// job) so the app can be tested without needing it to be listening on
+// a port.
 
 const express = require('express');
 const cors = require('cors');
@@ -11,9 +12,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Todas las rutas de la API quedan bajo el prefijo /api. A medida que
-// se agreguen entidades (producto, cliente, pedido...) cada una suma
-// su propio archivo de rutas acá, siguiendo el mismo patrón que health.
+// All API routes live under the /api prefix. As entities get added
+// (producto, cliente, pedido...) each one adds its own routes file
+// here, following the same pattern as health.
 app.use('/api', healthRoutes);
 
 module.exports = app;

@@ -1,15 +1,15 @@
 /* ==========================================================================
-   ESTILOS COMPARTIDOS — mockup "DOSIS"
-   Todas las páginas (home, producto, carrito, login) usan este mismo
-   archivo, así el look es consistente y las tipografías se cargan una
-   sola vez en vez de repetirse en cada .html.
+   SHARED STYLES — "DOSIS" mockup
+   Every page (home, producto, carrito, login) uses this same file, so
+   the look stays consistent and the fonts only load once instead of
+   being repeated in every .html.
    ========================================================================== */
 
-/* ----- Tipografías propias, incrustadas como base64 -----
-   Normalmente un @font-face apunta a un archivo .woff2 aparte, pero acá
-   el archivo entero de la tipografía está codificado como texto adentro
-   del "src". Así el sitio funciona sin conexión a internet ni servidor
-   de fuentes externo. */
+/* ----- Custom fonts, embedded as base64 -----
+   Normally an @font-face points to a separate .woff2 file, but here the
+   entire font file is encoded as text inside the "src". That's what
+   lets the site work with no internet connection and no external font
+   server. */
 @font-face {
   font-family: 'Big Shoulders Display';
   font-style: normal;
@@ -32,25 +32,25 @@
   src: url(data:font/woff2;base64,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) format('woff2');
 }
 
-/* ----- Paleta de colores como variables -----
-   En vez de escribir el color a mano en cada regla, se define una vez
-   acá como "variable" (--nombre) y despues se usa en todos lados con
-   var(--nombre). La ventaja: para cambiar el tono del acento, se toca
-   una sola línea y cambia en todo el sitio.
+/* ----- Color palette as variables -----
+   Instead of writing the color by hand in every rule, it's defined
+   once here as a "variable" (--name) and reused everywhere with
+   var(--name). The benefit: to change the accent's tone, only one
+   line needs to change, and it updates across the whole site.
 
-   Elegimos un único look (negro + amarillo-lima) como identidad fija
-   de la marca, no un tema que cambia según el sistema operativo. */
+   We picked a single look (black + lime yellow) as the brand's fixed
+   identity, instead of a theme that switches with the OS setting. */
 :root {
-  --ground: #0E0F0A;       /* fondo general de la página: negro cálido, no puro */
-  --surface: #17190F;      /* fondo de las tarjetas, un poco más claro que el fondo */
-  --ink: #F2F3EC;          /* texto principal: blanco hueso, no blanco puro */
-  --ink-soft: #A7AC98;     /* texto secundario */
-  --ink-faint: #6F7560;    /* texto terciario / etiquetas chicas */
-  --accent: #D6F53C;       /* color de marca: amarillo-lima, se usa poco y a propósito */
-  --accent-ink: #14150C;   /* texto oscuro que va arriba del color de marca (más legible que blanco sobre el lima) */
-  --accent-soft: #262B12;  /* variante oscura del acento, para fondos de etiquetas */
-  --line: #2B2E22;         /* bordes y separadores, visibles sobre el negro */
-  --danger: #E2536F;       /* rojo suave, solo para "eliminar" / errores de formulario */
+  --ground: #0E0F0A;       /* overall page background: warm black, not pure black */
+  --surface: #17190F;      /* card background, a bit lighter than the page background */
+  --ink: #F2F3EC;          /* main text: off-white, not pure white */
+  --ink-soft: #A7AC98;     /* secondary text */
+  --ink-faint: #6F7560;    /* tertiary text / small labels */
+  --accent: #D6F53C;       /* brand color: lime yellow, used sparingly and on purpose */
+  --accent-ink: #14150C;   /* dark text placed on top of the brand color (more legible than white on lime) */
+  --accent-soft: #262B12;  /* dark variant of the accent, for tag/badge backgrounds */
+  --line: #2B2E22;         /* borders and separators, visible against the black */
+  --danger: #E2536F;       /* soft red, only for "remove" actions / form errors */
   --shadow: 0 0 0 1px rgba(214, 245, 60, .12), 0 12px 28px -12px rgba(0, 0, 0, .6);
   --radius: 3px;
   --font-display: 'Big Shoulders Display', 'Arial Narrow', sans-serif;
@@ -59,10 +59,11 @@
   color-scheme: dark;
 }
 
-/* ----- Reseteo básico -----
-   El navegador trae márgenes y estilos por defecto en varias etiquetas
-   (títulos, listas, botones, inputs). Se los saca acá una sola vez para
-   empezar de cero y no pelear con eso en cada componente. */
+/* ----- Basic reset -----
+   The browser ships with default margins and styles on several
+   elements (headings, lists, buttons, inputs). This clears them once
+   here so we start from zero instead of fighting them in every
+   component. */
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -80,7 +81,7 @@ body {
 }
 h1, h2, h3 {
   margin: 0;
-  text-wrap: balance; /* evita que un título quede con una sola palabra colgando en la última línea */
+  text-wrap: balance; /* keeps a heading from leaving a single word dangling on the last line */
 }
 p {
   margin: 0;
@@ -114,13 +115,13 @@ input, select, textarea {
   outline-offset: 3px;
 }
 .tabnum {
-  /* números en fuente monoespaciada, para que las cifras (precios,
-     gramos) queden alineadas prolijamente en columnas */
+  /* renders numbers with a monospaced figure width, so digits (prices,
+     grams) line up neatly in columns */
   font-variant-numeric: tabular-nums;
 }
 
-/* Si el usuario tiene animaciones reducidas activado en su sistema,
-   se cortan las transiciones/animaciones casi a cero. */
+/* If the user has reduced motion turned on at the OS level, cut
+   transitions/animations down to nearly nothing. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
@@ -130,8 +131,8 @@ input, select, textarea {
   }
 }
 
-/* Contenedor central reutilizable: le da el mismo ancho máximo y
-   márgenes laterales a header, secciones y footer. */
+/* Reusable centered container: gives the header, sections, and footer
+   the same max width and side margins. */
 .wrap {
   max-width: 1180px;
   margin-inline: auto;
@@ -144,7 +145,7 @@ input, select, textarea {
   .wrap { padding-inline: 2.5rem; }
 }
 
-/* Contenedor angosto, para páginas de una sola columna como login */
+/* Narrow container, for single-column pages like login */
 .wrap-narrow {
   max-width: 480px;
   margin-inline: auto;
@@ -155,14 +156,15 @@ input, select, textarea {
 }
 
 /* ==========================================================================
-   HEADER (compartido por todas las páginas)
+   HEADER (shared across all pages)
    ========================================================================== */
 .site-header {
   position: sticky;
   top: 0;
   z-index: 40;
-  /* color-mix mezcla el fondo con transparencia sin tener que calcular
-     un rgba a mano; junto con el blur da el efecto "vidrio esmerilado" */
+  /* color-mix blends the background with transparency without having
+     to calculate an rgba by hand; combined with the blur it gives a
+     "frosted glass" effect */
   background: color-mix(in srgb, var(--ground) 88%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
@@ -185,8 +187,8 @@ input, select, textarea {
   color: var(--accent);
 }
 
-/* Links de navegación: ocultos por defecto (mobile-first) y solo se
-   muestran a partir de la pantalla "md" (768px), donde ya entran cómodos */
+/* Nav links: hidden by default (mobile-first) and only shown from the
+   "md" breakpoint (768px) up, where they comfortably fit */
 .nav-links {
   display: none;
   align-items: center;
@@ -241,8 +243,8 @@ input, select, textarea {
   padding-inline: .15rem;
 }
 
-/* Botón hamburguesa: solo se ve en mobile (se esconde desde 768px,
-   que es justo cuando aparece .nav-links de arriba) */
+/* Hamburger button: only visible on mobile (hidden from 768px up,
+   which is exactly when .nav-links above appears) */
 .menu-toggle {
   display: flex;
   border: 1px solid var(--line);
@@ -257,8 +259,8 @@ input, select, textarea {
   height: 1.1rem;
 }
 
-/* Menú desplegable de mobile. Arranca oculto (display:none) y script.js
-   le agrega la clase "is-open" al tocar el botón. */
+/* Mobile dropdown menu. Starts hidden (display:none) and script.js
+   adds the "is-open" class to it when the button is clicked. */
 .mobile-nav {
   display: none;
   flex-direction: column;
@@ -275,12 +277,12 @@ input, select, textarea {
   border-bottom: 1px solid var(--line);
 }
 @media (min-width: 768px) {
-  /* a partir de acá ya se usa .nav-links, así que este menú se apaga
-     del todo aunque por JS tuviera la clase is-open puesta */
+  /* .nav-links is already in use from here on, so this menu is fully
+     switched off even if JS had added the is-open class to it */
   .mobile-nav { display: none !important; }
 }
 
-/* Migas de pan, para páginas que no son la home (producto, carrito) */
+/* Breadcrumbs, for pages other than home (producto, carrito) */
 .breadcrumbs {
   padding-block: 1.25rem 0;
   font-size: .82rem;
@@ -297,9 +299,9 @@ input, select, textarea {
 }
 
 /* ==========================================================================
-   BOTONES
-   Una sola clase base ".btn" con variantes (.btn-primary, .btn-ghost, etc)
-   en vez de repetir padding/tipografía en cada botón nuevo.
+   BUTTONS
+   A single base ".btn" class with variants (.btn-primary, .btn-ghost,
+   etc.) instead of repeating padding/typography on every new button.
    ========================================================================== */
 .btn {
   display: inline-flex;
@@ -354,7 +356,7 @@ input, select, textarea {
 .btn-text {
   color: var(--ink-faint);
   padding-inline: 0;
-  margin-top: .75rem; /* siempre aparece debajo de otro botón, nunca solo */
+  margin-top: .75rem; /* always appears below another button, never alone */
 }
 .btn-text:hover {
   color: var(--accent);
@@ -366,9 +368,9 @@ input, select, textarea {
 }
 
 /* ==========================================================================
-   HERO (solo home)
-   En mobile es una sola columna (texto arriba, panel abajo). Desde
-   1024px se abre en 2 columnas lado a lado.
+   HERO (home page only)
+   Single column on mobile (copy on top, panel below). Opens into 2
+   side-by-side columns from 1024px up.
    ========================================================================== */
 .hero {
   padding-block: 3rem 3.5rem;
@@ -395,7 +397,7 @@ input, select, textarea {
   margin-bottom: 1rem;
 }
 .eyebrow::before {
-  /* rayita corta antes del texto, dibujada con un elemento vacío en vez de una imagen */
+  /* short line before the text, drawn with an empty element instead of an image */
   content: '';
   width: 1.5rem;
   height: 1px;
@@ -405,8 +407,8 @@ input, select, textarea {
   font-family: var(--font-display);
   font-weight: 800;
   text-transform: uppercase;
-  /* clamp(mínimo, preferido, máximo): el tamaño de letra escala con el
-     ancho de pantalla (7vw) pero nunca baja de 2.6rem ni supera 4.4rem */
+  /* clamp(min, preferred, max): the font size scales with the viewport
+     width (7vw) but never goes below 2.6rem or above 4.4rem */
   font-size: clamp(2.6rem, 7vw, 4.4rem);
   line-height: .94;
   letter-spacing: -.01em;
@@ -417,7 +419,7 @@ input, select, textarea {
 }
 .lede {
   margin-top: 1.4rem;
-  max-width: 46ch; /* ancho máximo en "cantidad de caracteres", para que el párrafo no se estire de más en pantallas anchas */
+  max-width: 46ch; /* max width in "character count", so the paragraph doesn't stretch too wide on large screens */
   color: var(--ink-soft);
   font-size: 1.05rem;
   line-height: 1.6;
@@ -430,10 +432,10 @@ input, select, textarea {
 }
 
 /* ==========================================================================
-   PANEL "ETIQUETA" (ejemplo de sugerencia armada por la IA)
-   Se reutiliza en la home (grande, en el hero) y en el carrito (más chico).
-   Está pensado como una "etiqueta" de producto: encabezado + franja de
-   datos del perfil + lista de ítems sugeridos + botón.
+   AI SUGGESTION "LABEL" PANEL
+   Reused on the home page (large, in the hero) and on the cart page
+   (smaller). It's designed as a product "label": header + strip of
+   profile data + list of suggested items + button.
    ========================================================================== */
 .ai-panel {
   background: var(--surface);
@@ -462,10 +464,10 @@ input, select, textarea {
   opacity: .6;
 }
 
-/* Franja con Objetivo / Días de entreno / Peso, en 3 columnas iguales.
-   En pantallas muy angostas (menos de 480px) se usa una versión con
-   menos padding y letra más chica para que los 3 valores entren sin
-   amontonarse contra el borde. */
+/* Strip with Goal / Training days / Weight, in 3 equal columns. On
+   very narrow screens (under 480px) a version with less padding and
+   smaller type kicks in so the 3 values fit without crowding the
+   edge. */
 .panel-profile {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -474,7 +476,7 @@ input, select, textarea {
 .panel-profile > div {
   padding: .7rem .5rem;
   border-right: 1px solid var(--line);
-  min-width: 0; /* permite que el texto se achique en vez de forzar overflow */
+  min-width: 0; /* lets the text shrink instead of forcing an overflow */
 }
 .panel-profile > div:last-child {
   border-right: none;
@@ -506,7 +508,7 @@ input, select, textarea {
 }
 .panel-items li {
   display: grid;
-  grid-template-columns: 4.4rem 1fr; /* columna fija para la cantidad + resto para el nombre */
+  grid-template-columns: 4.4rem 1fr; /* fixed column for the quantity + the rest for the name */
   gap: .15rem .9rem;
   padding: .85rem 0;
   border-bottom: 1px dashed var(--line);
@@ -526,7 +528,7 @@ input, select, textarea {
   font-size: .95rem;
 }
 .panel-items .tag {
-  grid-column: 2; /* fuerza que este texto arranque debajo del nombre, no al lado de la cantidad */
+  grid-column: 2; /* forces this text to start below the name, not next to the quantity */
   font-size: .8rem;
   color: var(--ink-faint);
 }
@@ -536,7 +538,7 @@ input, select, textarea {
 }
 
 /* ==========================================================================
-   SECCIÓN "CÓMO SE ARMA TU DOSIS" (3 pasos, solo home)
+   "HOW YOUR DOSE IS BUILT" SECTION (3 steps, home page only)
    ========================================================================== */
 .steps {
   padding-block: 3rem;
@@ -592,8 +594,8 @@ input, select, textarea {
 }
 
 /* ==========================================================================
-   CATÁLOGO (grilla de productos, solo home)
-   1 columna en mobile, 2 en tablet (640px+), 3 en desktop (1024px+)
+   CATALOG (product grid, home page only)
+   1 column on mobile, 2 on tablet (640px+), 3 on desktop (1024px+)
    ========================================================================== */
 .catalog {
   padding-block: 3.5rem 4rem;
@@ -622,8 +624,8 @@ input, select, textarea {
   display: flex;
   flex-direction: column;
   gap: .9rem;
-  /* arranca invisible y corrida hacia abajo; script.js agrega
-     "is-visible" cuando la tarjeta entra en pantalla al scrollear */
+  /* starts invisible and shifted down; script.js adds "is-visible"
+     once the card scrolls into view */
   opacity: 0;
   transform: translateY(14px);
   transition: opacity .5s ease, transform .5s ease, border-color .15s ease, box-shadow .15s ease;
@@ -686,7 +688,7 @@ input, select, textarea {
   margin-top: .2rem;
 }
 .card a.card-title {
-  /* el título de la tarjeta también es un link a la página de detalle */
+  /* the card title doubles as a link to the detail page */
   transition: color .15s ease;
 }
 .card a.card-title:hover {
@@ -694,7 +696,7 @@ input, select, textarea {
 }
 
 /* ==========================================================================
-   FOOTER (compartido)
+   FOOTER (shared)
    ========================================================================== */
 .site-footer {
   border-top: 1px solid var(--line);
@@ -747,7 +749,7 @@ input, select, textarea {
 }
 
 /* ==========================================================================
-   PÁGINA DE PRODUCTO
+   PRODUCT PAGE
    ========================================================================== */
 .product-page {
   padding-block: 2rem 4rem;
@@ -762,9 +764,9 @@ input, select, textarea {
   }
 }
 
-/* "Imagen" del producto: como no hay fotos reales, se dibuja un envase
-   estilizado solo con CSS (gradientes + texto), en la línea de la
-   etiqueta que ya se usa en el panel de IA. */
+/* Product "image": since there are no real photos, a stylized
+   container is drawn purely with CSS (gradients + text), following the
+   same "label" look already used in the AI panel. */
 .product-visual {
   aspect-ratio: 4 / 5;
   border-radius: var(--radius);
@@ -779,7 +781,7 @@ input, select, textarea {
   overflow: hidden;
 }
 .product-visual::before {
-  /* aro difuso detrás del envase, para dar sensación de foco/producto */
+  /* soft glow behind the container, to give a sense of focus/product */
   content: '';
   position: absolute;
   width: 70%;
@@ -866,7 +868,7 @@ input, select, textarea {
   max-width: 52ch;
 }
 
-/* Tabla de macros completa (más detallada que la de la tarjeta chica) */
+/* Full nutrition table (more detailed than the small one on the card) */
 .macro-table {
   margin-top: 1.75rem;
   border: 1px solid var(--line);
@@ -902,7 +904,7 @@ input, select, textarea {
   font-weight: 600;
 }
 
-/* Selector de cantidad (paso a paso, - / cantidad / +) */
+/* Quantity stepper (- / quantity / +) */
 .qty-stepper {
   margin-top: 1.75rem;
   display: flex;
@@ -941,12 +943,12 @@ input, select, textarea {
   flex: 1 1 12rem;
 }
 
-/* Reseñas */
+/* Reviews */
 .reviews {
   margin-top: 3rem;
   padding-top: 2.5rem;
   border-top: 1px solid var(--line);
-  grid-column: 1 / -1; /* ocupa todo el ancho, no solo la columna de info */
+  grid-column: 1 / -1; /* spans the full width, not just the info column */
 }
 .reviews-head {
   display: flex;
@@ -1007,7 +1009,7 @@ input, select, textarea {
 }
 
 /* ==========================================================================
-   PÁGINA DE CARRITO
+   CART PAGE
    ========================================================================== */
 .cart-page {
   padding-block: 2rem 4rem;
@@ -1132,8 +1134,8 @@ input, select, textarea {
   font-size: 1.4rem;
 }
 
-/* Grupo de radios de método de pago / dirección, con estilo de tarjeta
-   seleccionable en vez de un radio button suelto */
+/* Payment method / address radio group, styled as selectable cards
+   instead of a bare radio button */
 .option-group {
   margin-top: 1.5rem;
   display: flex;
@@ -1168,7 +1170,7 @@ input, select, textarea {
 }
 
 /* ==========================================================================
-   FORMULARIOS (login / registro)
+   FORMS (login / register)
    ========================================================================== */
 .field {
   display: flex;
@@ -1214,8 +1216,8 @@ input, select, textarea {
   margin-bottom: 1.1rem;
 }
 .field-spaced {
-  /* un campo suelto que necesita más aire arriba, por ejemplo cuando
-     va después de una lista de opciones en vez de otro campo */
+  /* a standalone field that needs more room above it, e.g. when it
+     follows a list of options instead of another field */
   margin-top: 1.5rem;
 }
 

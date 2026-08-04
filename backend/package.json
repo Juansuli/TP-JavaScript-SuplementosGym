@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "API de DOSIS (e-commerce de suplementos con IA)",
+  "description": "DOSIS API (AI-powered supplements e-commerce)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -1,28 +1,29 @@
-// Script compartido por todas las páginas del mockup. No hay React ni
-// nada más: es JavaScript "de toda la vida", pensado para ser fácil de
-// leer. Cada bloque revisa primero si los elementos que necesita están
-// en la página actual, así el mismo archivo sirve para las 4 páginas
-// sin tirar errores en las que no usan esa función.
+// Script shared by all pages of the mockup. There's no React or
+// anything else here: it's plain, old-fashioned JavaScript, written to
+// be easy to read. Each block first checks whether the elements it
+// needs exist on the current page, so the same file works across all
+// 4 pages without throwing errors on the ones that don't use that
+// particular feature.
 (function () {
 
-  // ----- 1) Abrir/cerrar el menú de mobile -----
-  // Al tocar el botón hamburguesa, se le agrega/saca la clase "is-open"
-  // al menú (eso es lo que el CSS usa para mostrarlo u ocultarlo).
+  // ----- 1) Open/close the mobile menu -----
+  // Clicking the hamburger button adds/removes the "is-open" class on
+  // the menu (that's what the CSS uses to show or hide it).
   var menuToggle = document.getElementById('menuToggle');
   var mobileNav = document.getElementById('mobileNav');
   if (menuToggle && mobileNav) {
     menuToggle.addEventListener('click', function () {
       var open = mobileNav.classList.toggle('is-open');
-      // aria-expanded le avisa a lectores de pantalla si el menú está abierto o cerrado
+      // aria-expanded tells screen readers whether the menu is open or closed
       menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
   }
 
-  // ----- 2) Aparición suave de las tarjetas al scrollear (solo home) -----
-  // IntersectionObserver le avisa al código cuando un elemento entra en
-  // la pantalla. Apenas eso pasa, se le agrega "is-visible" (que en el
-  // CSS dispara la animación de opacidad) y se deja de observar esa
-  // tarjeta porque ya no hace falta (solo debe pasar una vez).
+  // ----- 2) Cards fading in on scroll (home page only) -----
+  // IntersectionObserver notifies the code when an element enters the
+  // viewport. As soon as that happens, "is-visible" gets added (which
+  // triggers the opacity animation in the CSS) and that card stops
+  // being observed, since it only needs to happen once.
   var cards = document.querySelectorAll('.card');
   if ('IntersectionObserver' in window && cards.length) {
     var cardObserver = new IntersectionObserver(function (entries) {
@@ -32,7 +33,7 @@
           cardObserver.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.15 }); // se dispara cuando el 15% de la tarjeta ya es visible
+    }, { threshold: 0.15 }); // fires once 15% of the card is already visible
 
     cards.forEach(function (card) {
       cardObserver.observe(card);
@@ -43,10 +44,10 @@
     });
   }
 
-  // ----- 3) Selector de cantidad (+ / -) en producto y carrito -----
-  // Cada ".stepper" tiene un botón restar, un número en el medio y un
-  // botón sumar. Se busca ese número dentro del mismo stepper y se le
-  // suma o resta 1, sin bajar de 1.
+  // ----- 3) Quantity stepper (+ / -) on product and cart pages -----
+  // Each ".stepper" has a minus button, a number in the middle, and a
+  // plus button. This finds that number inside the same stepper and
+  // adds or subtracts 1, never going below 1.
   document.querySelectorAll('.stepper').forEach(function (stepper) {
     var valueEl = stepper.querySelector('.qty-value');
     var minusBtn = stepper.querySelector('[data-step="-1"]');
@@ -66,10 +67,10 @@
     });
   });
 
-  // ----- 4) Tabs "Ingresar" / "Crear cuenta" en login -----
-  // Los botones de arriba tienen data-tab="ingresar" o data-tab="registro".
-  // Al tocar uno, se le pone is-active a ese botón y se muestra el panel
-  // con el mismo data-panel; el resto se oculta.
+  // ----- 4) "Login" / "Register" tabs on the login page -----
+  // The buttons above have data-tab="login" or data-tab="register".
+  // Clicking one marks that button as is-active and shows the panel
+  // with the matching data-panel; the rest get hidden.
   var tabButtons = document.querySelectorAll('[data-tab]');
   if (tabButtons.length) {
     tabButtons.forEach(function (button) {

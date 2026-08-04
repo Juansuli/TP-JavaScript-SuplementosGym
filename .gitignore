@@ -1,14 +1,14 @@
-# Dependencias (se reinstalan con "npm install", no hace falta subirlas)
+# Dependencies (reinstalled with "npm install", no need to commit them)
 node_modules/
 
-# Variables de entorno: tienen datos sensibles (usuario/contraseña de
-# la base, tokens, etc). Se sube ".env.example" como plantilla, nunca
-# el ".env" real de cada uno.
+# Environment variables: contain sensitive data (db user/password,
+# tokens, etc). ".env.example" is committed as a template, never
+# anyone's real ".env".
 .env
 .env.local
 .env.*.local
 
-# Builds / carpetas generadas
+# Builds / generated folders
 dist/
 dist-ssr/
 build/
@@ -18,8 +18,8 @@ logs/
 *.log
 npm-debug.log*
 
-# Carpeta de trabajo de Claude Code (config y sesiones locales, no es
-# parte del proyecto)
+# Claude Code's working folder (local config and sessions, not part of
+# the project)
 .claude/
 
 # Editor / IDE
@@ -27,11 +27,11 @@ npm-debug.log*
 !.vscode/extensions.json
 .idea/
 
-# Archivos propios del sistema operativo
+# OS-specific files
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Archivos de respaldo que a veces dejan draw.io / Google Docs al guardar
+# Backup files that draw.io / Google Docs sometimes leave behind on save
 *.bkp
 .$*
