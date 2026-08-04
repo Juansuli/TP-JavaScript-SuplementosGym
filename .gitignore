@@ -1,0 +1,37 @@
+# Dependencias (se reinstalan con "npm install", no hace falta subirlas)
+node_modules/
+
+# Variables de entorno: tienen datos sensibles (usuario/contraseña de
+# la base, tokens, etc). Se sube ".env.example" como plantilla, nunca
+# el ".env" real de cada uno.
+.env
+.env.local
+.env.*.local
+
+# Builds / carpetas generadas
+dist/
+dist-ssr/
+build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Carpeta de trabajo de Claude Code (config y sesiones locales, no es
+# parte del proyecto)
+.claude/
+
+# Editor / IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Archivos propios del sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos de respaldo que a veces dejan draw.io / Google Docs al guardar
+*.bkp
+.$*
