@@ -41,8 +41,7 @@ Regularidad:
 | CRUD simple | 1\. CRUD administrador. <br> 2\. CRUD cliente. <br> 3\. CRUD producto. <br> 4\. CRUD pedido. 
 | CRUD dependiente | 1. CRUD pedido_producto {depende de} CRUD pedido y CRUD producto. <br> 2. CRUD sugerencia_IA {depende de} CRUD cliente. |
 | Listado \+ detalle | 1\. Listado de producto filtrado por precio: muestra nombre, descripción, precio y info\_nutricional. <br> 2\. Listado de pedido filtrado por estado: muestra id\\\_pedido, id\\\_usuario, fecha, estado y total. |
-| CUU/Epic | CUU1. Consultar IA y armar carrito con sugerencia. 
-CUU2. Realizar pedido. |
+| CUU/Epic | CUU1. Consultar IA y armar carrito con sugerencia. <br> CUU2. Realizar pedido. |
 
 Adicionales para Aprobación
 
