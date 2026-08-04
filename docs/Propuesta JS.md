@@ -39,7 +39,7 @@ Regularidad:
 | Req | Detalle |
 | :---- | :---- |
 | CRUD simple | 1\. CRUD administrador. 2\. CRUD cliente. 3\. CRUD producto. 4\. CRUD pedido. |
-| CRUD dependiente | 1\. CRUD carrito {depende de} CRUD cliente. 2\. CRUD detalle\\\_pedido {depende de} CRUD pedido y CRUD producto. |
+| CRUD dependiente | 1. CRUD pedido_producto {depende de} CRUD pedido y CRUD producto. 2. CRUD sugerencia_IA {depende de} CRUD cliente. |
 | Listado \+ detalle | 1\. Listado de producto filtrado por precio: muestra nombre, descripción, precio y info\_nutricional. 2\. Listado de pedido filtrado por estado: muestra id\\\_pedido, id\\\_usuario, fecha, estado y total. |
 | CUU/Epic | CUU1. Consultar IA y armar carrito con sugerencia. CUU2. Realizar pedido. |
 
@@ -47,7 +47,7 @@ Adicionales para Aprobación
 
 | Req | Detalle |
 | :---- | :---- |
-| CRUD | 1\. CRUD sugerencia\_IA. 2\. CRUD item\\\_carrito. 3\. CRUD item\\\_sugerido. 4\. CRUD usuario. |
+| CRUD | 1. CRUD administrador. 2. CRUD cliente. 3. CRUD producto. 4. CRUD pedido. 5. CRUD pedido_producto. 6. CRUD sugerencia_IA. 7. CRUD descuento. |
 | CUU/Epic | CUU1. Registrar y actualizar un perfil de cliente. CUU2. Actualizar stock producto. CUU3. Eliminar cliente. CUU4. Eliminar producto. |
 
 ### Alcance Adicional Voluntario
