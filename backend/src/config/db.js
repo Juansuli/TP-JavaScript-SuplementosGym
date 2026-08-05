@@ -1,24 +1,24 @@
-// MySQL connection setup.
-// For now this uses mysql2 directly (no ORM yet — not decided which
-// one to use). Once one is picked (Sequelize, Prisma, etc.) this file
-// is what changes, but the rest of the code shouldn't need to know
-// about that: controllers only use whatever this file exports.
+// MySQL connection, set up through Sequelize (our chosen ORM).
+// Sequelize still needs a low-level driver to actually talk to MySQL —
+// that's what the "mysql2" package (already installed) is for.
+// Sequelize uses it automatically underneath, we don't call mysql2
+// directly anywhere anymore.
 
-const mysql = require('mysql2/promise');
+const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-// A "pool" reuses connections instead of opening a new one for every
-// query, which is much more expensive. The real credentials (host,
-// user, password) live in the .env file, which is never committed to
-// the repo (see .gitignore) — this only reads those variables.
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'suplementos_gym',
-  waitForConnections: true,
-  connectionLimit: 10,
-});
+const sequelize = new Sequelize(
+  process.env.DB_NAME || 'suplementos_gym',
+  process.env.DB_USER || 'root',
+  process.env.DB_PASSWORD || '',
+  {
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
+    dialect: 'mysql',
+    // Set this to console.log while learning, to see the real SQL
+    // Sequelize generates for each call. Keep it false normally, it's noisy.
+    logging: false,
+  }
+);
 
-module.exports = pool;
+module.exports = sequelize;

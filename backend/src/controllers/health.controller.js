@@ -3,11 +3,13 @@
 // point to copy the same pattern (routes -> controller) once the real
 // controllers get added (producto, cliente, pedido, etc.).
 
-const db = require('../config/db');
+const sequelize = require('../config/db');
 
 async function checkHealth(req, res) {
   try {
-    await db.query('SELECT 1');
+    // .authenticate() is Sequelize's built-in way to check the
+    // connection actually works, instead of writing a raw query by hand.
+    await sequelize.authenticate();
     res.json({ status: 'ok', db: 'connected' });
   } catch (error) {
     // If the database isn't configured yet, the server still
