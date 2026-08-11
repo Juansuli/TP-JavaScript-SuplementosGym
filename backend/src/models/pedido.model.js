@@ -19,7 +19,7 @@ const Pedido = sequelize.define(
       allowNull: false,
       references: {
         model: Cliente,
-        key: 'id',
+        key: 'id_cliente',
       },
     },
     fecha: {

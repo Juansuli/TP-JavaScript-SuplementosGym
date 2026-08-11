@@ -1,9 +1,9 @@
 // Sequelize model for the "cliente" entity from the DER.
-// Like "administrador", it's a subtype of "usuario": its "id" is both its
-// primary key and a foreign key to usuario.id. On top of that it carries
-// the profile fields the AI suggestion engine needs (physical data,
-// training habits, goals) plus an optional link to a discount category
-// (see "descuento_cliente" in the diagram).
+// Like "administrador", it's a subtype of "usuario": its "id_cliente" is
+// both its primary key and a foreign key to usuario.id_usuario. On top of
+// that it carries the profile fields the AI suggestion engine needs
+// (physical data, training habits, goals) plus an optional link to a
+// discount category (see "descuento_cliente" in the diagram).
 
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
@@ -13,12 +13,12 @@ const Descuento = require('./descuento.model');
 const Cliente = sequelize.define(
   'Cliente',
   {
-    id: {
+    id_cliente: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       references: {
         model: Usuario,
-        key: 'id',
+        key: 'id_usuario',
       },
     },
     fecha_nacimiento: {
@@ -54,7 +54,7 @@ const Cliente = sequelize.define(
       allowNull: true,
       references: {
         model: Descuento,
-        key: 'categoria',
+        key: 'categoría',
       },
     },
   },

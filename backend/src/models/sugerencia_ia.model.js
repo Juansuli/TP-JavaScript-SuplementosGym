@@ -8,7 +8,7 @@ const Cliente = require('./cliente.model');
 const SugerenciaIA = sequelize.define(
   'SugerenciaIA',
   {
-    id: {
+    id_sugerencia: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
@@ -30,7 +30,7 @@ const SugerenciaIA = sequelize.define(
       allowNull: false,
       references: {
         model: Cliente,
-        key: 'id',
+        key: 'id_cliente',
       },
     },
   },
