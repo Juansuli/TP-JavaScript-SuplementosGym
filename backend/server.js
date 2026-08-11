@@ -5,7 +5,19 @@
 require('dotenv').config();
 const app = require('./src/app');
 const sequelize = require('./src/config/db');
-require('./src/models/producto.model'); // registers the Producto model with Sequelize
+
+// Registers every model with Sequelize so sync() knows about them. Order
+// matters here: a table with a foreign key (e.g. cliente -> usuario) must
+// be listed after the table it points to, or MySQL rejects the FK because
+// the referenced table doesn't exist yet.
+require('./src/models/usuario.model');
+require('./src/models/administrador.model');
+require('./src/models/descuento.model');
+require('./src/models/cliente.model');
+require('./src/models/producto.model');
+require('./src/models/pedido.model');
+require('./src/models/pedido_producto.model');
+require('./src/models/sugerencia_ia.model');
 
 const PORT = process.env.PORT || 3001;
 
