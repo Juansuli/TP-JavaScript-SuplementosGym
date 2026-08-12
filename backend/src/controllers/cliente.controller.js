@@ -38,7 +38,9 @@ function validateRegistration(data) {
     errors.push('El email es obligatorio y debe ser válido.');
   }
 
-  if (typeof data.nombre !== 'string' || data.nombre.trim() === '') {
+  if (typeof data.nombre !== 'string') {
+    errors.push('El nombre ingresado no es válido.');
+  } else if (data.nombre.trim() === '') {
     errors.push('El nombre es obligatorio.');
   }
 
@@ -175,9 +177,15 @@ async function updateClient(req, res) {
 
   const userData = getAllowedData(req.body, USER_FIELDS);
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
+  const userErrors = [];
   const clientErrors = validateClientData(clientData);
 
-  if (clientErrors.length) return res.status(400).json({ error: clientErrors });
+  if (userData.nombre !== undefined && typeof userData.nombre !== 'string') {
+    userErrors.push('El nombre ingresado no es válido.');
+  }
+
+  const errors = [...userErrors, ...clientErrors];
+  if (errors.length) return res.status(400).json({ error: errors });
 
   if (Object.keys(userData).length === 0 && Object.keys(clientData).length === 0) {
     return res.status(400).json({ error: 'Enviá al menos un campo editable.' });
