@@ -6,6 +6,8 @@
 const express = require('express');
 const cors = require('cors');
 const healthRoutes = require('./routes/health.routes');
+const productRoutes = require('./routes/producto.routes');
+const clientRoutes = require('./routes/cliente.routes');
 
 const app = express();
 
@@ -16,5 +18,7 @@ app.use(express.json());
 // (producto, cliente, pedido...) each one adds its own routes file
 // here, following the same pattern as health.
 app.use('/api', healthRoutes);
+app.use('/api/productos', productRoutes);
+app.use('/api/clientes', clientRoutes);
 
 module.exports = app;
