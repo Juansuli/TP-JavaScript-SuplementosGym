@@ -18,7 +18,9 @@ function validateProduct(data, isUpdate = false) {
   const errors = [];
 
   if (!isUpdate || data.nombre !== undefined) {
-    if (typeof data.nombre !== 'string' || data.nombre.trim() === '') {
+    if (typeof data.nombre !== 'string') {
+      errors.push('El nombre ingresado no es válido.');
+    } else if (data.nombre.trim() === '') {
       errors.push('Name is required.');
     }
   }
@@ -102,13 +104,13 @@ async function updateProduct(req, res) {
   const id = getProductId(req.params.id);
   if (!id) return res.status(400).json({ error: 'The product id is not valid.' });
 
+  const errors = validateProduct(req.body, true);
+  if (errors.length) return res.status(400).json({ error: errors });
+
   const data = getEditableData(req.body);
   if (Object.keys(data).length === 0) {
     return res.status(400).json({ error: 'Send at least one editable field.' });
   }
-
-  const errors = validateProduct(data, true);
-  if (errors.length) return res.status(400).json({ error: errors });
 
   try {
     const product = await Producto.findByPk(id);
