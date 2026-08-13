@@ -1,9 +1,5 @@
 import { useState } from 'react'
 
-// Placeholder form so the admin panel is testable end-to-end. Sol owns
-// this component (Parte 1) — she can rework the fields/validation UI
-// freely as long as it keeps this same contract: product (null when
-// creating), onSubmit(values) and onCancel().
 function ProductForm({ product, onSubmit, onCancel }) {
   const isEditing = Boolean(product)
 
@@ -14,7 +10,7 @@ function ProductForm({ product, onSubmit, onCancel }) {
     stock: product?.stock ?? '',
     info_nutricional: product?.info_nutricional ?? '',
   })
-  const [error, setError] = useState(null)
+  const [errors, setErrors] = useState([])
   const [isSaving, setIsSaving] = useState(false)
 
   function handleChange(field) {
@@ -23,13 +19,17 @@ function ProductForm({ product, onSubmit, onCancel }) {
 
   async function handleSubmit(event) {
     event.preventDefault()
-    setError(null)
+    setErrors([])
     setIsSaving(true)
 
     try {
       await onSubmit(values)
     } catch (err) {
-      setError(err.message)
+      // El servicio junta todos los mensajes del backend en un solo
+      // string separado por saltos de línea (ver parseErrorMessage en
+      // product.service.js) — acá se separan de nuevo para mostrarlos
+      // como lista, no como un párrafo pegado.
+      setErrors(err.message.split('\n'))
     } finally {
       setIsSaving(false)
     }
@@ -42,7 +42,12 @@ function ProductForm({ product, onSubmit, onCancel }) {
 
         <label>
           Nombre
-          <input type="text" value={values.nombre} onChange={handleChange('nombre')} />
+          <input
+            type="text"
+            required
+            value={values.nombre}
+            onChange={handleChange('nombre')}
+          />
         </label>
 
         <label>
@@ -56,6 +61,7 @@ function ProductForm({ product, onSubmit, onCancel }) {
             type="number"
             min="0"
             step="0.01"
+            required
             value={values.precio}
             onChange={handleChange('precio')}
           />
@@ -67,6 +73,7 @@ function ProductForm({ product, onSubmit, onCancel }) {
             type="number"
             min="0"
             step="1"
+            required
             value={values.stock}
             onChange={handleChange('stock')}
           />
@@ -77,7 +84,13 @@ function ProductForm({ product, onSubmit, onCancel }) {
           <textarea value={values.info_nutricional} onChange={handleChange('info_nutricional')} />
         </label>
 
-        {error && <p className="product-form-error">{error}</p>}
+        {errors.length > 0 && (
+          <ul className="product-form-errors">
+            {errors.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        )}
 
         <div className="product-form-actions">
           <button type="button" onClick={onCancel} disabled={isSaving}>

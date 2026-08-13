@@ -7,7 +7,7 @@ const API_BASE_URL = 'http://localhost:3001/api/productos'
 // validation messages ({ error: ['Name is required.', ...] }).
 function parseErrorMessage(body) {
   if (!body || !body.error) return 'Ocurrió un error inesperado.'
-  return Array.isArray(body.error) ? body.error.join(' ') : body.error
+  return Array.isArray(body.error) ? body.error.join('\n') : body.error
 }
 
 async function getProducts(filters = {}) {

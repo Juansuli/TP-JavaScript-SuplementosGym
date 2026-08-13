@@ -12,6 +12,7 @@ function AdminProducts() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState(null)
+  const [actionError, setActionError] = useState(null)
   const [editingProduct, setEditingProduct] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
 
@@ -34,11 +35,13 @@ function AdminProducts() {
   }, [])
 
   function openCreateForm() {
+    setActionError(null)
     setEditingProduct(null)
     setIsFormOpen(true)
   }
 
   function openEditForm(product) {
+    setActionError(null)
     setEditingProduct(product)
     setIsFormOpen(true)
   }
@@ -75,7 +78,7 @@ function AdminProducts() {
     if (!confirmed) return
 
     setNotice(null)
-    setError(null)
+    setActionError(null)
 
     try {
       const result = await deleteProduct(product.id_producto)
@@ -92,7 +95,10 @@ function AdminProducts() {
         setNotice(`"${product.nombre}" se eliminó correctamente.`)
       }
     } catch (err) {
-      setError(err.message)
+      // A propósito no usa `error`: ese estado esconde la tabla entera
+      // (ver más abajo), y un borrado fallido no debería tapar la lista
+      // de productos que ya se había cargado bien.
+      setActionError(err.message)
     }
   }
 
@@ -106,6 +112,7 @@ function AdminProducts() {
       </div>
 
       {notice && <p className="admin-products-notice">{notice}</p>}
+      {actionError && <p className="admin-products-notice admin-products-notice-error">{actionError}</p>}
       {isLoading && <p className="catalog-message">Cargando productos...</p>}
       {!isLoading && error && <p className="catalog-message catalog-error">{error}</p>}
 
