@@ -1,120 +1,110 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useEffect, useState } from 'react'
+import ProductCard from './components/ProductCard'
+import ProductDetail from './components/ProductDetail'
+import { getProducts, getProductById } from './services/product.service'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [products, setProducts] = useState([])
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  async function loadProducts(filters) {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const data = await getProducts(filters)
+      setProducts(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Load the full catalog once, when the page first mounts.
+  useEffect(() => {
+    loadProducts()
+  }, [])
+
+  function handleFilterSubmit(event) {
+    event.preventDefault()
+    loadProducts({ minPrice, maxPrice })
+  }
+
+  async function handleSelectProduct(id) {
+    setError(null)
+
+    try {
+      const product = await getProductById(id)
+      setSelectedProduct(product)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      <header className="catalog-header">
+        <h1>Catálogo de productos</h1>
 
-      <div className="ticks"></div>
+        <form className="price-filter" onSubmit={handleFilterSubmit}>
+          <label>
+            Precio mínimo
+            <input
+              type="number"
+              min="0"
+              value={minPrice}
+              onChange={(event) => setMinPrice(event.target.value)}
+            />
+          </label>
+          <label>
+            Precio máximo
+            <input
+              type="number"
+              min="0"
+              value={maxPrice}
+              onChange={(event) => setMaxPrice(event.target.value)}
+            />
+          </label>
+          <button type="submit">Filtrar</button>
+        </form>
+      </header>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <main className="catalog-main">
+        {isLoading && <p className="catalog-message">Cargando productos...</p>}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+        {!isLoading && error && (
+          <p className="catalog-message catalog-error">{error}</p>
+        )}
+
+        {!isLoading && !error && products.length === 0 && (
+          <p className="catalog-message">No hay productos para mostrar</p>
+        )}
+
+        {!isLoading && !error && products.length > 0 && (
+          <div className="product-grid">
+            {products.map((product) => (
+              <ProductCard
+                key={product.id_producto}
+                product={product}
+                onSelect={handleSelectProduct}
+              />
+            ))}
+          </div>
+        )}
+      </main>
+
+      {selectedProduct && (
+        <ProductDetail
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
     </>
   )
 }

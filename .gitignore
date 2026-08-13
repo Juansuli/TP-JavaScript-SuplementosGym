@@ -21,10 +21,12 @@ npm-debug.log*
 # Claude Code's working folder (local config and sessions, not part of
 # the project)
 .claude/
+.codex/
 
 # Claude Code's project instructions file: kept local to this machine,
 # not shared through the repo
 CLAUDE.md
+CODEX.md
 
 # Editor / IDE
 .vscode/*
