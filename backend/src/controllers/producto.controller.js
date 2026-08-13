@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const Producto = require('../models/producto.model');
+const PedidoProducto = require('../models/pedido_producto.model');
 
 const EDITABLE_FIELDS = [
   'nombre',
@@ -130,6 +131,14 @@ async function deleteProduct(req, res) {
   try {
     const product = await Producto.findByPk(id);
     if (!product) return res.status(404).json({ error: 'Product not found.' });
+
+    // CUU1: a product with associated orders can't be physically deleted —
+    // it gets marked "descontinuado" (soft delete) instead.
+    const orderCount = await PedidoProducto.count({ where: { id_producto: id } });
+    if (orderCount > 0) {
+      await product.update({ estado: 'descontinuado' });
+      return res.json(product);
+    }
 
     await product.destroy();
     return res.status(204).send();
