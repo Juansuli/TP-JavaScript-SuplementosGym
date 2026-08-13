@@ -22,19 +22,19 @@ function validateProduct(data, isUpdate = false) {
     if (typeof data.nombre !== 'string') {
       errors.push('El nombre ingresado no es válido.');
     } else if (data.nombre.trim() === '') {
-      errors.push('Name is required.');
+      errors.push('El nombre es obligatorio.');
     }
   }
 
   if (!isUpdate || data.precio !== undefined) {
     if (data.precio === undefined || data.precio === '' || Number.isNaN(Number(data.precio)) || Number(data.precio) < 0) {
-      errors.push('Price must be a number greater than or equal to 0.');
+      errors.push('El precio debe ser un número mayor o igual a 0.');
     }
   }
 
   if (!isUpdate || data.stock !== undefined) {
     if (!Number.isInteger(Number(data.stock)) || Number(data.stock) < 0) {
-      errors.push('Stock must be a whole number greater than or equal to 0.');
+      errors.push('El stock debe ser un número entero mayor o igual a 0.');
     }
   }
 
@@ -61,7 +61,7 @@ async function listProducts(req, res) {
       if ((minimo !== undefined && (Number.isNaN(minimo) || minimo < 0)) ||
           (maximo !== undefined && (Number.isNaN(maximo) || maximo < 0)) ||
           (minimo !== undefined && maximo !== undefined && minimo > maximo)) {
-        return res.status(400).json({ error: 'The price range is not valid.' });
+        return res.status(400).json({ error: 'El rango de precio no es válido.' });
       }
 
       where.precio = {};
@@ -72,20 +72,20 @@ async function listProducts(req, res) {
     const products = await Producto.findAll({ where, order: [['id_producto', 'ASC']] });
     return res.json(products);
   } catch (error) {
-    return res.status(500).json({ error: 'Products could not be retrieved.' });
+    return res.status(500).json({ error: 'No se pudieron obtener los productos.' });
   }
 }
 
 async function getProduct(req, res) {
   const id = getProductId(req.params.id);
-  if (!id) return res.status(400).json({ error: 'The product id is not valid.' });
+  if (!id) return res.status(400).json({ error: 'El id de producto no es válido.' });
 
   try {
     const product = await Producto.findByPk(id);
-    if (!product) return res.status(404).json({ error: 'Product not found.' });
+    if (!product) return res.status(404).json({ error: 'Producto no encontrado.' });
     return res.json(product);
   } catch (error) {
-    return res.status(500).json({ error: 'Product could not be retrieved.' });
+    return res.status(500).json({ error: 'No se pudo obtener el producto.' });
   }
 }
 
@@ -97,40 +97,40 @@ async function createProduct(req, res) {
     const product = await Producto.create(getEditableData(req.body));
     return res.status(201).json(product);
   } catch (error) {
-    return res.status(500).json({ error: 'Product could not be created.' });
+    return res.status(500).json({ error: 'No se pudo crear el producto.' });
   }
 }
 
 async function updateProduct(req, res) {
   const id = getProductId(req.params.id);
-  if (!id) return res.status(400).json({ error: 'The product id is not valid.' });
+  if (!id) return res.status(400).json({ error: 'El id de producto no es válido.' });
 
   const errors = validateProduct(req.body, true);
   if (errors.length) return res.status(400).json({ error: errors });
 
   const data = getEditableData(req.body);
   if (Object.keys(data).length === 0) {
-    return res.status(400).json({ error: 'Send at least one editable field.' });
+    return res.status(400).json({ error: 'Enviá al menos un campo editable.' });
   }
 
   try {
     const product = await Producto.findByPk(id);
-    if (!product) return res.status(404).json({ error: 'Product not found.' });
+    if (!product) return res.status(404).json({ error: 'Producto no encontrado.' });
 
     await product.update(data);
     return res.json(product);
   } catch (error) {
-    return res.status(500).json({ error: 'Product could not be updated.' });
+    return res.status(500).json({ error: 'No se pudo actualizar el producto.' });
   }
 }
 
 async function deleteProduct(req, res) {
   const id = getProductId(req.params.id);
-  if (!id) return res.status(400).json({ error: 'The product id is not valid.' });
+  if (!id) return res.status(400).json({ error: 'El id de producto no es válido.' });
 
   try {
     const product = await Producto.findByPk(id);
-    if (!product) return res.status(404).json({ error: 'Product not found.' });
+    if (!product) return res.status(404).json({ error: 'Producto no encontrado.' });
 
     // CUU1: a product with associated orders can't be physically deleted —
     // it gets marked "descontinuado" (soft delete) instead.
@@ -144,9 +144,9 @@ async function deleteProduct(req, res) {
     return res.status(204).send();
   } catch (error) {
     if (error.name === 'SequelizeForeignKeyConstraintError') {
-      return res.status(409).json({ error: 'A product with associated orders cannot be deleted.' });
+      return res.status(409).json({ error: 'No se puede eliminar un producto con pedidos asociados.' });
     }
-    return res.status(500).json({ error: 'Product could not be deleted.' });
+    return res.status(500).json({ error: 'No se pudo eliminar el producto.' });
   }
 }
 
