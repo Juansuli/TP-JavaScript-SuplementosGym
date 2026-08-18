@@ -3,7 +3,7 @@ import ProductCard from './ProductCard'
 import ProductDetail from './ProductDetail'
 import { getProducts, getProductById } from '../services/product.service'
 
-function ProductCatalog() {
+function ProductCatalog({ onAddToCart }) {
   const [products, setProducts] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [minPrice, setMinPrice] = useState('')
@@ -57,9 +57,7 @@ function ProductCatalog() {
         <div>
           <p className="eyebrow">Catálogo DOSIS</p>
           <h1 id="catalog-title">Elegí lo que suma a tu entrenamiento.</h1>
-          <p className="catalog-lede">
-            Productos con precio, disponibilidad y ficha nutricional sin vueltas.
-          </p>
+          <p className="catalog-lede">Productos con precio, disponibilidad y ficha nutricional sin vueltas.</p>
         </div>
 
         <form className="price-filter" onSubmit={handleFilterSubmit}>
@@ -74,26 +72,14 @@ function ProductCatalog() {
               Desde
               <span className="price-input">
                 <span>$</span>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="0"
-                  value={minPrice}
-                  onChange={(event) => setMinPrice(event.target.value)}
-                />
+                <input type="number" min="0" placeholder="0" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} />
               </span>
             </label>
             <label>
               Hasta
               <span className="price-input">
                 <span>$</span>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="Sin límite"
-                  value={maxPrice}
-                  onChange={(event) => setMaxPrice(event.target.value)}
-                />
+                <input type="number" min="0" placeholder="Sin límite" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} />
               </span>
             </label>
             <button className="btn btn-accent filter-submit" type="submit">Aplicar</button>
@@ -103,9 +89,7 @@ function ProductCatalog() {
 
       <div className="catalog-results-head">
         <h2>Productos</h2>
-        {!isLoading && !error && (
-          <span className="result-count tabnum">{products.length} resultados</span>
-        )}
+        {!isLoading && !error && <span className="result-count tabnum">{products.length} resultados</span>}
       </div>
 
       {isLoading && <p className="catalog-message">Cargando productos...</p>}
@@ -116,13 +100,22 @@ function ProductCatalog() {
       {!isLoading && !error && products.length > 0 && (
         <div className="product-grid">
           {products.map((product) => (
-            <ProductCard key={product.id_producto} product={product} onSelect={handleSelectProduct} />
+            <ProductCard
+              key={product.id_producto}
+              product={product}
+              onSelect={handleSelectProduct}
+              onAddToCart={onAddToCart}
+            />
           ))}
         </div>
       )}
 
       {selectedProduct && (
-        <ProductDetail product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+        <ProductDetail
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          onAddToCart={onAddToCart}
+        />
       )}
     </section>
   )

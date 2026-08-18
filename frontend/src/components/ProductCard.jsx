@@ -10,9 +10,10 @@ function getStatus(product) {
   return 'Disponible'
 }
 
-function ProductCard({ product, onSelect }) {
+function ProductCard({ product, onSelect, onAddToCart }) {
   const status = getStatus(product)
   const shortName = product.nombre.split(' ').slice(0, 3).join(' ')
+  const isAvailable = product.estado === 'disponible' && product.stock > 0
 
   return (
     <article className="product-card">
@@ -39,9 +40,21 @@ function ProductCard({ product, onSelect }) {
           <div><dt>Estado</dt><dd>{status}</dd></div>
           <div><dt>Ficha</dt><dd>{product.info_nutricional ? 'Disponible' : '—'}</dd></div>
         </dl>
-        <button type="button" className="btn btn-outline product-card-select" onClick={() => onSelect(product.id_producto)}>
-          Ver detalle
-        </button>
+        <div className="product-card-actions">
+          <button type="button" className="btn btn-outline product-card-select" onClick={() => onSelect(product.id_producto)}>
+            Ver detalle
+          </button>
+          {onAddToCart && (
+            <button
+              type="button"
+              className="btn btn-accent product-card-add"
+              disabled={!isAvailable}
+              onClick={() => onAddToCart(product)}
+            >
+              Agregar
+            </button>
+          )}
+        </div>
       </div>
     </article>
   )

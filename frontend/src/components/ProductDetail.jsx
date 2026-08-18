@@ -6,7 +6,7 @@ const priceFormatter = new Intl.NumberFormat('es-AR', {
   maximumFractionDigits: 0,
 })
 
-function ProductDetail({ product, onClose }) {
+function ProductDetail({ product, onClose, onAddToCart }) {
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === 'Escape') onClose()
@@ -20,18 +20,12 @@ function ProductDetail({ product, onClose }) {
     }
   }, [onClose])
 
-  const isAvailable = product.estado !== 'descontinuado' && Number(product.stock) > 0
+  const isAvailable = product.estado === 'disponible' && product.stock > 0
   const shortName = product.nombre.split(' ').slice(0, 3).join(' ')
 
   return (
     <div className="product-detail-overlay" onMouseDown={onClose}>
-      <article
-        className="product-detail"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="product-detail-title"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
+      <article className="product-detail" role="dialog" aria-modal="true" aria-labelledby="product-detail-title" onMouseDown={(event) => event.stopPropagation()}>
         <div className="detail-toolbar">
           <span className="detail-kicker">Ficha de producto</span>
           <button type="button" className="product-detail-close" onClick={onClose} aria-label="Cerrar detalle">
@@ -56,9 +50,7 @@ function ProductDetail({ product, onClose }) {
             <h2 className="product-title" id="product-detail-title">{product.nombre}</h2>
             <p className="product-meta">Stock actual · {product.stock} unidades</p>
             <p className="product-price tabnum">{priceFormatter.format(product.precio)}</p>
-            <p className="product-description">
-              {product.descripcion || 'Este producto todavía no tiene una descripción cargada.'}
-            </p>
+            <p className="product-description">{product.descripcion || 'Este producto todavía no tiene una descripción cargada.'}</p>
             <div className="nutrition-block">
               <span className="nutrition-title">Información nutricional</span>
               <p>{product.info_nutricional || 'Información nutricional pendiente de carga.'}</p>
@@ -70,9 +62,14 @@ function ProductDetail({ product, onClose }) {
                 <span>{isAvailable ? `${product.stock} unidades en stock` : 'Sin stock para pedidos'}</span>
               </div>
             </div>
-            <button type="button" className="btn btn-accent detail-done" onClick={onClose}>
-              Volver al catálogo
-            </button>
+            <div className="detail-actions">
+              {onAddToCart && (
+                <button type="button" className="btn btn-accent product-detail-add" disabled={!isAvailable} onClick={() => onAddToCart(product)}>
+                  Agregar al pedido
+                </button>
+              )}
+              <button type="button" className="btn btn-ghost detail-done" onClick={onClose}>Volver al catálogo</button>
+            </div>
           </div>
         </div>
       </article>

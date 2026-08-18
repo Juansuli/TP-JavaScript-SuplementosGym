@@ -8,6 +8,7 @@ const cors = require('cors');
 const healthRoutes = require('./routes/health.routes');
 const productRoutes = require('./routes/producto.routes');
 const clientRoutes = require('./routes/cliente.routes');
+const orderRoutes = require('./routes/pedido.routes');
 
 const app = express();
 
@@ -20,5 +21,6 @@ app.use(express.json());
 app.use('/api', healthRoutes);
 app.use('/api/productos', productRoutes);
 app.use('/api/clientes', clientRoutes);
+app.use('/api/pedidos', orderRoutes);
 
 module.exports = app;
