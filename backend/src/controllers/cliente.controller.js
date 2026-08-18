@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const bcrypt = require('bcryptjs');
 const sequelize = require('../config/db');
 const Usuario = require('../models/usuario.model');
 const Cliente = require('../models/cliente.model');
@@ -127,6 +128,32 @@ async function getClient(req, res) {
   }
 }
 
+async function login(req, res) {
+  const { email, password } = req.body;
+
+  if (typeof email !== 'string' || typeof password !== 'string') {
+    return res.status(400).json({ error: 'El email y la contraseña son obligatorios.' });
+  }
+
+  try {
+    const user = await Usuario.findOne({ where: { email } });
+    if (!user) {
+      return res.status(401).json({ error: 'Email o contraseña incorrectos.' });
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.contraseña);
+    if (!passwordMatches) {
+      return res.status(401).json({ error: 'Email o contraseña incorrectos.' });
+    }
+
+    const userData = user.toJSON();
+    delete userData.contraseña;
+    return res.json(userData);
+  } catch (error) {
+    return res.status(500).json({ error: 'No se pudo iniciar sesión.' });
+  }
+}
+
 async function createClient(req, res) {
   const registrationErrors = validateRegistration(req.body);
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
@@ -139,11 +166,13 @@ async function createClient(req, res) {
 
   try {
     const client = await sequelize.transaction(async (transaction) => {
+      const hashedPassword = await bcrypt.hash(req.body.password, 10);
+
       const user = await Usuario.create(
         {
           ...userData,
           rol: 'cliente',
-          contraseña: req.body.password,
+          contraseña: hashedPassword,
         },
         { transaction }
       );
@@ -243,6 +272,7 @@ async function deleteClient(req, res) {
 module.exports = {
   listClients,
   getClient,
+  login,
   createClient,
   updateClient,
   deleteClient,
