@@ -468,3 +468,60 @@
   cursor: pointer;
   text-decoration: underline;
 }
+
+.confirm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.confirm-modal {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+  padding: 24px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+
+  h2 {
+    margin: 0;
+    color: var(--text-h);
+  }
+
+  p {
+    margin: 0;
+    color: var(--text);
+  }
+}
+
+.confirm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+
+  button {
+    font: inherit;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    cursor: pointer;
+  }
+
+  .confirm-modal-danger {
+    color: #fff;
+    border-color: #e5484d;
+    background: #e5484d;
+  }
+}

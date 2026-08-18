@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import ProductForm from './ProductForm'
+import ConfirmModal from './ConfirmModal'
 import {
   getProducts,
   createProduct,
@@ -15,6 +16,7 @@ function AdminProducts() {
   const [actionError, setActionError] = useState(null)
   const [editingProduct, setEditingProduct] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [productPendingDelete, setProductPendingDelete] = useState(null)
 
   async function loadProducts() {
     setIsLoading(true)
@@ -73,10 +75,19 @@ function AdminProducts() {
     closeForm()
   }
 
-  async function handleDelete(product) {
-    const confirmed = window.confirm(`¿Seguro que querés eliminar "${product.nombre}"?`)
-    if (!confirmed) return
+  function requestDelete(product) {
+    setProductPendingDelete(product)
+  }
 
+  function cancelDelete() {
+    setProductPendingDelete(null)
+  }
+
+  async function confirmDelete() {
+    const product = productPendingDelete
+    if (!product) return
+
+    setProductPendingDelete(null)
     setNotice(null)
     setActionError(null)
 
@@ -142,7 +153,7 @@ function AdminProducts() {
                   <button type="button" onClick={() => openEditForm(product)}>
                     Editar
                   </button>
-                  <button type="button" onClick={() => handleDelete(product)}>
+                  <button type="button" onClick={() => requestDelete(product)}>
                     Eliminar
                   </button>
                 </td>
@@ -154,6 +165,17 @@ function AdminProducts() {
 
       {isFormOpen && (
         <ProductForm product={editingProduct} onSubmit={handleFormSubmit} onCancel={closeForm} />
+      )}
+
+      {productPendingDelete && (
+        <ConfirmModal
+          title="Eliminar producto"
+          message={`¿Seguro que querés eliminar "${productPendingDelete.nombre}"?`}
+          confirmLabel="Eliminar"
+          isDanger
+          onConfirm={confirmDelete}
+          onCancel={cancelDelete}
+        />
       )}
     </div>
   )
