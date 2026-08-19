@@ -15,23 +15,6 @@ function getPositiveInteger(value) {
   return Number.isInteger(number) && number > 0 ? number : null;
 }
 
-function getAuthenticatedUser(req) {
-  const userId = getPositiveInteger(req.user?.id_usuario);
-
-  if (!userId || !['cliente', 'administrador'].includes(req.user?.rol)) {
-    return null;
-  }
-
-  return {
-    id: userId,
-    role: req.user.rol,
-  };
-}
-
-function canAccessOrder(user, order) {
-  return user.role === 'administrador' || user.id === order.usuario_id;
-}
-
 function getAllowedData(body, fields) {
   return Object.fromEntries(
     fields
@@ -148,13 +131,6 @@ async function restoreOrderStock(orderId, transaction) {
 
 async function listOrders(req, res) {
   const { estado } = req.query;
-  const user = getAuthenticatedUser(req);
-
-  if (!user) return res.status(401).json({ error: 'Debés iniciar sesión para consultar pedidos.' });
-  if (user.role !== 'administrador') {
-    return res.status(403).json({ error: 'No tenés permiso para consultar todos los pedidos.' });
-  }
-
   if (estado !== undefined && !ORDER_STATUSES.includes(estado)) {
     return res.status(400).json({ error: 'El estado del pedido no es válido.' });
   }
@@ -175,16 +151,9 @@ async function getOrder(req, res) {
   const orderId = getPositiveInteger(req.params.id);
   if (!orderId) return res.status(400).json({ error: 'El id de pedido no es válido.' });
 
-  const user = getAuthenticatedUser(req);
-  if (!user) return res.status(401).json({ error: 'Debés iniciar sesión para consultar un pedido.' });
-
   try {
     const order = await Pedido.findByPk(orderId);
     if (!order) return res.status(404).json({ error: 'Pedido no encontrado.' });
-    if (!canAccessOrder(user, order)) {
-      return res.status(403).json({ error: 'No tenés permiso para consultar este pedido.' });
-    }
-
     return res.json(await buildOrderResponse(order));
   } catch (error) {
     return res.status(500).json({ error: 'No se pudo obtener el pedido.' });
@@ -192,18 +161,13 @@ async function getOrder(req, res) {
 }
 
 async function createOrder(req, res) {
-  const user = getAuthenticatedUser(req);
-  if (!user) return res.status(401).json({ error: 'Debés iniciar sesión para crear un pedido.' });
-  if (user.role !== 'cliente') {
-    return res.status(403).json({ error: 'Solo los clientes pueden crear pedidos.' });
-  }
-
-  const clientId = user.id;
+  const clientId = getPositiveInteger(req.body.usuario_id);
   const orderData = getAllowedData(req.body, CREATE_ORDER_FIELDS);
   const orderErrors = validateOrderData(orderData);
   const itemErrors = validateOrderItems(req.body.productos);
   const errors = [...orderErrors, ...itemErrors];
 
+  if (!clientId) errors.push('El id de cliente es obligatorio y debe ser válido.');
   if (errors.length) return res.status(400).json({ error: errors });
 
   try {
@@ -297,8 +261,6 @@ async function updateOrder(req, res) {
   const orderId = getPositiveInteger(req.params.id);
   if (!orderId) return res.status(400).json({ error: 'El id de pedido no es válido.' });
 
-  const user = getAuthenticatedUser(req);
-  if (!user) return res.status(401).json({ error: 'Debés iniciar sesión para actualizar un pedido.' });
 
   const orderData = getAllowedData(req.body, ORDER_FIELDS);
   const errors = validateOrderData(orderData, true);
@@ -315,16 +277,6 @@ async function updateOrder(req, res) {
         lock: transaction.LOCK.UPDATE,
       });
       if (!existingOrder) return null;
-
-      if (!canAccessOrder(user, existingOrder)) {
-        throw new Error('ORDER_ACCESS_DENIED');
-      }
-
-      if (orderData.estado !== undefined &&
-          orderData.estado !== 'cancelado' &&
-          user.role !== 'administrador') {
-        throw new Error('ORDER_STATUS_ACCESS_DENIED');
-      }
 
       if (orderData.estado === 'cancelado') {
         if (!STOCK_RESERVED_STATUSES.includes(existingOrder.estado)) {
@@ -343,14 +295,6 @@ async function updateOrder(req, res) {
     if (!order) return res.status(404).json({ error: 'Pedido no encontrado.' });
     return res.json(order);
   } catch (error) {
-    if (error.message === 'ORDER_ACCESS_DENIED') {
-      return res.status(403).json({ error: 'No tenés permiso para actualizar este pedido.' });
-    }
-
-    if (error.message === 'ORDER_STATUS_ACCESS_DENIED') {
-      return res.status(403).json({ error: 'Solo un administrador puede cambiar el estado a ese valor.' });
-    }
-
     if (error.message === 'ORDER_CANNOT_BE_CANCELLED') {
       return res.status(409).json({ error: 'Solo se pueden cancelar pedidos pendientes o en proceso.' });
     }
@@ -371,9 +315,6 @@ async function deleteOrder(req, res) {
   const orderId = getPositiveInteger(req.params.id);
   if (!orderId) return res.status(400).json({ error: 'El id de pedido no es válido.' });
 
-  const user = getAuthenticatedUser(req);
-  if (!user) return res.status(401).json({ error: 'Debés iniciar sesión para eliminar un pedido.' });
-
   try {
     const deleted = await sequelize.transaction(async (transaction) => {
       const order = await Pedido.findByPk(orderId, {
@@ -381,10 +322,6 @@ async function deleteOrder(req, res) {
         lock: transaction.LOCK.UPDATE,
       });
       if (!order) return false;
-
-      if (!canAccessOrder(user, order)) {
-        throw new Error('ORDER_ACCESS_DENIED');
-      }
 
       if (STOCK_RESERVED_STATUSES.includes(order.estado)) {
         await restoreOrderStock(order.id_pedido, transaction);
@@ -403,10 +340,6 @@ async function deleteOrder(req, res) {
     if (!deleted) return res.status(404).json({ error: 'Pedido no encontrado.' });
     return res.status(204).send();
   } catch (error) {
-    if (error.message === 'ORDER_ACCESS_DENIED') {
-      return res.status(403).json({ error: 'No tenés permiso para eliminar este pedido.' });
-    }
-
     if (error.message === 'ORDER_CANNOT_BE_DELETED') {
       return res.status(409).json({ error: 'No se pueden eliminar pedidos enviados o entregados.' });
     }
