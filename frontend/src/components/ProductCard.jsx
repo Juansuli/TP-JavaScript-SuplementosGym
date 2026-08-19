@@ -1,19 +1,36 @@
+import { useEffect, useState } from 'react'
+
 const priceFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
   currency: 'ARS',
   maximumFractionDigits: 0,
 })
 
-function getStatus(product) {
+function getStatus(product, remainingStock) {
   if (product.estado === 'descontinuado') return 'Descontinuado'
-  if (product.estado === 'agotado' || Number(product.stock) === 0) return 'Agotado'
+  if (product.estado === 'agotado' || remainingStock === 0) return 'Agotado'
   return 'Disponible'
 }
 
-function ProductCard({ product, onSelect, onAddToCart }) {
-  const status = getStatus(product)
+function ProductCard({ product, quantityInCart = 0, onSelect, onAddToCart }) {
+  const [isAdded, setIsAdded] = useState(false)
+  const remainingStock = Math.max(0, Number(product.stock) - quantityInCart)
+  const status = getStatus(product, remainingStock)
   const shortName = product.nombre.split(' ').slice(0, 3).join(' ')
-  const isAvailable = product.estado === 'disponible' && product.stock > 0
+  const isAvailable = product.estado === 'disponible' && remainingStock > 0
+
+  useEffect(() => {
+    if (!isAdded) return undefined
+
+    const timeoutId = window.setTimeout(() => setIsAdded(false), 550)
+    return () => window.clearTimeout(timeoutId)
+  }, [isAdded])
+
+  function handleAddToCart() {
+    if (!isAvailable || isAdded) return
+    onAddToCart(product)
+    setIsAdded(true)
+  }
 
   return (
     <article className="product-card">
@@ -36,7 +53,7 @@ function ProductCard({ product, onSelect, onAddToCart }) {
           {product.descripcion || 'Producto deportivo con ficha técnica disponible.'}
         </p>
         <dl className="product-card-facts">
-          <div><dt>Stock</dt><dd className="tabnum">{product.stock} un.</dd></div>
+          <div><dt>Stock</dt><dd className="tabnum">{remainingStock} un.</dd></div>
           <div><dt>Estado</dt><dd>{status}</dd></div>
         </dl>
         <div className="product-card-actions">
@@ -46,11 +63,11 @@ function ProductCard({ product, onSelect, onAddToCart }) {
           {onAddToCart && (
             <button
               type="button"
-              className="btn btn-accent product-card-add"
-              disabled={!isAvailable}
-              onClick={() => onAddToCart(product)}
+              className={`btn btn-accent product-card-add ${isAdded ? 'is-added' : ''}`}
+              disabled={!isAvailable || isAdded}
+              onClick={handleAddToCart}
             >
-              Agregar
+              {isAdded ? '✓ Agregado' : 'Agregar'}
             </button>
           )}
         </div>

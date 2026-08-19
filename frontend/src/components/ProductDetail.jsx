@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 const priceFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
@@ -6,7 +6,9 @@ const priceFormatter = new Intl.NumberFormat('es-AR', {
   maximumFractionDigits: 0,
 })
 
-function ProductDetail({ product, onClose, onAddToCart }) {
+function ProductDetail({ product, quantityInCart = 0, onClose, onAddToCart }) {
+  const [isAdded, setIsAdded] = useState(false)
+
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === 'Escape') onClose()
@@ -20,8 +22,22 @@ function ProductDetail({ product, onClose, onAddToCart }) {
     }
   }, [onClose])
 
-  const isAvailable = product.estado === 'disponible' && product.stock > 0
+  useEffect(() => {
+    if (!isAdded) return undefined
+
+    const timeoutId = window.setTimeout(() => setIsAdded(false), 550)
+    return () => window.clearTimeout(timeoutId)
+  }, [isAdded])
+
+  const remainingStock = Math.max(0, Number(product.stock) - quantityInCart)
+  const isAvailable = product.estado === 'disponible' && remainingStock > 0
   const shortName = product.nombre.split(' ').slice(0, 3).join(' ')
+
+  function handleAddToCart() {
+    if (!isAvailable || isAdded) return
+    onAddToCart(product)
+    setIsAdded(true)
+  }
 
   return (
     <div className="product-detail-overlay" onMouseDown={onClose}>
@@ -48,7 +64,7 @@ function ProductDetail({ product, onClose, onAddToCart }) {
           <div className="product-info">
             <p className="eyebrow">Producto #{String(product.id_producto).padStart(4, '0')}</p>
             <h2 className="product-title" id="product-detail-title">{product.nombre}</h2>
-            <p className="product-meta">Stock actual · {product.stock} unidades</p>
+            <p className="product-meta">Stock actual · {remainingStock} unidades</p>
             <p className="product-price tabnum">{priceFormatter.format(product.precio)}</p>
             <p className="product-description">{product.descripcion || 'Este producto todavía no tiene una descripción cargada.'}</p>
             <div className="nutrition-block">
@@ -59,13 +75,18 @@ function ProductDetail({ product, onClose, onAddToCart }) {
               <span className={`availability-dot ${isAvailable ? '' : 'is-unavailable'}`} />
               <div>
                 <strong>{isAvailable ? 'Disponible' : 'No disponible'}</strong>
-                <span>{isAvailable ? `${product.stock} unidades en stock` : 'Sin stock para pedidos'}</span>
+                <span>{isAvailable ? `${remainingStock} unidades en stock` : 'Sin stock para pedidos'}</span>
               </div>
             </div>
             <div className="detail-actions">
               {onAddToCart && (
-                <button type="button" className="btn btn-accent product-detail-add" disabled={!isAvailable} onClick={() => onAddToCart(product)}>
-                  Agregar al pedido
+                <button
+                  type="button"
+                  className={`btn btn-accent product-detail-add ${isAdded ? 'is-added' : ''}`}
+                  disabled={!isAvailable || isAdded}
+                  onClick={handleAddToCart}
+                >
+                  {isAdded ? '✓ Agregado' : 'Agregar al pedido'}
                 </button>
               )}
               <button type="button" className="btn btn-ghost detail-done" onClick={onClose}>Volver al catálogo</button>

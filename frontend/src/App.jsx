@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import ProductCatalog from './components/ProductCatalog'
 import AdminProducts from './components/AdminProducts'
 import AuthModal from './components/AuthModal'
 import Cart from './components/Cart'
+import ToastStack from './components/ToastStack'
 import './App.css'
 
 function App() {
@@ -12,10 +13,24 @@ function App() {
   const [cart, setCart] = useState([])
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [toasts, setToasts] = useState([])
+  const nextToastId = useRef(0)
 
   const isAdmin = currentUser?.rol === 'administrador'
   const isClient = currentUser?.rol === 'cliente'
   const cartCount = cart.reduce((sum, item) => sum + item.cantidad, 0)
+  const cartQuantities = Object.fromEntries(
+    cart.map((item) => [item.id_producto, item.cantidad])
+  )
+
+  const dismissToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id))
+  }, [])
+
+  function showToast(message, type = 'success') {
+    nextToastId.current += 1
+    setToasts((prev) => [...prev, { id: nextToastId.current, message, type }])
+  }
 
   function handleAuthSuccess(user) {
     setCurrentUser(user)
@@ -30,6 +45,9 @@ function App() {
   }
 
   function addToCart(product) {
+    const quantityInCart = cartQuantities[product.id_producto] ?? 0
+    if (quantityInCart >= Number(product.stock)) return
+
     setCart((prev) => {
       const existing = prev.find((item) => item.id_producto === product.id_producto)
 
@@ -51,6 +69,7 @@ function App() {
         },
       ]
     })
+    showToast(`Se agregó ${product.nombre} al carrito`)
   }
 
   function updateCartQuantity(id_producto, cantidad) {
@@ -113,7 +132,9 @@ function App() {
                   <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
                 </svg>
                 <span className="nav-action-label">Pedido</span>
-                {cartCount > 0 && <span className="cart-count tabnum">{cartCount}</span>}
+                {cartCount > 0 && (
+                  <span key={cartCount} className="cart-count cart-count-bump tabnum">{cartCount}</span>
+                )}
               </button>
             )}
 
@@ -162,7 +183,10 @@ function App() {
         {view === 'admin' && isAdmin ? (
           <AdminProducts token={currentUser.token} />
         ) : (
-          <ProductCatalog onAddToCart={isClient ? addToCart : undefined} />
+          <ProductCatalog
+            cartQuantities={cartQuantities}
+            onAddToCart={isClient ? addToCart : undefined}
+          />
         )}
       </main>
 
@@ -209,6 +233,8 @@ function App() {
           onClose={() => setIsCartOpen(false)}
         />
       )}
+
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   )
 }

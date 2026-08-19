@@ -3,7 +3,7 @@ import ProductCard from './ProductCard'
 import ProductDetail from './ProductDetail'
 import { getProducts, getProductById } from '../services/product.service'
 
-function ProductCatalog({ onAddToCart }) {
+function ProductCatalog({ cartQuantities, onAddToCart }) {
   const [products, setProducts] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [minPrice, setMinPrice] = useState('')
@@ -103,6 +103,7 @@ function ProductCatalog({ onAddToCart }) {
             <ProductCard
               key={product.id_producto}
               product={product}
+              quantityInCart={cartQuantities[product.id_producto] ?? 0}
               onSelect={handleSelectProduct}
               onAddToCart={onAddToCart}
             />
@@ -113,6 +114,7 @@ function ProductCatalog({ onAddToCart }) {
       {selectedProduct && (
         <ProductDetail
           product={selectedProduct}
+          quantityInCart={cartQuantities[selectedProduct.id_producto] ?? 0}
           onClose={() => setSelectedProduct(null)}
           onAddToCart={onAddToCart}
         />
