@@ -2,6 +2,17 @@ import { useState } from 'react'
 import { createOrder } from '../services/pedido.service'
 
 const PAYMENT_METHODS = ['tarjeta', 'efectivo', 'transferencia']
+const priceFormatter = new Intl.NumberFormat('es-AR', {
+  style: 'currency',
+  currency: 'ARS',
+  maximumFractionDigits: 0,
+})
+
+const paymentLabels = {
+  tarjeta: 'Tarjeta de crédito o débito',
+  transferencia: 'Transferencia bancaria',
+  efectivo: 'Efectivo al retirar en el local',
+}
 
 function Cart({ cart, token, onUpdateQuantity, onRemoveItem, onOrderPlaced, onClose }) {
   const [values, setValues] = useState({
@@ -40,92 +51,122 @@ function Cart({ cart, token, onUpdateQuantity, onRemoveItem, onOrderPlaced, onCl
 
   return (
     <div className="cart-overlay">
-      <div className="cart" role="dialog" aria-modal="true">
-        <button type="button" className="cart-close" onClick={onClose}>
-          Cerrar
-        </button>
-
-        <h2>Carrito</h2>
+      <div className="cart" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+        <div className="cart-toolbar">
+          <span className="detail-kicker">Pedido DOSIS</span>
+          <button type="button" className="cart-close" onClick={onClose} aria-label="Cerrar pedido">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
 
         {confirmedOrder ? (
           <div className="cart-confirmation">
+            <span className="confirmation-mark" aria-hidden="true">✓</span>
+            <p className="eyebrow">Pedido confirmado</p>
+            <h2 id="cart-title">Tu pedido ya está registrado.</h2>
             <p>
-              ¡Pedido #{confirmedOrder.id_pedido} confirmado! Total: ${confirmedOrder.total}
+              Pedido <strong className="tabnum">#{confirmedOrder.id_pedido}</strong>
+              {' · '}Total <strong className="tabnum">{priceFormatter.format(confirmedOrder.total)}</strong>
             </p>
-            <button type="button" onClick={onClose}>
-              Listo
-            </button>
+            <button type="button" className="btn btn-accent" onClick={onClose}>Listo</button>
           </div>
         ) : cart.length === 0 ? (
-          <p className="catalog-message">Tu carrito está vacío.</p>
+          <div className="cart-empty">
+            <p className="eyebrow">Carrito</p>
+            <h2 id="cart-title">Tu pedido está vacío.</h2>
+            <p>Agregá productos desde el catálogo para continuar.</p>
+            <button type="button" className="btn btn-accent" onClick={onClose}>Volver al catálogo</button>
+          </div>
         ) : (
-          <>
-            <ul className="cart-items">
-              {cart.map((item) => (
-                <li key={item.id_producto} className="cart-item">
-                  <span className="cart-item-name">{item.nombre}</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max={item.stock}
-                    value={item.cantidad}
-                    onChange={(event) => onUpdateQuantity(item.id_producto, Number(event.target.value))}
-                  />
-                  <span className="cart-item-subtotal">${(item.precio * item.cantidad).toFixed(2)}</span>
-                  <button type="button" onClick={() => onRemoveItem(item.id_producto)}>
-                    Quitar
-                  </button>
-                </li>
-              ))}
-            </ul>
+          <div className="cart-page">
+            <section className="cart-products">
+              <p className="eyebrow">Carrito</p>
+              <h2 className="page-title" id="cart-title">Tu pedido</h2>
 
-            <p className="cart-total">Total: ${total.toFixed(2)}</p>
+              <ul className="cart-items">
+                {cart.map((item) => (
+                  <li key={item.id_producto} className="cart-item">
+                    <div className="cart-item-thumb" aria-hidden="true"><span>DOSIS</span></div>
+                    <div>
+                      <span className="cart-item-name">{item.nombre}</span>
+                      <span className="cart-item-meta tabnum">{priceFormatter.format(item.precio)} c/u</span>
+                    </div>
+                    <span className="cart-item-subtotal tabnum">{priceFormatter.format(item.precio * item.cantidad)}</span>
+                    <div className="cart-item-actions">
+                      <label className="cart-quantity">
+                        <span>Cantidad</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max={item.stock}
+                          value={item.cantidad}
+                          onChange={(event) => onUpdateQuantity(item.id_producto, Number(event.target.value))}
+                        />
+                      </label>
+                      <button type="button" className="remove-link" onClick={() => onRemoveItem(item.id_producto)}>Quitar</button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-            <form className="cart-checkout-form" onSubmit={handleSubmit}>
-              <label>
-                Nombre de quien recibe
-                <input
-                  type="text"
-                  required
-                  value={values.nombre_receptor}
-                  onChange={handleChange('nombre_receptor')}
-                />
-              </label>
+            <aside className="order-summary">
+              <h2>Resumen</h2>
+              <div className="summary-row">
+                <span>Productos</span>
+                <span className="amount tabnum">{cart.reduce((sum, item) => sum + item.cantidad, 0)}</span>
+              </div>
+              <div className="summary-row">
+                <span>Subtotal</span>
+                <span className="amount tabnum">{priceFormatter.format(total)}</span>
+              </div>
+              <div className="summary-total">
+                <span>Total</span>
+                <span className="amount tabnum">{priceFormatter.format(total)}</span>
+              </div>
 
-              <label>
-                Dirección de entrega
-                <input
-                  type="text"
-                  required
-                  value={values.direccion_entrega}
-                  onChange={handleChange('direccion_entrega')}
-                />
-              </label>
+              <form className="cart-checkout-form" onSubmit={handleSubmit}>
+                <label>
+                  Nombre de quien recibe
+                  <input type="text" required placeholder="Nombre y apellido" value={values.nombre_receptor} onChange={handleChange('nombre_receptor')} />
+                </label>
 
-              <label>
-                Método de pago
-                <select value={values.metodo_pago} onChange={handleChange('metodo_pago')}>
+                <div className="option-group">
+                  <h3>Método de pago</h3>
                   {PAYMENT_METHODS.map((method) => (
-                    <option key={method} value={method}>
-                      {method}
-                    </option>
+                    <label className="option-card" key={method}>
+                      <input
+                        type="radio"
+                        name="metodo_pago"
+                        value={method}
+                        checked={values.metodo_pago === method}
+                        onChange={handleChange('metodo_pago')}
+                      />
+                      <span>{paymentLabels[method]}</span>
+                    </label>
                   ))}
-                </select>
-              </label>
+                </div>
 
-              {errors.length > 0 && (
-                <ul className="cart-errors">
-                  {errors.map((message) => (
-                    <li key={message}>{message}</li>
-                  ))}
-                </ul>
-              )}
+                <label>
+                  Dirección de entrega
+                  <input type="text" required placeholder="Calle, número, ciudad" value={values.direccion_entrega} onChange={handleChange('direccion_entrega')} />
+                </label>
 
-              <button type="submit" disabled={isSaving}>
-                {isSaving ? 'Confirmando...' : 'Confirmar pedido'}
-              </button>
-            </form>
-          </>
+                {errors.length > 0 && (
+                  <ul className="cart-errors">
+                    {errors.map((message) => <li key={message}>{message}</li>)}
+                  </ul>
+                )}
+
+                <button className="btn btn-accent" type="submit" disabled={isSaving}>
+                  {isSaving ? 'Confirmando...' : 'Confirmar pedido'}
+                </button>
+              </form>
+            </aside>
+          </div>
         )}
       </div>
     </div>

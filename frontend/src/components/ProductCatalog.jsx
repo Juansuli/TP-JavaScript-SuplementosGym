@@ -25,7 +25,6 @@ function ProductCatalog({ onAddToCart }) {
     }
   }
 
-  // Load the full catalog once, when the page first mounts.
   useEffect(() => {
     loadProducts()
   }, [])
@@ -33,6 +32,12 @@ function ProductCatalog({ onAddToCart }) {
   function handleFilterSubmit(event) {
     event.preventDefault()
     loadProducts({ minPrice, maxPrice })
+  }
+
+  function handleClearFilters() {
+    setMinPrice('')
+    setMaxPrice('')
+    loadProducts()
   }
 
   async function handleSelectProduct(id) {
@@ -47,57 +52,63 @@ function ProductCatalog({ onAddToCart }) {
   }
 
   return (
-    <>
-      <header className="catalog-header">
-        <h1>Catálogo de productos</h1>
+    <section className="catalog-page wrap" aria-labelledby="catalog-title">
+      <div className="catalog-heading">
+        <div>
+          <p className="eyebrow">Catálogo DOSIS</p>
+          <h1 id="catalog-title">Elegí lo que suma a tu entrenamiento.</h1>
+          <p className="catalog-lede">Productos con precio, disponibilidad y ficha nutricional sin vueltas.</p>
+        </div>
 
         <form className="price-filter" onSubmit={handleFilterSubmit}>
-          <label>
-            Precio mínimo
-            <input
-              type="number"
-              min="0"
-              value={minPrice}
-              onChange={(event) => setMinPrice(event.target.value)}
-            />
-          </label>
-          <label>
-            Precio máximo
-            <input
-              type="number"
-              min="0"
-              value={maxPrice}
-              onChange={(event) => setMaxPrice(event.target.value)}
-            />
-          </label>
-          <button type="submit">Filtrar</button>
-        </form>
-      </header>
-
-      <main className="catalog-main">
-        {isLoading && <p className="catalog-message">Cargando productos...</p>}
-
-        {!isLoading && error && (
-          <p className="catalog-message catalog-error">{error}</p>
-        )}
-
-        {!isLoading && !error && products.length === 0 && (
-          <p className="catalog-message">No hay productos para mostrar</p>
-        )}
-
-        {!isLoading && !error && products.length > 0 && (
-          <div className="product-grid">
-            {products.map((product) => (
-              <ProductCard
-                key={product.id_producto}
-                product={product}
-                onSelect={handleSelectProduct}
-                onAddToCart={onAddToCart}
-              />
-            ))}
+          <div className="filter-title">
+            <span>Filtrar por precio</span>
+            {(minPrice || maxPrice) && (
+              <button type="button" onClick={handleClearFilters}>Limpiar</button>
+            )}
           </div>
-        )}
-      </main>
+          <div className="filter-fields">
+            <label>
+              Desde
+              <span className="price-input">
+                <span>$</span>
+                <input type="number" min="0" placeholder="0" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} />
+              </span>
+            </label>
+            <label>
+              Hasta
+              <span className="price-input">
+                <span>$</span>
+                <input type="number" min="0" placeholder="Sin límite" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} />
+              </span>
+            </label>
+            <button className="btn btn-accent filter-submit" type="submit">Aplicar</button>
+          </div>
+        </form>
+      </div>
+
+      <div className="catalog-results-head">
+        <h2>Productos</h2>
+        {!isLoading && !error && <span className="result-count tabnum">{products.length} resultados</span>}
+      </div>
+
+      {isLoading && <p className="catalog-message">Cargando productos...</p>}
+      {!isLoading && error && <p className="catalog-message catalog-error">{error}</p>}
+      {!isLoading && !error && products.length === 0 && (
+        <p className="catalog-message">No hay productos para mostrar con ese rango.</p>
+      )}
+      {!isLoading && !error && products.length > 0 && (
+        <div className="product-grid">
+          {products.map((product) => (
+            <ProductCard
+              key={product.id_producto}
+              product={product}
+              onSelect={handleSelectProduct}
+              onAddToCart={onAddToCart}
+            />
+          ))}
+        </div>
+      )}
 
       {selectedProduct && (
         <ProductDetail
@@ -106,7 +117,7 @@ function ProductCatalog({ onAddToCart }) {
           onAddToCart={onAddToCart}
         />
       )}
-    </>
+    </section>
   )
 }
 
