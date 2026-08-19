@@ -9,12 +9,15 @@ function parseErrorMessage(body) {
   return Array.isArray(body.error) ? body.error.join('\n') : body.error
 }
 
-async function createOrder(data) {
+async function createOrder(data, token) {
   let response
   try {
     response = await fetch(API_BASE_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(data),
     })
   } catch {

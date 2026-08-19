@@ -160,7 +160,7 @@ function App() {
 
       <main className="app-content">
         {view === 'admin' && isAdmin ? (
-          <AdminProducts />
+          <AdminProducts token={currentUser.token} />
         ) : (
           <ProductCatalog onAddToCart={isClient ? addToCart : undefined} />
         )}
@@ -202,7 +202,7 @@ function App() {
       {isCartOpen && (
         <Cart
           cart={cart}
-          usuarioId={currentUser?.id_usuario}
+          token={currentUser?.token}
           onUpdateQuantity={updateCartQuantity}
           onRemoveItem={removeFromCart}
           onOrderPlaced={clearCart}

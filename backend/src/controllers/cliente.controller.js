@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const sequelize = require('../config/db');
 const Usuario = require('../models/usuario.model');
 const Cliente = require('../models/cliente.model');
@@ -18,6 +19,14 @@ const CLIENT_FIELDS = [
   'direccion_entrega',
   'descuento_categoria',
 ];
+
+function signToken(user) {
+  return jwt.sign(
+    { id_usuario: user.id_usuario, rol: user.rol },
+    process.env.JWT_SECRET,
+    { algorithm: 'HS256', expiresIn: process.env.JWT_EXPIRES_IN || '2h' }
+  );
+}
 
 function getClientId(value) {
   const id = Number(value);
@@ -119,6 +128,10 @@ async function getClient(req, res) {
   const id = getClientId(req.params.id);
   if (!id) return res.status(400).json({ error: 'El id de cliente no es válido.' });
 
+  if (req.user.rol !== 'administrador' && req.user.id_usuario !== id) {
+    return res.status(404).json({ error: 'Cliente no encontrado.' });
+  }
+
   try {
     const client = await getClientWithUser(id);
     if (!client) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -148,7 +161,9 @@ async function login(req, res) {
 
     const userData = user.toJSON();
     delete userData.contraseña;
-    return res.json(userData);
+
+    const token = signToken(user);
+    return res.json({ ...userData, token });
   } catch (error) {
     return res.status(500).json({ error: 'No se pudo iniciar sesión.' });
   }
@@ -185,7 +200,7 @@ async function createClient(req, res) {
         { transaction }
       );
 
-      return buildClientResponse(newClient, user);
+      return { ...buildClientResponse(newClient, user), token: signToken(user) };
     });
 
     return res.status(201).json(client);
@@ -201,6 +216,10 @@ async function createClient(req, res) {
 async function updateClient(req, res) {
   const id = getClientId(req.params.id);
   if (!id) return res.status(400).json({ error: 'El id de cliente no es válido.' });
+
+  if (req.user.rol !== 'administrador' && req.user.id_usuario !== id) {
+    return res.status(404).json({ error: 'Cliente no encontrado.' });
+  }
 
   const userData = getAllowedData(req.body, USER_FIELDS);
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
@@ -245,6 +264,10 @@ async function deleteClient(req, res) {
   const id = getClientId(req.params.id);
   if (!id) return res.status(400).json({ error: 'El id de cliente no es válido.' });
 
+  if (req.user.rol !== 'administrador' && req.user.id_usuario !== id) {
+    return res.status(404).json({ error: 'Cliente no encontrado.' });
+  }
+
   try {
     const orderCount = await Pedido.count({ where: { usuario_id: id } });
     if (orderCount > 0) {
@@ -276,4 +299,5 @@ module.exports = {
   createClient,
   updateClient,
   deleteClient,
+  signToken,
 };
