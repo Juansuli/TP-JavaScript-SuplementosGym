@@ -126,7 +126,7 @@ function App() {
       {isCartOpen && (
         <Cart
           cart={cart}
-          usuarioId={currentUser?.id_usuario}
+          token={currentUser?.token}
           onUpdateQuantity={updateCartQuantity}
           onRemoveItem={removeFromCart}
           onOrderPlaced={clearCart}

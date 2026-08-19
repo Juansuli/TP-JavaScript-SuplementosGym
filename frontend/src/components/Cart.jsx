@@ -3,7 +3,7 @@ import { createOrder } from '../services/pedido.service'
 
 const PAYMENT_METHODS = ['tarjeta', 'efectivo', 'transferencia']
 
-function Cart({ cart, usuarioId, onUpdateQuantity, onRemoveItem, onOrderPlaced, onClose }) {
+function Cart({ cart, token, onUpdateQuantity, onRemoveItem, onOrderPlaced, onClose }) {
   const [values, setValues] = useState({
     nombre_receptor: '',
     direccion_entrega: '',
@@ -26,10 +26,9 @@ function Cart({ cart, usuarioId, onUpdateQuantity, onRemoveItem, onOrderPlaced, 
 
     try {
       const order = await createOrder({
-        usuario_id: usuarioId,
         ...values,
         productos: cart.map((item) => ({ id_producto: item.id_producto, cantidad: item.cantidad })),
-      })
+      }, token)
       setConfirmedOrder(order)
       onOrderPlaced()
     } catch (err) {

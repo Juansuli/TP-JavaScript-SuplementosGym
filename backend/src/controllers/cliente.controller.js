@@ -128,6 +128,10 @@ async function getClient(req, res) {
   const id = getClientId(req.params.id);
   if (!id) return res.status(400).json({ error: 'El id de cliente no es válido.' });
 
+  if (req.user.rol !== 'administrador' && req.user.id_usuario !== id) {
+    return res.status(404).json({ error: 'Cliente no encontrado.' });
+  }
+
   try {
     const client = await getClientWithUser(id);
     if (!client) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -213,6 +217,10 @@ async function updateClient(req, res) {
   const id = getClientId(req.params.id);
   if (!id) return res.status(400).json({ error: 'El id de cliente no es válido.' });
 
+  if (req.user.rol !== 'administrador' && req.user.id_usuario !== id) {
+    return res.status(404).json({ error: 'Cliente no encontrado.' });
+  }
+
   const userData = getAllowedData(req.body, USER_FIELDS);
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
   const clientErrors = validateClientData(clientData);
@@ -255,6 +263,10 @@ async function updateClient(req, res) {
 async function deleteClient(req, res) {
   const id = getClientId(req.params.id);
   if (!id) return res.status(400).json({ error: 'El id de cliente no es válido.' });
+
+  if (req.user.rol !== 'administrador' && req.user.id_usuario !== id) {
+    return res.status(404).json({ error: 'Cliente no encontrado.' });
+  }
 
   try {
     const orderCount = await Pedido.count({ where: { usuario_id: id } });
