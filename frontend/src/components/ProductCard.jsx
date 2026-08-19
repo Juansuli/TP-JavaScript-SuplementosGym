@@ -38,7 +38,6 @@ function ProductCard({ product, onSelect, onAddToCart }) {
         <dl className="product-card-facts">
           <div><dt>Stock</dt><dd className="tabnum">{product.stock} un.</dd></div>
           <div><dt>Estado</dt><dd>{status}</dd></div>
-          <div><dt>Ficha</dt><dd>{product.info_nutricional ? 'Disponible' : '—'}</dd></div>
         </dl>
         <div className="product-card-actions">
           <button type="button" className="btn btn-outline product-card-select" onClick={() => onSelect(product.id_producto)}>
