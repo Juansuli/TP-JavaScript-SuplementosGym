@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const Producto = require('../models/producto.model');
 const PedidoProducto = require('../models/pedido_producto.model');
+const { getProductStatus } = require('../utils/product-status');
 
 const EDITABLE_FIELDS = [
   'nombre',
@@ -94,7 +95,10 @@ async function createProduct(req, res) {
   if (errors.length) return res.status(400).json({ error: errors });
 
   try {
-    const product = await Producto.create(getEditableData(req.body));
+    const data = getEditableData(req.body);
+    data.estado = getProductStatus(data.stock);
+
+    const product = await Producto.create(data);
     return res.status(201).json(product);
   } catch (error) {
     return res.status(500).json({ error: 'No se pudo crear el producto.' });
@@ -116,6 +120,10 @@ async function updateProduct(req, res) {
   try {
     const product = await Producto.findByPk(id);
     if (!product) return res.status(404).json({ error: 'Producto no encontrado.' });
+
+    if (data.stock !== undefined) {
+      data.estado = getProductStatus(data.stock, product.estado);
+    }
 
     await product.update(data);
     return res.json(product);
