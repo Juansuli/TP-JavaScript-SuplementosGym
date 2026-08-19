@@ -8,7 +8,7 @@ import {
   deleteProduct,
 } from '../services/product.service'
 
-function AdminProducts() {
+function AdminProducts({ token }) {
   const [products, setProducts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -61,13 +61,13 @@ function AdminProducts() {
     }
 
     if (editingProduct) {
-      const updated = await updateProduct(editingProduct.id_producto, payload)
+      const updated = await updateProduct(editingProduct.id_producto, payload, token)
       setProducts((prev) =>
         prev.map((product) => (product.id_producto === updated.id_producto ? updated : product))
       )
       setNotice(`"${updated.nombre}" se actualizó correctamente.`)
     } else {
-      const created = await createProduct(payload)
+      const created = await createProduct(payload, token)
       setProducts((prev) => [...prev, created])
       setNotice(`"${created.nombre}" se creó correctamente.`)
     }
@@ -92,7 +92,7 @@ function AdminProducts() {
     setActionError(null)
 
     try {
-      const result = await deleteProduct(product.id_producto)
+      const result = await deleteProduct(product.id_producto, token)
 
       if (result) {
         // El backend no lo borró: tiene pedidos asociados y lo marcó

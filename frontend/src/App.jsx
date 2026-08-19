@@ -114,7 +114,7 @@ function App() {
       </nav>
 
       {view === 'admin' && isAdmin ? (
-        <AdminProducts />
+        <AdminProducts token={currentUser.token} />
       ) : (
         <ProductCatalog onAddToCart={isClient ? addToCart : undefined} />
       )}

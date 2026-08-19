@@ -53,12 +53,15 @@ async function getProductById(id) {
   return response.json()
 }
 
-async function createProduct(data) {
+async function createProduct(data, token) {
   let response
   try {
     response = await fetch(API_BASE_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(data),
     })
   } catch {
@@ -73,12 +76,15 @@ async function createProduct(data) {
   return body
 }
 
-async function updateProduct(id, data) {
+async function updateProduct(id, data, token) {
   let response
   try {
     response = await fetch(`${API_BASE_URL}/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(data),
     })
   } catch {
@@ -93,10 +99,13 @@ async function updateProduct(id, data) {
   return body
 }
 
-async function deleteProduct(id) {
+async function deleteProduct(id, token) {
   let response
   try {
-    response = await fetch(`${API_BASE_URL}/${id}`, { method: 'DELETE' })
+    response = await fetch(`${API_BASE_URL}/${id}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
   } catch {
     throw new Error('No se pudo conectar con el servidor.')
   }
