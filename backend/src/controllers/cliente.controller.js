@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const sequelize = require('../config/db');
 const Usuario = require('../models/usuario.model');
 const Cliente = require('../models/cliente.model');
@@ -18,6 +19,14 @@ const CLIENT_FIELDS = [
   'direccion_entrega',
   'descuento_categoria',
 ];
+
+function signToken(user) {
+  return jwt.sign(
+    { id_usuario: user.id_usuario, rol: user.rol },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '2h' }
+  );
+}
 
 function getClientId(value) {
   const id = Number(value);
@@ -148,7 +157,9 @@ async function login(req, res) {
 
     const userData = user.toJSON();
     delete userData.contraseña;
-    return res.json(userData);
+
+    const token = signToken(user);
+    return res.json({ ...userData, token });
   } catch (error) {
     return res.status(500).json({ error: 'No se pudo iniciar sesión.' });
   }
