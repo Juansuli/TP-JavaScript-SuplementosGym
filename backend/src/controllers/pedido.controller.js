@@ -158,6 +158,11 @@ async function getOrder(req, res) {
   try {
     const order = await Pedido.findByPk(orderId);
     if (!order) return res.status(404).json({ error: 'Pedido no encontrado.' });
+
+    if (req.user.rol !== 'administrador' && order.usuario_id !== req.user.id_usuario) {
+      return res.status(404).json({ error: 'Pedido no encontrado.' });
+    }
+
     return res.json(await buildOrderResponse(order));
   } catch (error) {
     return res.status(500).json({ error: 'No se pudo obtener el pedido.' });
@@ -165,13 +170,12 @@ async function getOrder(req, res) {
 }
 
 async function createOrder(req, res) {
-  const clientId = getPositiveInteger(req.body.usuario_id);
+  const clientId = req.user.id_usuario;
   const orderData = getAllowedData(req.body, CREATE_ORDER_FIELDS);
   const orderErrors = validateOrderData(orderData);
   const itemErrors = validateOrderItems(req.body.productos);
   const errors = [...orderErrors, ...itemErrors];
 
-  if (!clientId) errors.push('El id de cliente es obligatorio y debe ser válido.');
   if (errors.length) return res.status(400).json({ error: errors });
 
   try {
