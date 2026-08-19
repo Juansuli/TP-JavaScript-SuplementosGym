@@ -1,4 +1,6 @@
-function ProductDetail({ product, onClose }) {
+function ProductDetail({ product, onClose, onAddToCart }) {
+  const isAvailable = product.estado === 'disponible' && product.stock > 0
+
   return (
     <div className="product-detail-overlay">
       <div className="product-detail" role="dialog" aria-modal="true">
@@ -16,6 +18,17 @@ function ProductDetail({ product, onClose }) {
             <h3>Información nutricional</h3>
             <p>{product.info_nutricional}</p>
           </>
+        )}
+
+        {onAddToCart && (
+          <button
+            type="button"
+            className="product-detail-add"
+            disabled={!isAvailable}
+            onClick={() => onAddToCart(product)}
+          >
+            Agregar al carrito
+          </button>
         )}
       </div>
     </div>
