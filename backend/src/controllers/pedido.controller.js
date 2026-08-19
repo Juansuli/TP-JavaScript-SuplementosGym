@@ -4,6 +4,7 @@ const Pedido = require('../models/pedido.model');
 const PedidoProducto = require('../models/pedido_producto.model');
 const Cliente = require('../models/cliente.model');
 const Producto = require('../models/producto.model');
+const Usuario = require('../models/usuario.model');
 
 const ORDER_STATUSES = ['pendiente', 'procesando', 'enviado', 'entregado', 'cancelado'];
 const STOCK_RESERVED_STATUSES = ['pendiente', 'procesando'];
@@ -177,6 +178,11 @@ async function createOrder(req, res) {
         throw new Error('CLIENT_NOT_FOUND');
       }
 
+      const user = await Usuario.findByPk(clientId, { transaction });
+      if (!user || user.rol !== 'cliente') {
+        throw new Error('CLIENT_ROLE_INVALID');
+      }
+
       const orderItems = [];
 
       for (const item of req.body.productos) {
@@ -243,6 +249,10 @@ async function createOrder(req, res) {
   } catch (error) {
     if (error.message === 'CLIENT_NOT_FOUND') {
       return res.status(404).json({ error: 'Cliente no encontrado.' });
+    }
+
+    if (error.message === 'CLIENT_ROLE_INVALID') {
+      return res.status(403).json({ error: 'Solo los clientes pueden crear pedidos.' });
     }
 
     if (error.message === 'PRODUCT_NOT_AVAILABLE') {
