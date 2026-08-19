@@ -18,6 +18,21 @@ if (process.env.JWT_EXPIRES_IN && /^\d+$/.test(process.env.JWT_EXPIRES_IN)) {
   process.exit(1);
 }
 
+// Complementa el chequeo de arriba: la regex atrapa el caso que NO tira
+// excepción (número sin unidad, se toma como milisegundos en silencio).
+// Este chequeo reutiliza la función real que arma los tokens en
+// producción para atrapar cualquier otro valor que SÍ tire excepción
+// (typos, formatos que la librería no puede parsear), en vez de
+// reimplementar a mano qué hace signToken.
+const { signToken } = require('./src/controllers/cliente.controller');
+
+try {
+  signToken({ id_usuario: 0, rol: 'test' });
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
+
 const app = require('./src/app');
 const sequelize = require('./src/config/db');
 

@@ -200,7 +200,7 @@ async function createClient(req, res) {
         { transaction }
       );
 
-      return buildClientResponse(newClient, user);
+      return { ...buildClientResponse(newClient, user), token: signToken(user) };
     });
 
     return res.status(201).json(client);
@@ -299,4 +299,5 @@ module.exports = {
   createClient,
   updateClient,
   deleteClient,
+  signToken,
 };
