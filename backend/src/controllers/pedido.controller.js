@@ -4,8 +4,10 @@ const Pedido = require('../models/pedido.model');
 const PedidoProducto = require('../models/pedido_producto.model');
 const Cliente = require('../models/cliente.model');
 const Producto = require('../models/producto.model');
+const Usuario = require('../models/usuario.model');
 
 const ORDER_STATUSES = ['pendiente', 'procesando', 'enviado', 'entregado', 'cancelado'];
+const STOCK_RESERVED_STATUSES = ['pendiente', 'procesando'];
 const CREATE_ORDER_FIELDS = ['nombre_receptor', 'direccion_entrega', 'metodo_pago'];
 const ORDER_FIELDS = ['nombre_receptor', 'direccion_entrega', 'metodo_pago', 'estado'];
 
@@ -102,9 +104,34 @@ async function buildOrderResponse(order, transaction) {
   };
 }
 
+async function restoreOrderStock(orderId, transaction) {
+  const orderItems = await PedidoProducto.findAll({
+    where: { id_pedido: orderId },
+    transaction,
+  });
+
+  for (const item of orderItems) {
+    const product = await Producto.findByPk(item.id_producto, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!product) {
+      throw new Error('PRODUCT_NOT_FOUND');
+    }
+
+    await product.update(
+      {
+        stock: product.stock + item.cantidad,
+        estado: product.estado === 'descontinuado' ? 'descontinuado' : 'disponible',
+      },
+      { transaction }
+    );
+  }
+}
+
 async function listOrders(req, res) {
   const { estado } = req.query;
-
   if (estado !== undefined && !ORDER_STATUSES.includes(estado)) {
     return res.status(400).json({ error: 'El estado del pedido no es válido.' });
   }
@@ -128,7 +155,6 @@ async function getOrder(req, res) {
   try {
     const order = await Pedido.findByPk(orderId);
     if (!order) return res.status(404).json({ error: 'Pedido no encontrado.' });
-
     return res.json(await buildOrderResponse(order));
   } catch (error) {
     return res.status(500).json({ error: 'No se pudo obtener el pedido.' });
@@ -150,6 +176,11 @@ async function createOrder(req, res) {
       const client = await Cliente.findByPk(clientId, { transaction });
       if (!client) {
         throw new Error('CLIENT_NOT_FOUND');
+      }
+
+      const user = await Usuario.findByPk(clientId, { transaction });
+      if (!user || user.rol !== 'cliente') {
+        throw new Error('CLIENT_ROLE_INVALID');
       }
 
       const orderItems = [];
@@ -220,6 +251,10 @@ async function createOrder(req, res) {
       return res.status(404).json({ error: 'Cliente no encontrado.' });
     }
 
+    if (error.message === 'CLIENT_ROLE_INVALID') {
+      return res.status(403).json({ error: 'Solo los clientes pueden crear pedidos.' });
+    }
+
     if (error.message === 'PRODUCT_NOT_AVAILABLE') {
       return res.status(409).json({ error: `El producto ${error.productId} no está disponible.` });
     }
@@ -236,6 +271,7 @@ async function updateOrder(req, res) {
   const orderId = getPositiveInteger(req.params.id);
   if (!orderId) return res.status(400).json({ error: 'El id de pedido no es válido.' });
 
+
   const orderData = getAllowedData(req.body, ORDER_FIELDS);
   const errors = validateOrderData(orderData, true);
 
@@ -245,12 +281,42 @@ async function updateOrder(req, res) {
   }
 
   try {
-    const order = await Pedido.findByPk(orderId);
-    if (!order) return res.status(404).json({ error: 'Pedido no encontrado.' });
+    const order = await sequelize.transaction(async (transaction) => {
+      const existingOrder = await Pedido.findByPk(orderId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!existingOrder) return null;
 
-    await order.update(orderData);
-    return res.json(await buildOrderResponse(order));
+      if (orderData.estado === 'cancelado') {
+        if (!STOCK_RESERVED_STATUSES.includes(existingOrder.estado)) {
+          throw new Error('ORDER_CANNOT_BE_CANCELLED');
+        }
+
+        await restoreOrderStock(existingOrder.id_pedido, transaction);
+      } else if (existingOrder.estado === 'cancelado' && orderData.estado !== undefined) {
+        throw new Error('CANCELLED_ORDER_CANNOT_BE_REACTIVATED');
+      }
+
+      await existingOrder.update(orderData, { transaction });
+      return buildOrderResponse(existingOrder, transaction);
+    });
+
+    if (!order) return res.status(404).json({ error: 'Pedido no encontrado.' });
+    return res.json(order);
   } catch (error) {
+    if (error.message === 'ORDER_CANNOT_BE_CANCELLED') {
+      return res.status(409).json({ error: 'Solo se pueden cancelar pedidos pendientes o en proceso.' });
+    }
+
+    if (error.message === 'CANCELLED_ORDER_CANNOT_BE_REACTIVATED') {
+      return res.status(409).json({ error: 'Un pedido cancelado no puede volver a estar activo.' });
+    }
+
+    if (error.message === 'PRODUCT_NOT_FOUND') {
+      return res.status(409).json({ error: 'No se pudo devolver el stock porque falta un producto asociado.' });
+    }
+
     return res.status(500).json({ error: 'No se pudo actualizar el pedido.' });
   }
 }
@@ -261,8 +327,17 @@ async function deleteOrder(req, res) {
 
   try {
     const deleted = await sequelize.transaction(async (transaction) => {
-      const order = await Pedido.findByPk(orderId, { transaction });
+      const order = await Pedido.findByPk(orderId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
       if (!order) return false;
+
+      if (STOCK_RESERVED_STATUSES.includes(order.estado)) {
+        await restoreOrderStock(order.id_pedido, transaction);
+      } else if (order.estado !== 'cancelado') {
+        throw new Error('ORDER_CANNOT_BE_DELETED');
+      }
 
       await PedidoProducto.destroy({
         where: { id_pedido: orderId },
@@ -275,6 +350,14 @@ async function deleteOrder(req, res) {
     if (!deleted) return res.status(404).json({ error: 'Pedido no encontrado.' });
     return res.status(204).send();
   } catch (error) {
+    if (error.message === 'ORDER_CANNOT_BE_DELETED') {
+      return res.status(409).json({ error: 'No se pueden eliminar pedidos enviados o entregados.' });
+    }
+
+    if (error.message === 'PRODUCT_NOT_FOUND') {
+      return res.status(409).json({ error: 'No se pudo devolver el stock porque falta un producto asociado.' });
+    }
+
     return res.status(500).json({ error: 'No se pudo eliminar el pedido.' });
   }
 }
