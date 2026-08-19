@@ -41,7 +41,7 @@ function ProductDetail({ product, quantityInCart = 0, onClose, onAddToCart }) {
 
   return (
     <div className="product-detail-overlay" onMouseDown={onClose}>
-      <article className="product-detail" role="dialog" aria-modal="true" aria-labelledby="product-detail-title" onMouseDown={(event) => event.stopPropagation()}>
+      <article className={`product-detail product-state-${product.estado ?? 'disponible'}`} role="dialog" aria-modal="true" aria-labelledby="product-detail-title" onMouseDown={(event) => event.stopPropagation()}>
         <div className="detail-toolbar">
           <span className="detail-kicker">Ficha de producto</span>
           <button type="button" className="product-detail-close" onClick={onClose} aria-label="Cerrar detalle">

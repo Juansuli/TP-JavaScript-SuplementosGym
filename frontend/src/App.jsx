@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import ProductCatalog from './components/ProductCatalog'
 import AdminProducts from './components/AdminProducts'
+import AdminOrders from './components/AdminOrders'
 import AuthModal from './components/AuthModal'
 import Cart from './components/Cart'
 import ToastStack from './components/ToastStack'
@@ -113,13 +114,22 @@ function App() {
               Catálogo
             </button>
             {isAdmin && (
-              <button
-                type="button"
-                className={view === 'admin' ? 'is-active' : ''}
-                onClick={() => changeView('admin')}
-              >
-                Administrar productos
-              </button>
+              <>
+                <button
+                  type="button"
+                  className={view === 'admin' ? 'is-active' : ''}
+                  onClick={() => changeView('admin')}
+                >
+                  Administrar productos
+                </button>
+                <button
+                  type="button"
+                  className={view === 'admin-orders' ? 'is-active' : ''}
+                  onClick={() => changeView('admin-orders')}
+                >
+                  Administrar pedidos
+                </button>
+              </>
             )}
           </nav>
 
@@ -169,7 +179,10 @@ function App() {
         <nav className={`mobile-nav wrap ${isMenuOpen ? 'is-open' : ''}`} id="mobileNav">
           <button type="button" onClick={() => changeView('catalogo')}>Catálogo</button>
           {isAdmin && (
-            <button type="button" onClick={() => changeView('admin')}>Administrar productos</button>
+            <>
+              <button type="button" onClick={() => changeView('admin')}>Administrar productos</button>
+              <button type="button" onClick={() => changeView('admin-orders')}>Administrar pedidos</button>
+            </>
           )}
           {isClient && (
             <button type="button" onClick={() => { setIsCartOpen(true); setIsMenuOpen(false) }}>
@@ -180,7 +193,9 @@ function App() {
       </header>
 
       <main className="app-content">
-        {view === 'admin' && isAdmin ? (
+        {view === 'admin-orders' && isAdmin ? (
+          <AdminOrders token={currentUser.token} />
+        ) : view === 'admin' && isAdmin ? (
           <AdminProducts token={currentUser.token} />
         ) : (
           <ProductCatalog

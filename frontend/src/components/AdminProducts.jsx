@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ProductForm from './ProductForm'
 import ConfirmModal from './ConfirmModal'
 import {
@@ -17,6 +17,19 @@ function AdminProducts({ token }) {
   const [editingProduct, setEditingProduct] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [productPendingDelete, setProductPendingDelete] = useState(null)
+  const [nameFilter, setNameFilter] = useState('')
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const [isBulkDeletePending, setIsBulkDeletePending] = useState(false)
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const selectAllRef = useRef(null)
+
+  const normalizedFilter = nameFilter.trim().toLocaleLowerCase('es')
+  const filteredProducts = products.filter((product) => (
+    product.nombre.toLocaleLowerCase('es').includes(normalizedFilter)
+  ))
+  const visibleIds = filteredProducts.map((product) => product.id_producto)
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id))
+  const someVisibleSelected = visibleIds.some((id) => selectedIds.has(id))
 
   async function loadProducts() {
     setIsLoading(true)
@@ -35,6 +48,12 @@ function AdminProducts({ token }) {
   useEffect(() => {
     loadProducts()
   }, [])
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someVisibleSelected && !allVisibleSelected
+    }
+  }, [allVisibleSelected, someVisibleSelected])
 
   function openCreateForm() {
     setActionError(null)
@@ -105,12 +124,87 @@ function AdminProducts({ token }) {
         setProducts((prev) => prev.filter((item) => item.id_producto !== product.id_producto))
         setNotice(`"${product.nombre}" se eliminó correctamente.`)
       }
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(product.id_producto)
+        return next
+      })
     } catch (err) {
       // A propósito no usa `error`: ese estado esconde la tabla entera
       // (ver más abajo), y un borrado fallido no debería tapar la lista
       // de productos que ya se había cargado bien.
       setActionError(err.message)
     }
+  }
+
+  function toggleProductSelection(productId) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(productId)) next.delete(productId)
+      else next.add(productId)
+      return next
+    })
+  }
+
+  function toggleAllVisible() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (allVisibleSelected) visibleIds.forEach((id) => next.delete(id))
+      else visibleIds.forEach((id) => next.add(id))
+      return next
+    })
+  }
+
+  async function confirmBulkDelete() {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+
+    setIsBulkDeletePending(false)
+    setIsBulkDeleting(true)
+    setNotice(null)
+    setActionError(null)
+
+    const results = await Promise.allSettled(ids.map((id) => deleteProduct(id, token)))
+    const deletedIds = new Set()
+    const discontinuedProducts = new Map()
+    const failedIds = new Set()
+    const failureMessages = new Set()
+
+    results.forEach((result, index) => {
+      const id = ids[index]
+      if (result.status === 'rejected') {
+        failedIds.add(id)
+        failureMessages.add(result.reason.message)
+      } else if (result.value) {
+        discontinuedProducts.set(id, result.value)
+      } else {
+        deletedIds.add(id)
+      }
+    })
+
+    setProducts((prev) => prev
+      .filter((product) => !deletedIds.has(product.id_producto))
+      .map((product) => discontinuedProducts.get(product.id_producto) ?? product))
+    setSelectedIds(failedIds)
+
+    const summary = []
+    if (deletedIds.size > 0) {
+      summary.push(deletedIds.size === 1 ? '1 eliminado' : `${deletedIds.size} eliminados`)
+    }
+    if (discontinuedProducts.size > 0) {
+      summary.push(discontinuedProducts.size === 1
+        ? '1 marcado como descontinuado'
+        : `${discontinuedProducts.size} marcados como descontinuados`)
+    }
+    if (summary.length > 0) setNotice(`${summary.join(', ')}.`)
+    if (failedIds.size > 0) {
+      const failedSummary = failedIds.size === 1
+        ? '1 producto no pudo procesarse.'
+        : `${failedIds.size} productos no pudieron procesarse.`
+      setActionError(`${failedSummary} ${[...failureMessages].join(' ')}`)
+    }
+
+    setIsBulkDeleting(false)
   }
 
   return (
@@ -132,35 +226,80 @@ function AdminProducts({ token }) {
       )}
 
       {!isLoading && !error && products.length > 0 && (
-        <table className="admin-products-table">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Precio</th>
-              <th>Stock</th>
-              <th>Estado</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((product) => (
-              <tr key={product.id_producto}>
-                <td>{product.nombre}</td>
-                <td>${product.precio}</td>
-                <td>{product.stock}</td>
-                <td>{product.estado ?? '—'}</td>
-                <td className="admin-products-actions">
-                  <button type="button" onClick={() => openEditForm(product)}>
-                    Editar
-                  </button>
-                  <button type="button" onClick={() => requestDelete(product)}>
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          <div className="admin-products-toolbar">
+            <label className="admin-products-search">
+              Buscar por nombre
+              <input
+                type="search"
+                value={nameFilter}
+                placeholder="Ej. proteína"
+                onChange={(event) => setNameFilter(event.target.value)}
+              />
+            </label>
+            <div className="admin-products-bulk-actions">
+              <span>{selectedIds.size} seleccionados</span>
+              <button
+                type="button"
+                disabled={selectedIds.size === 0 || isBulkDeleting}
+                onClick={() => setIsBulkDeletePending(true)}
+              >
+                {isBulkDeleting ? 'Eliminando...' : 'Eliminar seleccionados'}
+              </button>
+            </div>
+          </div>
+
+          {filteredProducts.length === 0 ? (
+            <p className="catalog-message">No hay productos que coincidan con la búsqueda.</p>
+          ) : (
+            <table className="admin-products-table">
+              <thead>
+                <tr>
+                  <th className="admin-products-checkbox">
+                    <input
+                      ref={selectAllRef}
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleAllVisible}
+                      aria-label="Seleccionar todos los productos visibles"
+                    />
+                  </th>
+                  <th>Nombre</th>
+                  <th>Precio</th>
+                  <th>Stock</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map((product) => (
+                  <tr key={product.id_producto} className={`product-state-${product.estado ?? 'disponible'}`}>
+                    <td className="admin-products-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(product.id_producto)}
+                        onChange={() => toggleProductSelection(product.id_producto)}
+                        aria-label={`Seleccionar ${product.nombre}`}
+                      />
+                    </td>
+                    <td>{product.nombre}</td>
+                    <td>${product.precio}</td>
+                    <td>{product.stock}</td>
+                    <td><span className="admin-product-status">{product.estado ?? '—'}</span></td>
+                    <td className="admin-products-actions">
+                      <button type="button" onClick={() => openEditForm(product)}>
+                        Editar
+                      </button>
+                      <button type="button" onClick={() => requestDelete(product)}>
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </>
       )}
 
       {isFormOpen && (
@@ -175,6 +314,17 @@ function AdminProducts({ token }) {
           isDanger
           onConfirm={confirmDelete}
           onCancel={cancelDelete}
+        />
+      )}
+
+      {isBulkDeletePending && (
+        <ConfirmModal
+          title="Eliminar productos"
+          message={`¿Seguro que querés eliminar ${selectedIds.size} productos?`}
+          confirmLabel="Eliminar seleccionados"
+          isDanger
+          onConfirm={confirmBulkDelete}
+          onCancel={() => setIsBulkDeletePending(false)}
         />
       )}
     </div>

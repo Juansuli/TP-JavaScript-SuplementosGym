@@ -33,7 +33,7 @@ function ProductCard({ product, quantityInCart = 0, onSelect, onAddToCart }) {
   }
 
   return (
-    <article className="product-card">
+    <article className={`product-card product-state-${product.estado ?? 'disponible'}`}>
       <div className="product-card-visual" aria-hidden="true">
         <div className="mini-tub">
           <span>DOSIS</span>
