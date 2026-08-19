@@ -5,6 +5,7 @@ const PedidoProducto = require('../models/pedido_producto.model');
 const Cliente = require('../models/cliente.model');
 const Producto = require('../models/producto.model');
 const Usuario = require('../models/usuario.model');
+const { getProductStatus } = require('../utils/product-status');
 
 const ORDER_STATUSES = ['pendiente', 'procesando', 'enviado', 'entregado', 'cancelado'];
 const STOCK_RESERVED_STATUSES = ['pendiente', 'procesando'];
@@ -120,10 +121,12 @@ async function restoreOrderStock(orderId, transaction) {
       throw new Error('PRODUCT_NOT_FOUND');
     }
 
+    const restoredStock = product.stock + item.cantidad;
+
     await product.update(
       {
-        stock: product.stock + item.cantidad,
-        estado: product.estado === 'descontinuado' ? 'descontinuado' : 'disponible',
+        stock: restoredStock,
+        estado: getProductStatus(restoredStock, product.estado),
       },
       { transaction }
     );
@@ -236,7 +239,7 @@ async function createOrder(req, res) {
         await item.product.update(
           {
             stock: remainingStock,
-            estado: remainingStock === 0 ? 'agotado' : 'disponible',
+            estado: getProductStatus(remainingStock, item.product.estado),
           },
           { transaction }
         );
