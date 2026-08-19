@@ -3,6 +3,21 @@
 // src/app.js.
 
 require('dotenv').config();
+
+// Fail fast on JWT misconfiguration: better a loud startup error than a
+// generic 500 on the first login attempt, or (worse) silently minting
+// tokens that expire in milliseconds because JWT_EXPIRES_IN was a bare
+// number instead of a unit string like "2h".
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  console.error('JWT_SECRET debe estar definido en .env y tener al menos 32 caracteres.');
+  process.exit(1);
+}
+
+if (process.env.JWT_EXPIRES_IN && /^\d+$/.test(process.env.JWT_EXPIRES_IN)) {
+  console.error('JWT_EXPIRES_IN debe incluir una unidad (ej. "2h", "7200s"), no un número solo (se interpretaría en milisegundos).');
+  process.exit(1);
+}
+
 const app = require('./src/app');
 const sequelize = require('./src/config/db');
 
