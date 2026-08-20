@@ -202,6 +202,7 @@ function App() {
           <ProductCatalog
             cartQuantities={cartQuantities}
             onAddToCart={isClient ? addToCart : undefined}
+            showToast={showToast}
           />
         )}
       </main>

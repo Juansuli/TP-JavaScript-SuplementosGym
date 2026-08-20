@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ProductCard from './ProductCard'
 import ProductDetail from './ProductDetail'
 import { getProducts, getProductById } from '../services/product.service'
 
-function ProductCatalog({ cartQuantities, onAddToCart }) {
+function ProductCatalog({ cartQuantities, onAddToCart, showToast }) {
   const [products, setProducts] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const selectedProductIdRef = useRef(null)
 
   async function loadProducts(filters) {
     setIsLoading(true)
@@ -41,13 +42,13 @@ function ProductCatalog({ cartQuantities, onAddToCart }) {
   }
 
   async function handleSelectProduct(id) {
-    setError(null)
+    selectedProductIdRef.current = id
 
     try {
       const product = await getProductById(id)
-      setSelectedProduct(product)
+      if (selectedProductIdRef.current === id) setSelectedProduct(product)
     } catch (err) {
-      setError(err.message)
+      if (selectedProductIdRef.current === id) showToast(err.message, 'error')
     }
   }
 
@@ -115,7 +116,10 @@ function ProductCatalog({ cartQuantities, onAddToCart }) {
         <ProductDetail
           product={selectedProduct}
           quantityInCart={cartQuantities[selectedProduct.id_producto] ?? 0}
-          onClose={() => setSelectedProduct(null)}
+          onClose={() => {
+            selectedProductIdRef.current = null
+            setSelectedProduct(null)
+          }}
           onAddToCart={onAddToCart}
         />
       )}
