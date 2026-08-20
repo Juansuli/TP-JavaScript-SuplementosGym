@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { getRemainingStock } from '../utils/stock'
 
 const priceFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
@@ -6,7 +7,9 @@ const priceFormatter = new Intl.NumberFormat('es-AR', {
   maximumFractionDigits: 0,
 })
 
-function ProductDetail({ product, onClose, onAddToCart }) {
+function ProductDetail({ product, quantityInCart = 0, onClose, onAddToCart }) {
+  const [isAdded, setIsAdded] = useState(false)
+
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === 'Escape') onClose()
@@ -20,12 +23,27 @@ function ProductDetail({ product, onClose, onAddToCart }) {
     }
   }, [onClose])
 
-  const isAvailable = product.estado === 'disponible' && product.stock > 0
+  useEffect(() => {
+    if (!isAdded) return undefined
+
+    const timeoutId = window.setTimeout(() => setIsAdded(false), 550)
+    return () => window.clearTimeout(timeoutId)
+  }, [isAdded])
+
+  const remainingStock = getRemainingStock(product, quantityInCart)
+  const isAvailable = product.estado === 'disponible' && remainingStock > 0
+  const isCartLimitReached = product.estado === 'disponible' && Number(product.stock) > 0 && remainingStock === 0
   const shortName = product.nombre.split(' ').slice(0, 3).join(' ')
+
+  function handleAddToCart() {
+    if (!isAvailable || isAdded) return
+    onAddToCart(product)
+    setIsAdded(true)
+  }
 
   return (
     <div className="product-detail-overlay" onMouseDown={onClose}>
-      <article className="product-detail" role="dialog" aria-modal="true" aria-labelledby="product-detail-title" onMouseDown={(event) => event.stopPropagation()}>
+      <article className={`product-detail product-state-${product.estado ?? 'disponible'}`} role="dialog" aria-modal="true" aria-labelledby="product-detail-title" onMouseDown={(event) => event.stopPropagation()}>
         <div className="detail-toolbar">
           <span className="detail-kicker">Ficha de producto</span>
           <button type="button" className="product-detail-close" onClick={onClose} aria-label="Cerrar detalle">
@@ -48,7 +66,7 @@ function ProductDetail({ product, onClose, onAddToCart }) {
           <div className="product-info">
             <p className="eyebrow">Producto #{String(product.id_producto).padStart(4, '0')}</p>
             <h2 className="product-title" id="product-detail-title">{product.nombre}</h2>
-            <p className="product-meta">Stock actual · {product.stock} unidades</p>
+            <p className="product-meta">Stock actual · {remainingStock} unidades</p>
             <p className="product-price tabnum">{priceFormatter.format(product.precio)}</p>
             <p className="product-description">{product.descripcion || 'Este producto todavía no tiene una descripción cargada.'}</p>
             <div className="nutrition-block">
@@ -58,14 +76,23 @@ function ProductDetail({ product, onClose, onAddToCart }) {
             <div className="availability-row">
               <span className={`availability-dot ${isAvailable ? '' : 'is-unavailable'}`} />
               <div>
-                <strong>{isAvailable ? 'Disponible' : 'No disponible'}</strong>
-                <span>{isAvailable ? `${product.stock} unidades en stock` : 'Sin stock para pedidos'}</span>
+                <strong>{isAvailable ? 'Disponible' : isCartLimitReached ? 'Máximo en tu pedido' : 'No disponible'}</strong>
+                <span>{isAvailable
+                  ? `${remainingStock} unidades en stock`
+                  : isCartLimitReached
+                    ? 'Ya tenés toda la cantidad disponible en el carrito'
+                    : 'Sin stock para pedidos'}</span>
               </div>
             </div>
             <div className="detail-actions">
               {onAddToCart && (
-                <button type="button" className="btn btn-accent product-detail-add" disabled={!isAvailable} onClick={() => onAddToCart(product)}>
-                  Agregar al pedido
+                <button
+                  type="button"
+                  className={`btn btn-accent product-detail-add ${isAdded ? 'is-added' : ''}`}
+                  disabled={!isAvailable || isAdded}
+                  onClick={handleAddToCart}
+                >
+                  {isAdded ? '✓ Agregado' : 'Agregar al pedido'}
                 </button>
               )}
               <button type="button" className="btn btn-ghost detail-done" onClick={onClose}>Volver al catálogo</button>
