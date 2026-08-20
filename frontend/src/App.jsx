@@ -5,6 +5,7 @@ import AdminOrders from './components/AdminOrders'
 import AuthModal from './components/AuthModal'
 import Cart from './components/Cart'
 import ToastStack from './components/ToastStack'
+import { getRemainingStock } from './utils/stock'
 import './App.css'
 
 function App() {
@@ -47,7 +48,7 @@ function App() {
 
   function addToCart(product) {
     const quantityInCart = cartQuantities[product.id_producto] ?? 0
-    if (quantityInCart >= Number(product.stock)) return
+    if (getRemainingStock(product, quantityInCart) === 0) return
 
     setCart((prev) => {
       const existing = prev.find((item) => item.id_producto === product.id_producto)
@@ -194,9 +195,9 @@ function App() {
 
       <main className="app-content">
         {view === 'admin-orders' && isAdmin ? (
-          <AdminOrders token={currentUser.token} />
+          <AdminOrders token={currentUser.token} showToast={showToast} />
         ) : view === 'admin' && isAdmin ? (
-          <AdminProducts token={currentUser.token} />
+          <AdminProducts token={currentUser.token} showToast={showToast} />
         ) : (
           <ProductCatalog
             cartQuantities={cartQuantities}

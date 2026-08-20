@@ -8,12 +8,10 @@ import {
   deleteProduct,
 } from '../services/product.service'
 
-function AdminProducts({ token }) {
+function AdminProducts({ token, showToast }) {
   const [products, setProducts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [notice, setNotice] = useState(null)
-  const [actionError, setActionError] = useState(null)
   const [editingProduct, setEditingProduct] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [productPendingDelete, setProductPendingDelete] = useState(null)
@@ -56,13 +54,11 @@ function AdminProducts({ token }) {
   }, [allVisibleSelected, someVisibleSelected])
 
   function openCreateForm() {
-    setActionError(null)
     setEditingProduct(null)
     setIsFormOpen(true)
   }
 
   function openEditForm(product) {
-    setActionError(null)
     setEditingProduct(product)
     setIsFormOpen(true)
   }
@@ -84,11 +80,11 @@ function AdminProducts({ token }) {
       setProducts((prev) =>
         prev.map((product) => (product.id_producto === updated.id_producto ? updated : product))
       )
-      setNotice(`"${updated.nombre}" se actualizó correctamente.`)
+      showToast(`"${updated.nombre}" se actualizó correctamente.`)
     } else {
       const created = await createProduct(payload, token)
       setProducts((prev) => [...prev, created])
-      setNotice(`"${created.nombre}" se creó correctamente.`)
+      showToast(`"${created.nombre}" se creó correctamente.`)
     }
 
     closeForm()
@@ -107,8 +103,6 @@ function AdminProducts({ token }) {
     if (!product) return
 
     setProductPendingDelete(null)
-    setNotice(null)
-    setActionError(null)
 
     try {
       const result = await deleteProduct(product.id_producto, token)
@@ -119,10 +113,10 @@ function AdminProducts({ token }) {
         setProducts((prev) =>
           prev.map((item) => (item.id_producto === result.id_producto ? result : item))
         )
-        setNotice(`"${product.nombre}" tiene pedidos asociados: quedó marcado como "descontinuado" en vez de eliminarse.`)
+        showToast(`"${product.nombre}" tiene pedidos asociados: quedó marcado como "descontinuado" en vez de eliminarse.`)
       } else {
         setProducts((prev) => prev.filter((item) => item.id_producto !== product.id_producto))
-        setNotice(`"${product.nombre}" se eliminó correctamente.`)
+        showToast(`"${product.nombre}" se eliminó correctamente.`)
       }
       setSelectedIds((prev) => {
         const next = new Set(prev)
@@ -130,14 +124,13 @@ function AdminProducts({ token }) {
         return next
       })
     } catch (err) {
-      // A propósito no usa `error`: ese estado esconde la tabla entera
-      // (ver más abajo), y un borrado fallido no debería tapar la lista
-      // de productos que ya se había cargado bien.
-      setActionError(err.message)
+      showToast(err.message, 'error')
     }
   }
 
   function toggleProductSelection(productId) {
+    if (isBulkDeleting) return
+
     setSelectedIds((prev) => {
       const next = new Set(prev)
       if (next.has(productId)) next.delete(productId)
@@ -147,6 +140,8 @@ function AdminProducts({ token }) {
   }
 
   function toggleAllVisible() {
+    if (isBulkDeleting) return
+
     setSelectedIds((prev) => {
       const next = new Set(prev)
       if (allVisibleSelected) visibleIds.forEach((id) => next.delete(id))
@@ -161,8 +156,6 @@ function AdminProducts({ token }) {
 
     setIsBulkDeletePending(false)
     setIsBulkDeleting(true)
-    setNotice(null)
-    setActionError(null)
 
     const results = await Promise.allSettled(ids.map((id) => deleteProduct(id, token)))
     const deletedIds = new Set()
@@ -196,12 +189,12 @@ function AdminProducts({ token }) {
         ? '1 marcado como descontinuado'
         : `${discontinuedProducts.size} marcados como descontinuados`)
     }
-    if (summary.length > 0) setNotice(`${summary.join(', ')}.`)
+    if (summary.length > 0) showToast(`${summary.join(', ')}.`)
     if (failedIds.size > 0) {
       const failedSummary = failedIds.size === 1
         ? '1 producto no pudo procesarse.'
         : `${failedIds.size} productos no pudieron procesarse.`
-      setActionError(`${failedSummary} ${[...failureMessages].join(' ')}`)
+      showToast(`${failedSummary} ${[...failureMessages].join(' ')}`, 'error')
     }
 
     setIsBulkDeleting(false)
@@ -216,8 +209,6 @@ function AdminProducts({ token }) {
         </button>
       </div>
 
-      {notice && <p className="admin-products-notice">{notice}</p>}
-      {actionError && <p className="admin-products-notice admin-products-notice-error">{actionError}</p>}
       {isLoading && <p className="catalog-message">Cargando productos...</p>}
       {!isLoading && error && <p className="catalog-message catalog-error">{error}</p>}
 
@@ -260,6 +251,7 @@ function AdminProducts({ token }) {
                       ref={selectAllRef}
                       type="checkbox"
                       checked={allVisibleSelected}
+                      disabled={isBulkDeleting}
                       onChange={toggleAllVisible}
                       aria-label="Seleccionar todos los productos visibles"
                     />
@@ -278,6 +270,7 @@ function AdminProducts({ token }) {
                       <input
                         type="checkbox"
                         checked={selectedIds.has(product.id_producto)}
+                        disabled={isBulkDeleting}
                         onChange={() => toggleProductSelection(product.id_producto)}
                         aria-label={`Seleccionar ${product.nombre}`}
                       />
@@ -287,10 +280,10 @@ function AdminProducts({ token }) {
                     <td>{product.stock}</td>
                     <td><span className="admin-product-status">{product.estado ?? '—'}</span></td>
                     <td className="admin-products-actions">
-                      <button type="button" onClick={() => openEditForm(product)}>
+                      <button type="button" disabled={isBulkDeleting} onClick={() => openEditForm(product)}>
                         Editar
                       </button>
-                      <button type="button" onClick={() => requestDelete(product)}>
+                      <button type="button" disabled={isBulkDeleting} onClick={() => requestDelete(product)}>
                         Eliminar
                       </button>
                     </td>

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import ConfirmModal from './ConfirmModal'
 import {
   deleteOrder,
@@ -8,16 +8,19 @@ import {
 } from '../services/pedido.service'
 
 const ORDER_STATUSES = ['pendiente', 'procesando', 'enviado', 'entregado', 'cancelado']
+const CANCELLABLE_STATUSES = ['pendiente', 'procesando']
+const DELETABLE_STATUSES = ['pendiente', 'procesando', 'cancelado']
 const priceFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
   currency: 'ARS',
+  maximumFractionDigits: 0,
 })
 const dateFormatter = new Intl.DateTimeFormat('es-AR', {
   dateStyle: 'short',
   timeStyle: 'short',
 })
 
-function AdminOrders({ token }) {
+function AdminOrders({ token, showToast }) {
   const [orders, setOrders] = useState([])
   const [statusFilter, setStatusFilter] = useState('')
   const [details, setDetails] = useState({})
@@ -27,46 +30,54 @@ function AdminOrders({ token }) {
   const [orderPendingDelete, setOrderPendingDelete] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [actionError, setActionError] = useState(null)
-  const [notice, setNotice] = useState(null)
+  const expandedOrderIdRef = useRef(null)
 
   useEffect(() => {
+    let isStale = false
+
     async function loadOrders() {
       setIsLoading(true)
       setError(null)
 
       try {
         const data = await getOrders({ estado: statusFilter }, token)
-        setOrders(data)
+        if (!isStale) setOrders(data)
       } catch (err) {
-        setError(err.message)
+        if (!isStale) setError(err.message)
       } finally {
-        setIsLoading(false)
+        if (!isStale) setIsLoading(false)
       }
     }
 
     loadOrders()
+    return () => {
+      isStale = true
+    }
   }, [statusFilter, token])
 
   async function toggleDetail(orderId) {
-    if (expandedOrderId === orderId) {
+    if (expandedOrderIdRef.current === orderId) {
+      expandedOrderIdRef.current = null
       setExpandedOrderId(null)
       return
     }
 
+    expandedOrderIdRef.current = orderId
     setExpandedOrderId(orderId)
     if (details[orderId]) return
 
     setLoadingDetailId(orderId)
-    setActionError(null)
     try {
       const detail = await getOrderById(orderId, token)
       setDetails((prev) => ({ ...prev, [orderId]: detail }))
     } catch (err) {
-      setActionError(err.message)
-      setExpandedOrderId(null)
+      if (expandedOrderIdRef.current === orderId) {
+        expandedOrderIdRef.current = null
+        setExpandedOrderId(null)
+        showToast(err.message, 'error')
+      }
     } finally {
-      setLoadingDetailId(null)
+      setLoadingDetailId((currentId) => (currentId === orderId ? null : currentId))
     }
   }
 
@@ -74,8 +85,6 @@ function AdminOrders({ token }) {
     if (estado === order.estado) return
 
     setUpdatingOrderId(order.id_pedido)
-    setNotice(null)
-    setActionError(null)
     try {
       const updated = await updateOrder(order.id_pedido, { estado }, token)
       setOrders((prev) => (
@@ -84,9 +93,9 @@ function AdminOrders({ token }) {
           : prev.map((item) => (item.id_pedido === updated.id_pedido ? updated : item))
       ))
       setDetails((prev) => ({ ...prev, [updated.id_pedido]: updated }))
-      setNotice(`El pedido #${updated.id_pedido} pasó a “${updated.estado}”.`)
+      showToast(`El pedido #${updated.id_pedido} pasó a “${updated.estado}”.`)
     } catch (err) {
-      setActionError(err.message)
+      showToast(err.message, 'error')
     } finally {
       setUpdatingOrderId(null)
     }
@@ -97,8 +106,6 @@ function AdminOrders({ token }) {
     if (!order) return
 
     setOrderPendingDelete(null)
-    setNotice(null)
-    setActionError(null)
     try {
       await deleteOrder(order.id_pedido, token)
       setOrders((prev) => prev.filter((item) => item.id_pedido !== order.id_pedido))
@@ -107,10 +114,13 @@ function AdminOrders({ token }) {
         delete next[order.id_pedido]
         return next
       })
-      if (expandedOrderId === order.id_pedido) setExpandedOrderId(null)
-      setNotice(`El pedido #${order.id_pedido} se eliminó correctamente.`)
+      if (expandedOrderIdRef.current === order.id_pedido) {
+        expandedOrderIdRef.current = null
+        setExpandedOrderId(null)
+      }
+      showToast(`El pedido #${order.id_pedido} se eliminó correctamente.`)
     } catch (err) {
-      setActionError(err.message)
+      showToast(err.message, 'error')
     }
   }
 
@@ -133,8 +143,6 @@ function AdminOrders({ token }) {
         {!isLoading && !error && <span>{orders.length} pedidos</span>}
       </div>
 
-      {notice && <p className="admin-products-notice">{notice}</p>}
-      {actionError && <p className="admin-products-notice admin-products-notice-error">{actionError}</p>}
       {isLoading && <p className="catalog-message">Cargando pedidos...</p>}
       {!isLoading && error && <p className="catalog-message catalog-error">{error}</p>}
       {!isLoading && !error && orders.length === 0 && (
@@ -151,8 +159,8 @@ function AdminOrders({ token }) {
                 <th>Fecha</th>
                 <th>Total</th>
                 <th>Estado</th>
-                <th>Productos</th>
-                <th></th>
+                <th>Detalle</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -178,7 +186,13 @@ function AdminOrders({ token }) {
                           aria-label={`Estado del pedido ${order.id_pedido}`}
                         >
                           {ORDER_STATUSES.map((status) => (
-                            <option key={status} value={status}>{status}</option>
+                            <option
+                              key={status}
+                              value={status}
+                              disabled={status === 'cancelado' && !CANCELLABLE_STATUSES.includes(order.estado)}
+                            >
+                              {status}
+                            </option>
                           ))}
                         </select>
                       </td>
@@ -188,7 +202,13 @@ function AdminOrders({ token }) {
                         </button>
                       </td>
                       <td>
-                        <button type="button" className="admin-order-delete" onClick={() => setOrderPendingDelete(order)}>
+                        <button
+                          type="button"
+                          className="admin-order-delete"
+                          disabled={!DELETABLE_STATUSES.includes(order.estado)}
+                          title={DELETABLE_STATUSES.includes(order.estado) ? undefined : 'Los pedidos enviados o entregados no se pueden eliminar'}
+                          onClick={() => setOrderPendingDelete(order)}
+                        >
                           Eliminar
                         </button>
                       </td>

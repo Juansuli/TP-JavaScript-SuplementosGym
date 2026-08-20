@@ -145,7 +145,7 @@ async function listOrders(req, res) {
       order: [['id_pedido', 'ASC']],
     });
 
-    return res.json(orders);
+    return res.json(await Promise.all(orders.map((order) => buildOrderResponse(order))));
   } catch (error) {
     return res.status(500).json({ error: 'No se pudieron obtener los pedidos.' });
   }

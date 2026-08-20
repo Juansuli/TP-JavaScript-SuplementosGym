@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { getRemainingStock } from '../utils/stock'
 
 const priceFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
@@ -14,8 +15,10 @@ function getStatus(product, remainingStock) {
 
 function ProductCard({ product, quantityInCart = 0, onSelect, onAddToCart }) {
   const [isAdded, setIsAdded] = useState(false)
-  const remainingStock = Math.max(0, Number(product.stock) - quantityInCart)
+  const remainingStock = getRemainingStock(product, quantityInCart)
   const status = getStatus(product, remainingStock)
+  const isCartLimitReached = product.estado === 'disponible' && Number(product.stock) > 0 && remainingStock === 0
+  const statusLabel = isCartLimitReached ? 'Máximo en pedido' : status
   const shortName = product.nombre.split(' ').slice(0, 3).join(' ')
   const isAvailable = product.estado === 'disponible' && remainingStock > 0
 
@@ -43,7 +46,7 @@ function ProductCard({ product, quantityInCart = 0, onSelect, onAddToCart }) {
 
       <div className="product-card-content">
         <div className="product-card-top">
-          <span className={`status-tag status-${status.toLowerCase()}`}>{status}</span>
+          <span className={`status-tag status-${status.toLowerCase()}`}>{statusLabel}</span>
           <span className="card-price tabnum">{priceFormatter.format(product.precio)}</span>
         </div>
         <button type="button" className="product-card-title" onClick={() => onSelect(product.id_producto)}>
@@ -54,7 +57,7 @@ function ProductCard({ product, quantityInCart = 0, onSelect, onAddToCart }) {
         </p>
         <dl className="product-card-facts">
           <div><dt>Stock</dt><dd className="tabnum">{remainingStock} un.</dd></div>
-          <div><dt>Estado</dt><dd>{status}</dd></div>
+          <div><dt>Estado</dt><dd>{statusLabel}</dd></div>
         </dl>
         <div className="product-card-actions">
           <button type="button" className="btn btn-outline product-card-select" onClick={() => onSelect(product.id_producto)}>

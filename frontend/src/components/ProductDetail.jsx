@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { getRemainingStock } from '../utils/stock'
 
 const priceFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
@@ -29,8 +30,9 @@ function ProductDetail({ product, quantityInCart = 0, onClose, onAddToCart }) {
     return () => window.clearTimeout(timeoutId)
   }, [isAdded])
 
-  const remainingStock = Math.max(0, Number(product.stock) - quantityInCart)
+  const remainingStock = getRemainingStock(product, quantityInCart)
   const isAvailable = product.estado === 'disponible' && remainingStock > 0
+  const isCartLimitReached = product.estado === 'disponible' && Number(product.stock) > 0 && remainingStock === 0
   const shortName = product.nombre.split(' ').slice(0, 3).join(' ')
 
   function handleAddToCart() {
@@ -74,8 +76,12 @@ function ProductDetail({ product, quantityInCart = 0, onClose, onAddToCart }) {
             <div className="availability-row">
               <span className={`availability-dot ${isAvailable ? '' : 'is-unavailable'}`} />
               <div>
-                <strong>{isAvailable ? 'Disponible' : 'No disponible'}</strong>
-                <span>{isAvailable ? `${remainingStock} unidades en stock` : 'Sin stock para pedidos'}</span>
+                <strong>{isAvailable ? 'Disponible' : isCartLimitReached ? 'Máximo en tu pedido' : 'No disponible'}</strong>
+                <span>{isAvailable
+                  ? `${remainingStock} unidades en stock`
+                  : isCartLimitReached
+                    ? 'Ya tenés toda la cantidad disponible en el carrito'
+                    : 'Sin stock para pedidos'}</span>
               </div>
             </div>
             <div className="detail-actions">

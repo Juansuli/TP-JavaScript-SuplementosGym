@@ -809,6 +809,13 @@
   cursor: pointer;
 }
 
+.admin-products-checkbox input:disabled,
+.admin-products-actions button:disabled,
+.admin-order-delete:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
 .admin-product-status {
   display: inline-flex;
   padding: .28rem .5rem;
@@ -854,12 +861,12 @@
   font-size: .75rem;
 }
 
-.admin-products-actions button:hover {
+.admin-products-actions button:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
 }
 
-.admin-products-actions button:last-child:hover {
+.admin-products-actions button:last-child:hover:not(:disabled) {
   border-color: var(--danger);
   color: var(--danger);
 }
@@ -1010,7 +1017,7 @@
   color: var(--accent);
 }
 
-.admin-order-delete:hover {
+.admin-order-delete:hover:not(:disabled) {
   border-color: var(--danger);
   color: var(--danger);
 }
