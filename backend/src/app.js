@@ -5,6 +5,7 @@
 
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const healthRoutes = require('./routes/health.routes');
 const productRoutes = require('./routes/producto.routes');
 const clientRoutes = require('./routes/cliente.routes');
@@ -14,6 +15,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // All API routes live under the /api prefix. As entities get added
 // (producto, cliente, pedido...) each one adds its own routes file

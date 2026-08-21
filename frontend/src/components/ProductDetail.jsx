@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getRemainingStock } from '../utils/stock'
+import ProductImage from './ProductImage'
 
 const priceFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
@@ -33,7 +34,6 @@ function ProductDetail({ product, quantityInCart = 0, onClose, onAddToCart }) {
   const remainingStock = getRemainingStock(product, quantityInCart)
   const isAvailable = product.estado === 'disponible' && remainingStock > 0
   const isCartLimitReached = product.estado === 'disponible' && Number(product.stock) > 0 && remainingStock === 0
-  const shortName = product.nombre.split(' ').slice(0, 3).join(' ')
 
   function handleAddToCart() {
     if (!isAvailable || isAdded) return
@@ -56,11 +56,7 @@ function ProductDetail({ product, quantityInCart = 0, onClose, onAddToCart }) {
 
         <div className="detail-grid">
           <div className="product-visual">
-            <div className="product-tub">
-              <span className="tub-brand">DOSIS</span>
-              <span className="tub-name">{shortName}</span>
-              <span className="tub-flavor">Producto deportivo</span>
-            </div>
+            <ProductImage product={product} className="product-detail-image" />
           </div>
 
           <div className="product-info">
