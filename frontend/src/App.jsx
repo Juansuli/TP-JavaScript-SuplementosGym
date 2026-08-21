@@ -8,9 +8,20 @@ import ToastStack from './components/ToastStack'
 import { getRemainingStock } from './utils/stock'
 import './App.css'
 
+const CURRENT_USER_STORAGE_KEY = 'dosis_current_user'
+
+function loadStoredUser() {
+  try {
+    const raw = localStorage.getItem(CURRENT_USER_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
 function App() {
   const [view, setView] = useState('catalogo')
-  const [currentUser, setCurrentUser] = useState(null)
+  const [currentUser, setCurrentUser] = useState(loadStoredUser)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [cart, setCart] = useState([])
   const [isCartOpen, setIsCartOpen] = useState(false)
@@ -36,11 +47,13 @@ function App() {
 
   function handleAuthSuccess(user) {
     setCurrentUser(user)
+    localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(user))
     setIsAuthOpen(false)
   }
 
   function handleLogout() {
     setCurrentUser(null)
+    localStorage.removeItem(CURRENT_USER_STORAGE_KEY)
     setView('catalogo')
     setCart([])
     setIsCartOpen(false)
