@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getRemainingStock } from '../utils/stock'
+import ProductImage from './ProductImage'
 
 const priceFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
@@ -19,7 +20,6 @@ function ProductCard({ product, quantityInCart = 0, onSelect, onAddToCart }) {
   const status = getStatus(product, remainingStock)
   const isCartLimitReached = product.estado === 'disponible' && Number(product.stock) > 0 && remainingStock === 0
   const statusLabel = isCartLimitReached ? 'Máximo en pedido' : status
-  const shortName = product.nombre.split(' ').slice(0, 3).join(' ')
   const isAvailable = product.estado === 'disponible' && remainingStock > 0
 
   useEffect(() => {
@@ -37,11 +37,8 @@ function ProductCard({ product, quantityInCart = 0, onSelect, onAddToCart }) {
 
   return (
     <article className={`product-card product-state-${product.estado ?? 'disponible'}`}>
-      <div className="product-card-visual" aria-hidden="true">
-        <div className="mini-tub">
-          <span>DOSIS</span>
-          <strong>{shortName}</strong>
-        </div>
+      <div className="product-card-visual">
+        <ProductImage product={product} className="product-card-image" />
       </div>
 
       <div className="product-card-content">

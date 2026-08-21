@@ -48,6 +48,9 @@ const Producto = sequelize.define(
     info_nutricional: {
       type: DataTypes.TEXT,
     },
+    imagen_url: {
+      type: DataTypes.STRING(255),
+    },
   },
   {
     // Without these two options, Sequelize would name the table

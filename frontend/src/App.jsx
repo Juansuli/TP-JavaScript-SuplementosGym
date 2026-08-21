@@ -80,6 +80,7 @@ function App() {
           nombre: product.nombre,
           precio: Number(product.precio),
           stock: product.stock,
+          imagen_url: product.imagen_url,
           cantidad: 1,
         },
       ]

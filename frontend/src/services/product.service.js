@@ -1,21 +1,27 @@
-// Concentrates every call to the backend's producto endpoints so the
-// components never talk to fetch() directly.
 const API_BASE_URL = 'http://localhost:3001/api/productos'
 
-// The backend's error shape isn't consistent: some routes send a single
-// string ({ error: 'Product not found.' }), others send an array of
-// validation messages ({ error: ['Name is required.', ...] }).
 function parseErrorMessage(body) {
   if (!body || !body.error) return 'Ocurrió un error inesperado.'
   return Array.isArray(body.error) ? body.error.join('\n') : body.error
+}
+
+function buildProductFormData(data) {
+  const formData = new FormData()
+
+  Object.entries(data).forEach(([field, value]) => {
+    if (field !== 'imagen' && value !== undefined && value !== null) {
+      formData.append(field, value)
+    }
+  })
+
+  if (data.imagen) formData.append('imagen', data.imagen)
+  return formData
 }
 
 async function getProducts(filters = {}) {
   const { minPrice, maxPrice } = filters
   const params = new URLSearchParams()
 
-  // The backend expects Spanish query param names (precioMin/precioMax)
-  // even though everything on the frontend side stays in English.
   if (minPrice) params.set('precioMin', minPrice)
   if (maxPrice) params.set('precioMax', maxPrice)
 
@@ -26,15 +32,10 @@ async function getProducts(filters = {}) {
   try {
     response = await fetch(url)
   } catch {
-    // fetch() itself rejects (server down, sin red, CORS) antes de
-    // llegar a response.ok, así que se maneja aparte.
     throw new Error('No se pudo conectar con el servidor.')
   }
 
-  if (!response.ok) {
-    throw new Error('No se pudieron cargar los productos.')
-  }
-
+  if (!response.ok) throw new Error('No se pudieron cargar los productos.')
   return response.json()
 }
 
@@ -46,10 +47,7 @@ async function getProductById(id) {
     throw new Error('No se pudo conectar con el servidor.')
   }
 
-  if (!response.ok) {
-    throw new Error('No se pudo cargar el detalle del producto.')
-  }
-
+  if (!response.ok) throw new Error('No se pudo cargar el detalle del producto.')
   return response.json()
 }
 
@@ -58,21 +56,15 @@ async function createProduct(data, token) {
   try {
     response = await fetch(API_BASE_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(data),
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: buildProductFormData(data),
     })
   } catch {
     throw new Error('No se pudo conectar con el servidor.')
   }
 
   const body = await response.json().catch(() => null)
-  if (!response.ok) {
-    throw new Error(parseErrorMessage(body))
-  }
-
+  if (!response.ok) throw new Error(parseErrorMessage(body))
   return body
 }
 
@@ -81,21 +73,15 @@ async function updateProduct(id, data, token) {
   try {
     response = await fetch(`${API_BASE_URL}/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(data),
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: buildProductFormData(data),
     })
   } catch {
     throw new Error('No se pudo conectar con el servidor.')
   }
 
   const body = await response.json().catch(() => null)
-  if (!response.ok) {
-    throw new Error(parseErrorMessage(body))
-  }
-
+  if (!response.ok) throw new Error(parseErrorMessage(body))
   return body
 }
 
@@ -115,13 +101,7 @@ async function deleteProduct(id, token) {
     throw new Error(parseErrorMessage(body))
   }
 
-  // 204 = borrado físico, sin contenido. 200 = baja lógica (CUU1): el
-  // backend devuelve el producto ya marcado "descontinuado" en vez de
-  // borrarlo, porque tiene pedidos asociados.
-  if (response.status === 204) {
-    return null
-  }
-
+  if (response.status === 204) return null
   return response.json()
 }
 

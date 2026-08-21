@@ -41,3 +41,7 @@ desktop.ini
 # Backup files that draw.io / Google Docs sometimes leave behind on save
 *.bkp
 .$*
+
+# Product images are uploaded locally and must not be committed
+backend/uploads/productos/*
+!backend/uploads/productos/.gitkeep

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import ProductForm from './ProductForm'
 import ConfirmModal from './ConfirmModal'
+import ProductImage from './ProductImage'
 import {
   getProducts,
   createProduct,
@@ -256,6 +257,7 @@ function AdminProducts({ token, showToast }) {
                       aria-label="Seleccionar todos los productos visibles"
                     />
                   </th>
+                  <th>Imagen</th>
                   <th>Nombre</th>
                   <th>Precio</th>
                   <th>Stock</th>
@@ -275,6 +277,7 @@ function AdminProducts({ token, showToast }) {
                         aria-label={`Seleccionar ${product.nombre}`}
                       />
                     </td>
+                    <td className="admin-product-image"><ProductImage product={product} className="admin-product-thumbnail" /></td>
                     <td>{product.nombre}</td>
                     <td>${product.precio}</td>
                     <td>{product.stock}</td>

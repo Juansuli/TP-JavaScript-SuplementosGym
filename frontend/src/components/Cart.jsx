@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createOrder } from '../services/pedido.service'
+import ProductImage from './ProductImage'
 
 const PAYMENT_METHODS = ['tarjeta', 'efectivo', 'transferencia']
 const priceFormatter = new Intl.NumberFormat('es-AR', {
@@ -89,7 +90,7 @@ function Cart({ cart, token, onUpdateQuantity, onRemoveItem, onOrderPlaced, onCl
               <ul className="cart-items">
                 {cart.map((item) => (
                   <li key={item.id_producto} className="cart-item">
-                    <div className="cart-item-thumb" aria-hidden="true"><span>DOSIS</span></div>
+                    <ProductImage product={item} className="cart-item-thumb" />
                     <div>
                       <span className="cart-item-name">{item.nombre}</span>
                       <span className="cart-item-meta tabnum">{priceFormatter.format(item.precio)} c/u</span>
