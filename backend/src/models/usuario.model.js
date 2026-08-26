@@ -39,6 +39,16 @@ const Usuario = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    // Un cliente inhabilitado no puede iniciar sesión (ver login en
+    // cliente.controller.js), pero sigue existiendo -- a diferencia de
+    // deleteClient, que sí lo borra. Solo aplica a clientes: la ruta que
+    // lo modifica busca por Cliente, así que un administrador nunca es
+    // alcanzable por ese camino.
+    activo: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
   },
   {
     tableName: 'usuario',
