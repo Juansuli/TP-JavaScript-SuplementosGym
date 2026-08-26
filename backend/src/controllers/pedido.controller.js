@@ -5,8 +5,12 @@ const PedidoProducto = require('../models/pedido_producto.model');
 const Cliente = require('../models/cliente.model');
 const Producto = require('../models/producto.model');
 const { getProductStatus } = require('../utils/product-status');
+const {
+  ORDER_STATUSES,
+  validateOrderData,
+  validateOrderItems,
+} = require('../middlewares/pedido-validation.middleware');
 
-const ORDER_STATUSES = ['pendiente', 'procesando', 'enviado', 'entregado', 'cancelado'];
 const STOCK_RESERVED_STATUSES = ['pendiente', 'procesando'];
 const CREATE_ORDER_FIELDS = ['nombre_receptor', 'direccion_entrega', 'metodo_pago'];
 const ORDER_FIELDS = ['nombre_receptor', 'direccion_entrega', 'metodo_pago', 'estado'];
@@ -22,52 +26,6 @@ function getAllowedData(body, fields) {
       .filter((field) => body[field] !== undefined)
       .map((field) => [field, typeof body[field] === 'string' ? body[field].trim() : body[field]])
   );
-}
-
-function validateOrderData(data, isUpdate = false) {
-  const errors = [];
-
-  for (const field of ['nombre_receptor', 'direccion_entrega', 'metodo_pago']) {
-    if ((!isUpdate || data[field] !== undefined) &&
-        (typeof data[field] !== 'string' || data[field].trim() === '')) {
-      errors.push(`El campo ${field} es obligatorio.`);
-    }
-  }
-
-  if (data.estado !== undefined && !ORDER_STATUSES.includes(data.estado)) {
-    errors.push('El estado del pedido no es válido.');
-  }
-
-  return errors;
-}
-
-function validateOrderItems(items) {
-  const errors = [];
-
-  if (!Array.isArray(items) || items.length === 0) {
-    return ['El pedido debe incluir al menos un producto.'];
-  }
-
-  const productIds = new Set();
-
-  for (const item of items) {
-    const productId = getPositiveInteger(item?.id_producto);
-    const quantity = getPositiveInteger(item?.cantidad);
-
-    if (!productId || !quantity) {
-      errors.push('Cada producto debe tener id_producto y cantidad enteros mayores a 0.');
-      continue;
-    }
-
-    if (productIds.has(productId)) {
-      errors.push('Un producto no puede repetirse dentro del mismo pedido.');
-      continue;
-    }
-
-    productIds.add(productId);
-  }
-
-  return errors;
 }
 
 function calculateTotal(items) {
