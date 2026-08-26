@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import ProductCatalog from './components/ProductCatalog'
 import AdminProducts from './components/AdminProducts'
 import AdminOrders from './components/AdminOrders'
+import AdminClients from './components/AdminClients'
 import AuthModal from './components/AuthModal'
 import Cart from './components/Cart'
 import ToastStack from './components/ToastStack'
@@ -144,6 +145,13 @@ function App() {
                 >
                   Administrar pedidos
                 </button>
+                <button
+                  type="button"
+                  className={view === 'admin-clients' ? 'is-active' : ''}
+                  onClick={() => changeView('admin-clients')}
+                >
+                  Administrar clientes
+                </button>
               </>
             )}
           </nav>
@@ -197,6 +205,7 @@ function App() {
             <>
               <button type="button" onClick={() => changeView('admin')}>Administrar productos</button>
               <button type="button" onClick={() => changeView('admin-orders')}>Administrar pedidos</button>
+              <button type="button" onClick={() => changeView('admin-clients')}>Administrar clientes</button>
             </>
           )}
           {isClient && (
@@ -210,6 +219,8 @@ function App() {
       <main className="app-content">
         {view === 'admin-orders' && isAdmin ? (
           <AdminOrders token={currentUser.token} showToast={showToast} />
+        ) : view === 'admin-clients' && isAdmin ? (
+          <AdminClients token={currentUser.token} showToast={showToast} />
         ) : view === 'admin' && isAdmin ? (
           <AdminProducts token={currentUser.token} showToast={showToast} />
         ) : (
