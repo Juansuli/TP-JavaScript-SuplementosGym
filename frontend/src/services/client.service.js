@@ -1,6 +1,6 @@
 // Concentrates the calls to the backend's client-management endpoints
-// (panel de administración: listar clientes y habilitar/inhabilitar),
-// mismo patrón que product.service.js y pedido.service.js.
+// (admin panel: list clients, enable/disable them), same pattern as
+// product.service.js and pedido.service.js.
 const API_BASE_URL = 'http://localhost:3001/api/clientes'
 
 function parseErrorMessage(body) {
