@@ -119,6 +119,10 @@ async function login(req, res) {
       return res.status(401).json({ error: 'Email o contraseña incorrectos.' });
     }
 
+    if (!user.activo) {
+      return res.status(403).json({ error: 'Tu cuenta está inhabilitada. Contactá a un administrador.' });
+    }
+
     const userData = user.toJSON();
     delete userData.contraseña;
 
@@ -252,6 +256,29 @@ async function deleteClient(req, res) {
   }
 }
 
+async function setClientStatus(req, res) {
+  const id = getClientId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'El id de cliente no es válido.' });
+
+  if (typeof req.body.activo !== 'boolean') {
+    return res.status(400).json({ error: 'El campo activo es obligatorio y debe ser true o false.' });
+  }
+
+  try {
+    const client = await Cliente.findByPk(id);
+    if (!client) return res.status(404).json({ error: 'Cliente no encontrado.' });
+
+    const user = await Usuario.findByPk(id);
+    if (!user) return res.status(404).json({ error: 'Cliente no encontrado.' });
+
+    await user.update({ activo: req.body.activo });
+
+    return res.json(buildClientResponse(client, user));
+  } catch (error) {
+    return res.status(500).json({ error: 'No se pudo actualizar el estado del cliente.' });
+  }
+}
+
 module.exports = {
   listClients,
   getClient,
@@ -259,5 +286,6 @@ module.exports = {
   createClient,
   updateClient,
   deleteClient,
+  setClientStatus,
   signToken,
 };

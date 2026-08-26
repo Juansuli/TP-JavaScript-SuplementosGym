@@ -7,6 +7,7 @@
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
     "migrate:product-images": "node scripts/add-product-image-column.js",
+    "migrate:usuario-activo": "node scripts/add-usuario-activo-column.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
