@@ -21,21 +21,50 @@ function Cart({ cart, token, onUpdateQuantity, onRemoveItem, onOrderPlaced, onCl
     direccion_entrega: '',
     metodo_pago: PAYMENT_METHODS[0],
   })
-  const [errors, setErrors] = useState([])
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [submitErrors, setSubmitErrors] = useState([])
   const [isSaving, setIsSaving] = useState(false)
   const [confirmedOrder, setConfirmedOrder] = useState(null)
 
   const total = cart.reduce((sum, item) => sum + item.precio * item.cantidad, 0)
 
+  function validateForm() {
+    const nextErrors = {}
+    if (values.nombre_receptor.trim() === '') nextErrors.nombre_receptor = 'El nombre de quien recibe es obligatorio.'
+    if (values.direccion_entrega.trim() === '') nextErrors.direccion_entrega = 'La dirección de entrega es obligatoria.'
+    return nextErrors
+  }
+
   function handleChange(field) {
-    return (event) => setValues((prev) => ({ ...prev, [field]: event.target.value }))
+    return (event) => {
+      setValues((prev) => ({ ...prev, [field]: event.target.value }))
+      setFieldErrors((prev) => {
+        if (!prev[field]) return prev
+        const nextErrors = { ...prev }
+        delete nextErrors[field]
+        return nextErrors
+      })
+    }
+  }
+
+  function splitSubmitErrors(messages) {
+    const nextFieldErrors = {}
+    const generalErrors = []
+    messages.forEach((message) => {
+      if (message.includes('nombre_receptor')) nextFieldErrors.nombre_receptor = 'El nombre de quien recibe es obligatorio.'
+      else if (message.includes('direccion_entrega')) nextFieldErrors.direccion_entrega = 'La dirección de entrega es obligatoria.'
+      else generalErrors.push(message)
+    })
+    return { nextFieldErrors, generalErrors }
   }
 
   async function handleSubmit(event) {
     event.preventDefault()
-    setErrors([])
+    const nextFieldErrors = validateForm()
+    setFieldErrors(nextFieldErrors)
+    setSubmitErrors([])
+    if (Object.keys(nextFieldErrors).length > 0) return
     setIsSaving(true)
-
     try {
       const order = await createOrder({
         ...values,
@@ -44,7 +73,9 @@ function Cart({ cart, token, onUpdateQuantity, onRemoveItem, onOrderPlaced, onCl
       setConfirmedOrder(order)
       onOrderPlaced()
     } catch (err) {
-      setErrors(err.message.split('\n'))
+      const { nextFieldErrors: backendFieldErrors, generalErrors } = splitSubmitErrors(err.message.split('\n'))
+      setFieldErrors(backendFieldErrors)
+      setSubmitErrors(generalErrors)
     } finally {
       setIsSaving(false)
     }
@@ -129,10 +160,11 @@ function Cart({ cart, token, onUpdateQuantity, onRemoveItem, onOrderPlaced, onCl
                 <span className="amount tabnum">{priceFormatter.format(total)}</span>
               </div>
 
-              <form className="cart-checkout-form" onSubmit={handleSubmit}>
+              <form className="cart-checkout-form" noValidate onSubmit={handleSubmit}>
                 <label>
                   Nombre de quien recibe
-                  <input type="text" required placeholder="Nombre y apellido" value={values.nombre_receptor} onChange={handleChange('nombre_receptor')} />
+                  <input type="text" required aria-invalid={Boolean(fieldErrors.nombre_receptor)} aria-describedby={fieldErrors.nombre_receptor ? 'recipient-name-error' : undefined} placeholder="Nombre y apellido" value={values.nombre_receptor} onChange={handleChange('nombre_receptor')} />
+                  {fieldErrors.nombre_receptor && <span id="recipient-name-error" className="cart-field-error">{fieldErrors.nombre_receptor}</span>}
                 </label>
 
                 <div className="option-group">
@@ -153,12 +185,13 @@ function Cart({ cart, token, onUpdateQuantity, onRemoveItem, onOrderPlaced, onCl
 
                 <label>
                   Dirección de entrega
-                  <input type="text" required placeholder="Calle, número, ciudad" value={values.direccion_entrega} onChange={handleChange('direccion_entrega')} />
+                  <input type="text" required aria-invalid={Boolean(fieldErrors.direccion_entrega)} aria-describedby={fieldErrors.direccion_entrega ? 'delivery-address-error' : undefined} placeholder="Calle, número, ciudad" value={values.direccion_entrega} onChange={handleChange('direccion_entrega')} />
+                  {fieldErrors.direccion_entrega && <span id="delivery-address-error" className="cart-field-error">{fieldErrors.direccion_entrega}</span>}
                 </label>
 
-                {errors.length > 0 && (
+                {submitErrors.length > 0 && (
                   <ul className="cart-errors">
-                    {errors.map((message) => <li key={message}>{message}</li>)}
+                    {submitErrors.map((message) => <li key={message}>{message}</li>)}
                   </ul>
                 )}
 

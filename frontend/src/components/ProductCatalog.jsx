@@ -8,6 +8,7 @@ function ProductCatalog({ cartQuantities, onAddToCart, showToast }) {
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
+  const [filterErrors, setFilterErrors] = useState({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const selectedProductIdRef = useRef(null)
@@ -30,15 +31,46 @@ function ProductCatalog({ cartQuantities, onAddToCart, showToast }) {
     loadProducts()
   }, [])
 
+  function validatePriceRange() {
+    const nextErrors = {}
+    const minimum = minPrice === '' ? null : Number(minPrice)
+    const maximum = maxPrice === '' ? null : Number(maxPrice)
+
+    if (minimum !== null && (Number.isNaN(minimum) || minimum < 0)) {
+      nextErrors.minPrice = 'El precio mínimo debe ser mayor o igual a 0.'
+    }
+
+    if (maximum !== null && (Number.isNaN(maximum) || maximum < 0)) {
+      nextErrors.maxPrice = 'El precio máximo debe ser mayor o igual a 0.'
+    }
+
+    if (!nextErrors.minPrice && !nextErrors.maxPrice && minimum !== null && maximum !== null && minimum > maximum) {
+      nextErrors.range = 'El precio mínimo no puede superar al máximo.'
+    }
+
+    return nextErrors
+  }
+
   function handleFilterSubmit(event) {
     event.preventDefault()
+    const nextErrors = validatePriceRange()
+    setFilterErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) return
     loadProducts({ minPrice, maxPrice })
   }
 
   function handleClearFilters() {
     setMinPrice('')
     setMaxPrice('')
+    setFilterErrors({})
     loadProducts()
+  }
+
+  function handlePriceChange(field, setValue) {
+    return (event) => {
+      setValue(event.target.value)
+      setFilterErrors((prev) => ({ ...prev, [field]: undefined, range: undefined }))
+    }
   }
 
   async function handleSelectProduct(id) {
@@ -61,7 +93,7 @@ function ProductCatalog({ cartQuantities, onAddToCart, showToast }) {
           <p className="catalog-lede">Productos con precio, disponibilidad y ficha nutricional sin vueltas.</p>
         </div>
 
-        <form className="price-filter" onSubmit={handleFilterSubmit}>
+        <form className="price-filter" noValidate onSubmit={handleFilterSubmit}>
           <div className="filter-title">
             <span>Filtrar por precio</span>
             {(minPrice || maxPrice) && (
@@ -73,18 +105,21 @@ function ProductCatalog({ cartQuantities, onAddToCart, showToast }) {
               Desde
               <span className="price-input">
                 <span>$</span>
-                <input type="number" min="0" placeholder="0" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} />
+                <input type="number" min="0" aria-invalid={Boolean(filterErrors.minPrice)} aria-describedby={filterErrors.minPrice ? 'min-price-error' : undefined} placeholder="0" value={minPrice} onChange={handlePriceChange('minPrice', setMinPrice)} />
               </span>
+              {filterErrors.minPrice && <span id="min-price-error" className="filter-field-error">{filterErrors.minPrice}</span>}
             </label>
             <label>
               Hasta
               <span className="price-input">
                 <span>$</span>
-                <input type="number" min="0" placeholder="Sin límite" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} />
+                <input type="number" min="0" aria-invalid={Boolean(filterErrors.maxPrice)} aria-describedby={filterErrors.maxPrice ? 'max-price-error' : undefined} placeholder="Sin límite" value={maxPrice} onChange={handlePriceChange('maxPrice', setMaxPrice)} />
               </span>
+              {filterErrors.maxPrice && <span id="max-price-error" className="filter-field-error">{filterErrors.maxPrice}</span>}
             </label>
             <button className="btn btn-accent filter-submit" type="submit">Aplicar</button>
           </div>
+          {filterErrors.range && <p className="filter-range-error">{filterErrors.range}</p>}
         </form>
       </div>
 

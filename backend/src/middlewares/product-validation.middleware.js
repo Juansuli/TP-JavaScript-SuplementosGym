@@ -18,7 +18,7 @@ function validateProduct(data, isUpdate = false) {
   }
 
   if (!isUpdate || data.stock !== undefined) {
-    if (!Number.isInteger(Number(data.stock)) || Number(data.stock) < 0) {
+    if (data.stock === '' || !Number.isInteger(Number(data.stock)) || Number(data.stock) < 0) {
       errors.push('El stock debe ser un número entero mayor o igual a 0.');
     }
   }
