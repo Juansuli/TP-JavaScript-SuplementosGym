@@ -97,12 +97,13 @@ function Cart({ cart, token, onUpdateQuantity, onRemoveItem, onOrderPlaced, onCl
         {confirmedOrder ? (
           <div className="cart-confirmation">
             <span className="confirmation-mark" aria-hidden="true">✓</span>
-            <p className="eyebrow">Pedido confirmado</p>
-            <h2 id="cart-title">Tu pedido ya está registrado.</h2>
+            <p className="eyebrow">Pedido enviado</p>
+            <h2 id="cart-title">Tu pedido fue enviado, pero todavía no fue confirmado.</h2>
             <p>
               Pedido <strong className="tabnum">#{confirmedOrder.id_pedido}</strong>
               {' · '}Total <strong className="tabnum">{priceFormatter.format(confirmedOrder.total)}</strong>
             </p>
+            <p>Un administrador tiene que confirmarlo. Vas a poder ver cuándo se confirme desde “Mis compras”.</p>
             <button type="button" className="btn btn-accent" onClick={onClose}>Listo</button>
           </div>
         ) : cart.length === 0 ? (

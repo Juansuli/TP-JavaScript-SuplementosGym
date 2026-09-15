@@ -12,6 +12,7 @@ const {
 } = require('../middlewares/pedido-validation.middleware');
 
 const STOCK_RESERVED_STATUSES = ['pendiente', 'procesando'];
+const CONFIRMED_STATUSES = ['procesando', 'enviado', 'entregado'];
 const CREATE_ORDER_FIELDS = ['nombre_receptor', 'direccion_entrega', 'metodo_pago'];
 const ORDER_FIELDS = ['nombre_receptor', 'direccion_entrega', 'metodo_pago', 'estado'];
 
@@ -97,9 +98,20 @@ async function listOrders(req, res) {
   }
 
   try {
+    // El rol del token no alcanza: un administrador puede además tener
+    // perfil de cliente (ver enableClientProfile), y en ese caso también
+    // tiene que ver solo sus propios pedidos acá.
+    const clientProfile = await Cliente.findByPk(req.user.id_usuario);
+    const isClient = Boolean(clientProfile);
+    const where = estado === undefined ? {} : { estado };
+    if (isClient) {
+      where.usuario_id = req.user.id_usuario;
+    }
+
     const orders = await Pedido.findAll({
-      where: estado === undefined ? {} : { estado },
-      order: [['id_pedido', 'ASC']],
+      where,
+      // El cliente ve primero sus pedidos más recientes; el admin mantiene el orden histórico.
+      order: [['id_pedido', isClient ? 'DESC' : 'ASC']],
     });
 
     return res.json(orders);
@@ -255,6 +267,11 @@ async function updateOrder(req, res) {
         await restoreOrderStock(existingOrder.id_pedido, transaction);
       } else if (existingOrder.estado === 'cancelado' && orderData.estado !== undefined) {
         throw new Error('CANCELLED_ORDER_CANNOT_BE_REACTIVATED');
+      }
+
+      // Primera vez que el administrador saca el pedido de "pendiente": queda sellada la fecha de confirmación.
+      if (CONFIRMED_STATUSES.includes(orderData.estado) && !existingOrder.fecha_confirmacion) {
+        orderData.fecha_confirmacion = new Date();
       }
 
       await existingOrder.update(orderData, { transaction });

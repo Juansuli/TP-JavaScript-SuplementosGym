@@ -8,6 +8,7 @@
     "dev": "nodemon src/app.js",
     "migrate:product-images": "node scripts/add-product-image-column.js",
     "migrate:usuario-activo": "node scripts/add-usuario-activo-column.js",
+    "migrate:pedido-confirmacion": "node scripts/add-pedido-confirmacion-column.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

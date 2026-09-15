@@ -12,7 +12,7 @@ const router = express.Router();
 
 router.use(authenticate);
 
-router.get('/', authorize('administrador'), listOrders);
+router.get('/', listOrders);
 router.get('/:id', getOrder);
 router.post('/', createOrder);
 router.put('/:id', authorize('administrador'), updateOrder);

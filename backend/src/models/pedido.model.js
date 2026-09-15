@@ -33,6 +33,14 @@ const Pedido = sequelize.define(
       allowNull: false,
       defaultValue: 'pendiente',
     },
+    // Se completa automáticamente la primera vez que un administrador saca
+    // el pedido de "pendiente". Mientras sea null, el pedido fue enviado
+    // por el cliente pero todavía nadie lo confirmó.
+    fecha_confirmacion: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: null,
+    },
     total: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
