@@ -69,6 +69,7 @@ function App() {
     setCurrentUser(user)
     localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(user))
     setIsAuthOpen(false)
+    setIsUserMenuOpen(false)
   }
 
   function handleLogout() {
@@ -77,7 +78,6 @@ function App() {
     setView('catalogo')
     setCart([])
     setIsCartOpen(false)
-    setIsUserMenuOpen(false)
   }
 
   async function handleEnableClientProfile() {
