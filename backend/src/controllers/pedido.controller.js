@@ -97,13 +97,17 @@ async function listOrders(req, res) {
     return res.status(400).json({ error: 'El estado del pedido no es válido.' });
   }
 
-  const isClient = req.user.rol === 'cliente';
-  const where = estado === undefined ? {} : { estado };
-  if (isClient) {
-    where.usuario_id = req.user.id_usuario;
-  }
-
   try {
+    // El rol del token no alcanza: un administrador puede además tener
+    // perfil de cliente (ver enableClientProfile), y en ese caso también
+    // tiene que ver solo sus propios pedidos acá.
+    const clientProfile = await Cliente.findByPk(req.user.id_usuario);
+    const isClient = Boolean(clientProfile);
+    const where = estado === undefined ? {} : { estado };
+    if (isClient) {
+      where.usuario_id = req.user.id_usuario;
+    }
+
     const orders = await Pedido.findAll({
       where,
       // El cliente ve primero sus pedidos más recientes; el admin mantiene el orden histórico.
