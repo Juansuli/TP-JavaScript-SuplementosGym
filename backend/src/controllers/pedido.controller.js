@@ -138,11 +138,11 @@ async function getOrder(req, res) {
   }
 }
 
+// Cualquier usuario con perfil de cliente puede crear pedidos: un cliente
+// siempre lo tiene (se crea al registrarse) y un administrador lo tiene
+// si activó su perfil (ver enableClientProfile en cliente.controller.js).
+// Por eso el permiso se valida buscando ese perfil, no por el rol.
 async function createOrder(req, res) {
-  if (req.user.rol !== 'cliente') {
-    return res.status(403).json({ error: 'Solo los clientes pueden crear pedidos.' });
-  }
-
   const clientId = req.user.id_usuario;
   const orderData = getAllowedData(req.body, CREATE_ORDER_FIELDS);
   const orderErrors = validateOrderData(orderData);
@@ -223,7 +223,7 @@ async function createOrder(req, res) {
     return res.status(201).json(order);
   } catch (error) {
     if (error.message === 'CLIENT_NOT_FOUND') {
-      return res.status(404).json({ error: 'Cliente no encontrado.' });
+      return res.status(409).json({ error: 'Necesitás un perfil de cliente para crear pedidos.' });
     }
 
     if (error.message === 'PRODUCT_NOT_AVAILABLE') {

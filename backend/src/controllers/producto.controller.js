@@ -5,7 +5,7 @@ const Producto = require('../models/producto.model');
 const PedidoProducto = require('../models/pedido_producto.model');
 const { getProductStatus } = require('../utils/product-status');
 const { productImagesDirectory } = require('../middlewares/product-image.middleware');
-const { validateProduct } = require('../middlewares/producto-validation.middleware');
+const { validateProduct } = require('../middlewares/product-validation.middleware');
 
 const EDITABLE_FIELDS = [
   'nombre',

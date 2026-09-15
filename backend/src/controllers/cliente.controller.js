@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const sequelize = require('../config/db');
 const Usuario = require('../models/usuario.model');
+const Administrador = require('../models/administrador.model');
 const Cliente = require('../models/cliente.model');
 const Pedido = require('../models/pedido.model');
 const { validateRegistration, validateClientData } = require('../middlewares/cliente-validation.middleware');
@@ -50,6 +51,9 @@ function buildClientResponse(client, user) {
   return {
     ...userData,
     ...clientData,
+    // Le dice al frontend si este usuario ya tiene perfil de cliente, sin
+    // importar su rol -- es lo que le permite a un administrador comprar.
+    es_cliente: true,
   };
 }
 
@@ -123,11 +127,19 @@ async function login(req, res) {
       return res.status(403).json({ error: 'Tu cuenta está inhabilitada. Contactá a un administrador.' });
     }
 
+    const token = signToken(user);
+
+    // Un administrador puede además tener perfil de cliente (ver
+    // enableClientProfile) -- si lo tiene, se lo devolvemos junto con sus
+    // datos para que el frontend sepa que puede hacer pedidos.
+    const clientProfile = await Cliente.findByPk(user.id_usuario);
+    if (clientProfile) {
+      return res.json({ ...buildClientResponse(clientProfile, user), token });
+    }
+
     const userData = user.toJSON();
     delete userData.contraseña;
-
-    const token = signToken(user);
-    return res.json({ ...userData, token });
+    return res.json({ ...userData, es_cliente: false, token });
   } catch (error) {
     return res.status(500).json({ error: 'No se pudo iniciar sesión.' });
   }
@@ -224,6 +236,31 @@ async function updateClient(req, res) {
   }
 }
 
+// Le crea un perfil de cliente a un administrador ya logueado, para que
+// pueda hacer pedidos como cualquier cliente sin dejar de ser
+// administrador. Los campos de perfil son opcionales (ver cliente.model.js).
+async function enableClientProfile(req, res) {
+  const id = req.user.id_usuario;
+
+  const clientData = getAllowedData(req.body, CLIENT_FIELDS);
+  const clientErrors = validateClientData(clientData);
+  if (clientErrors.length) return res.status(400).json({ error: clientErrors });
+
+  try {
+    const existingClient = await Cliente.findByPk(id);
+    if (existingClient) {
+      return res.status(409).json({ error: 'Ya tenés un perfil de cliente.' });
+    }
+
+    const user = await Usuario.findByPk(id);
+    const newClient = await Cliente.create({ id_cliente: id, ...clientData });
+
+    return res.status(201).json(buildClientResponse(newClient, user));
+  } catch (error) {
+    return res.status(500).json({ error: 'No se pudo habilitar el perfil de cliente.' });
+  }
+}
+
 async function deleteClient(req, res) {
   const id = getClientId(req.params.id);
   if (!id) return res.status(400).json({ error: 'El id de cliente no es válido.' });
@@ -240,12 +277,18 @@ async function deleteClient(req, res) {
 
     const deleted = await sequelize.transaction(async (transaction) => {
       const client = await Cliente.findByPk(id, { transaction });
-      const user = await Usuario.findByPk(id, { transaction });
-
-      if (!client || !user) return false;
+      if (!client) return false;
 
       await client.destroy({ transaction });
-      await user.destroy({ transaction });
+
+      // Si el usuario también es administrador (perfil de cliente
+      // superpuesto), solo se borra el perfil de cliente -- la cuenta de
+      // administrador se mantiene intacta.
+      const alsoAdmin = await Administrador.findByPk(id, { transaction });
+      if (!alsoAdmin) {
+        await Usuario.destroy({ where: { id_usuario: id }, transaction });
+      }
+
       return true;
     });
 
@@ -287,5 +330,6 @@ module.exports = {
   updateClient,
   deleteClient,
   setClientStatus,
+  enableClientProfile,
   signToken,
 };

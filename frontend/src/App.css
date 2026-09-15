@@ -1245,6 +1245,18 @@
   border-color: var(--accent);
 }
 
+.product-form input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.product-form-field-error {
+  color: var(--danger);
+  font-family: var(--font-body);
+  font-size: .78rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 .product-form-errors {
   padding-left: 1.2rem;
   color: var(--danger);
@@ -2369,4 +2381,26 @@
   height: 56px;
   aspect-ratio: 1 / 1;
   object-fit: cover;
+}
+
+
+.auth-modal input[aria-invalid='true'],
+.cart-checkout-form input[aria-invalid='true'],
+.price-filter input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.auth-field-error,
+.cart-field-error,
+.filter-field-error,
+.filter-range-error {
+  color: var(--danger);
+  font-family: var(--font-body);
+  font-size: .78rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.filter-range-error {
+  margin: .75rem 0 0;
 }
