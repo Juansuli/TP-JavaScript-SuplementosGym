@@ -7,6 +7,7 @@ import AuthModal from './components/AuthModal'
 import Cart from './components/Cart'
 import ToastStack from './components/ToastStack'
 import { getRemainingStock } from './utils/stock'
+import { enableClientProfile } from './services/client.service'
 import './App.css'
 
 const CURRENT_USER_STORAGE_KEY = 'dosis_current_user'
@@ -31,7 +32,9 @@ function App() {
   const nextToastId = useRef(0)
 
   const isAdmin = currentUser?.rol === 'administrador'
-  const isClient = currentUser?.rol === 'cliente'
+  // Un administrador también puede comprar si activó su perfil de cliente
+  // (ver handleEnableClientProfile), por eso esto ya no depende solo del rol.
+  const canOrder = currentUser?.es_cliente === true
   const cartCount = cart.reduce((sum, item) => sum + item.cantidad, 0)
   const cartQuantities = Object.fromEntries(
     cart.map((item) => [item.id_producto, item.cantidad])
@@ -58,6 +61,17 @@ function App() {
     setView('catalogo')
     setCart([])
     setIsCartOpen(false)
+  }
+
+  async function handleEnableClientProfile() {
+    try {
+      const updatedUser = { ...currentUser, ...(await enableClientProfile(currentUser.token)) }
+      setCurrentUser(updatedUser)
+      localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(updatedUser))
+      showToast('Ahora también podés comprar como cliente.')
+    } catch (err) {
+      showToast(err.message, 'error')
+    }
   }
 
   function addToCart(product) {
@@ -157,7 +171,7 @@ function App() {
           </nav>
 
           <div className="nav-actions">
-            {isClient && (
+            {canOrder && (
               <button type="button" className="icon-btn" onClick={() => setIsCartOpen(true)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="9" cy="21" r="1" />
@@ -174,6 +188,9 @@ function App() {
             {currentUser ? (
               <div className="user-menu">
                 <span>Hola, {currentUser.nombre}</span>
+                {isAdmin && !canOrder && (
+                  <button type="button" onClick={handleEnableClientProfile}>Habilitar compras</button>
+                )}
                 <button type="button" onClick={handleLogout}>Salir</button>
               </div>
             ) : (
@@ -208,7 +225,7 @@ function App() {
               <button type="button" onClick={() => changeView('admin-clients')}>Administrar clientes</button>
             </>
           )}
-          {isClient && (
+          {canOrder && (
             <button type="button" onClick={() => { setIsCartOpen(true); setIsMenuOpen(false) }}>
               Mi pedido ({cartCount})
             </button>
@@ -226,7 +243,7 @@ function App() {
         ) : (
           <ProductCatalog
             cartQuantities={cartQuantities}
-            onAddToCart={isClient ? addToCart : undefined}
+            onAddToCart={canOrder ? addToCart : undefined}
             showToast={showToast}
           />
         )}

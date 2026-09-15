@@ -4,6 +4,12 @@
 // that it carries the profile fields the AI suggestion engine needs
 // (physical data, training habits, goals) plus an optional link to a
 // discount category (see "descuento_cliente" in the diagram).
+//
+// An administrador can also have a row here (overlapping specialization,
+// see usuario.model.js) -- that's what lets them place pedidos too. All
+// the profile fields below are optional for exactly that reason: an
+// administrador who just wants to buy something doesn't need to fill out
+// a training profile first.
 
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');

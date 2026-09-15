@@ -4,6 +4,12 @@
 // That's the standard way to map a DER generalization/specialization to
 // relational tables -- one base table plus one table per subtype, linked
 // 1-to-1 through a shared id.
+//
+// The specialization is overlapping, not disjoint: "rol" says which
+// account a usuario logged in with, but a usuario row can have a matching
+// row in BOTH administrador and cliente. That's how an administrador can
+// also act as a cliente and place pedidos (see cliente.controller.js'
+// enableClientProfile).
 
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
@@ -39,11 +45,12 @@ const Usuario = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    // Un cliente inhabilitado no puede iniciar sesión (ver login en
+    // Un usuario inhabilitado no puede iniciar sesión (ver login en
     // cliente.controller.js), pero sigue existiendo -- a diferencia de
-    // deleteClient, que sí lo borra. Solo aplica a clientes: la ruta que
-    // lo modifica busca por Cliente, así que un administrador nunca es
-    // alcanzable por ese camino.
+    // deleteClient, que sí lo borra. La ruta que lo modifica busca por
+    // Cliente, así que también alcanza a un administrador que haya
+    // activado su perfil de cliente: inhabilitarlo ahí bloquea su cuenta
+    // por completo, no solo sus compras.
     activo: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
