@@ -43,4 +43,26 @@ async function setClientStatus(id, activo, token) {
   return body
 }
 
-export { getClients, setClientStatus }
+// Le crea un perfil de cliente a un administrador ya logueado, para que
+// pueda hacer pedidos como cualquier cliente sin dejar de ser administrador.
+async function enableClientProfile(token) {
+  let response
+  try {
+    response = await fetch(`${API_BASE_URL}/perfil-cliente`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({}),
+    })
+  } catch {
+    throw new Error('No se pudo conectar con el servidor.')
+  }
+
+  const body = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(parseErrorMessage(body))
+  return body
+}
+
+export { getClients, setClientStatus, enableClientProfile }
