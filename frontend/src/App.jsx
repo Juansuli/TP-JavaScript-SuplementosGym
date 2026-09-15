@@ -1,8 +1,9 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import ProductCatalog from './components/ProductCatalog'
 import AdminProducts from './components/AdminProducts'
 import AdminOrders from './components/AdminOrders'
 import AdminClients from './components/AdminClients'
+import MyOrders from './components/MyOrders'
 import AuthModal from './components/AuthModal'
 import Cart from './components/Cart'
 import ToastStack from './components/ToastStack'
@@ -27,8 +28,10 @@ function App() {
   const [cart, setCart] = useState([])
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [toasts, setToasts] = useState([])
   const nextToastId = useRef(0)
+  const userMenuRef = useRef(null)
 
   const isAdmin = currentUser?.rol === 'administrador'
   const isClient = currentUser?.rol === 'cliente'
@@ -36,6 +39,19 @@ function App() {
   const cartQuantities = Object.fromEntries(
     cart.map((item) => [item.id_producto, item.cantidad])
   )
+
+  useEffect(() => {
+    if (!isUserMenuOpen) return
+
+    function handleClickOutside(event) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isUserMenuOpen])
 
   const dismissToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id))
@@ -58,6 +74,7 @@ function App() {
     setView('catalogo')
     setCart([])
     setIsCartOpen(false)
+    setIsUserMenuOpen(false)
   }
 
   function addToCart(product) {
@@ -173,7 +190,37 @@ function App() {
 
             {currentUser ? (
               <div className="user-menu">
-                <span>Hola, {currentUser.nombre}</span>
+                <div className="user-menu-toggle" ref={userMenuRef}>
+                  <button
+                    type="button"
+                    className="user-menu-trigger"
+                    aria-haspopup="true"
+                    aria-expanded={isUserMenuOpen}
+                    onClick={() => setIsUserMenuOpen((isOpen) => !isOpen)}
+                  >
+                    <span>Hola, {currentUser.nombre}</span>
+                  </button>
+
+                  {isUserMenuOpen && (
+                    <div className="user-menu-dropdown" role="menu">
+                      {isClient && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            changeView('mis-compras')
+                            setIsUserMenuOpen(false)
+                          }}
+                        >
+                          Mis compras
+                        </button>
+                      )}
+                      <button type="button" role="menuitem" onClick={() => setIsUserMenuOpen(false)}>
+                        Ajustes
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <button type="button" onClick={handleLogout}>Salir</button>
               </div>
             ) : (
@@ -209,9 +256,12 @@ function App() {
             </>
           )}
           {isClient && (
-            <button type="button" onClick={() => { setIsCartOpen(true); setIsMenuOpen(false) }}>
-              Mi pedido ({cartCount})
-            </button>
+            <>
+              <button type="button" onClick={() => { setIsCartOpen(true); setIsMenuOpen(false) }}>
+                Mi pedido ({cartCount})
+              </button>
+              <button type="button" onClick={() => changeView('mis-compras')}>Mis compras</button>
+            </>
           )}
         </nav>
       </header>
@@ -223,6 +273,8 @@ function App() {
           <AdminClients token={currentUser.token} showToast={showToast} />
         ) : view === 'admin' && isAdmin ? (
           <AdminProducts token={currentUser.token} showToast={showToast} />
+        ) : view === 'mis-compras' && isClient ? (
+          <MyOrders token={currentUser.token} showToast={showToast} />
         ) : (
           <ProductCatalog
             cartQuantities={cartQuantities}

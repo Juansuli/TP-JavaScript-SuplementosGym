@@ -338,6 +338,16 @@
   color: var(--ink-faint);
 }
 
+.status-pendiente {
+  background: rgba(167, 172, 152, .1);
+  color: var(--ink-soft);
+}
+
+.status-cancelado {
+  background: rgba(167, 172, 152, .1);
+  color: var(--ink-faint);
+}
+
 .product-card.product-state-agotado {
   border-color: rgba(226, 83, 111, .65);
   box-shadow: 0 0 0 1px rgba(226, 83, 111, .12);
@@ -652,6 +662,10 @@
   .admin-clients {
     padding-inline: 2.5rem;
   }
+}
+
+.my-orders-header::before {
+  content: 'Tus pedidos';
 }
 
 .admin-products-header {
@@ -1072,6 +1086,12 @@
 .admin-orders-table .order-state-cancelado {
   color: var(--ink-faint);
   background: rgba(167, 172, 152, .04);
+}
+
+.my-order-notice {
+  margin: .4rem 0 0;
+  color: var(--ink-faint);
+  font-size: .7rem;
 }
 
 @media (max-width: 720px) {
@@ -1628,6 +1648,37 @@
 .user-menu button:hover {
   color: var(--accent);
   border-color: var(--accent);
+}
+
+.user-menu-toggle {
+  position: relative;
+}
+
+.user-menu-trigger[aria-expanded='true'] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.user-menu-dropdown {
+  position: absolute;
+  top: calc(100% + .5rem);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.user-menu-dropdown button {
+  padding: .65rem .9rem;
+  border: 0;
+  border-radius: 0;
+  text-align: left;
+  font-size: .78rem;
 }
 
 @media (max-width: 767px) {

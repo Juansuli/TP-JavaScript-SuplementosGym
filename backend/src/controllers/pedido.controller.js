@@ -12,6 +12,7 @@ const {
 } = require('../middlewares/pedido-validation.middleware');
 
 const STOCK_RESERVED_STATUSES = ['pendiente', 'procesando'];
+const CONFIRMED_STATUSES = ['procesando', 'enviado', 'entregado'];
 const CREATE_ORDER_FIELDS = ['nombre_receptor', 'direccion_entrega', 'metodo_pago'];
 const ORDER_FIELDS = ['nombre_receptor', 'direccion_entrega', 'metodo_pago', 'estado'];
 
@@ -96,10 +97,17 @@ async function listOrders(req, res) {
     return res.status(400).json({ error: 'El estado del pedido no es válido.' });
   }
 
+  const isClient = req.user.rol === 'cliente';
+  const where = estado === undefined ? {} : { estado };
+  if (isClient) {
+    where.usuario_id = req.user.id_usuario;
+  }
+
   try {
     const orders = await Pedido.findAll({
-      where: estado === undefined ? {} : { estado },
-      order: [['id_pedido', 'ASC']],
+      where,
+      // El cliente ve primero sus pedidos más recientes; el admin mantiene el orden histórico.
+      order: [['id_pedido', isClient ? 'DESC' : 'ASC']],
     });
 
     return res.json(orders);
@@ -255,6 +263,11 @@ async function updateOrder(req, res) {
         await restoreOrderStock(existingOrder.id_pedido, transaction);
       } else if (existingOrder.estado === 'cancelado' && orderData.estado !== undefined) {
         throw new Error('CANCELLED_ORDER_CANNOT_BE_REACTIVATED');
+      }
+
+      // Primera vez que el administrador saca el pedido de "pendiente": queda sellada la fecha de confirmación.
+      if (CONFIRMED_STATUSES.includes(orderData.estado) && !existingOrder.fecha_confirmacion) {
+        orderData.fecha_confirmacion = new Date();
       }
 
       await existingOrder.update(orderData, { transaction });
