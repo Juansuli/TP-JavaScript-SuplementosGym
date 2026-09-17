@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { getOrderById, getOrders } from '../services/pedido.service'
+import { getOrderById, getMyOrders } from '../services/pedido.service'
 
 const ORDER_STATE_LABELS = {
   pendiente: 'Pendiente',
@@ -43,7 +43,7 @@ function MyOrders({ token, showToast }) {
       setError(null)
 
       try {
-        const data = await getOrders({}, token)
+        const data = await getMyOrders(token)
         if (!isStale) setOrders(data)
       } catch (err) {
         if (!isStale) setError(err.message)
