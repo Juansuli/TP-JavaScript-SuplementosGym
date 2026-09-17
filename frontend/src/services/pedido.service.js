@@ -33,11 +33,19 @@ async function createOrder(data, token) {
 }
 
 async function getOrders(filters = {}, token) {
+  return fetchOrders(API_BASE_URL, filters, token)
+}
+
+async function getMyOrders(token) {
+  return fetchOrders(`${API_BASE_URL}/mis-pedidos`, {}, token)
+}
+
+async function fetchOrders(baseUrl, filters, token) {
   const params = new URLSearchParams()
   if (filters.estado) params.set('estado', filters.estado)
 
   const query = params.toString()
-  const url = query ? `${API_BASE_URL}?${query}` : API_BASE_URL
+  const url = query ? `${baseUrl}?${query}` : baseUrl
 
   let response
   try {
@@ -105,4 +113,4 @@ async function deleteOrder(id, token) {
   }
 }
 
-export { createOrder, getOrders, getOrderById, updateOrder, deleteOrder }
+export { createOrder, getOrders, getMyOrders, getOrderById, updateOrder, deleteOrder }

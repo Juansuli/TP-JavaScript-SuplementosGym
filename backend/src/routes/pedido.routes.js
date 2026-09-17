@@ -1,6 +1,7 @@
 const express = require('express');
 const {
   listOrders,
+  listMyOrders,
   getOrder,
   createOrder,
   updateOrder,
@@ -12,7 +13,8 @@ const router = express.Router();
 
 router.use(authenticate);
 
-router.get('/', listOrders);
+router.get('/', authorize('administrador'), listOrders);
+router.get('/mis-pedidos', listMyOrders);
 router.get('/:id', getOrder);
 router.post('/', createOrder);
 router.put('/:id', authorize('administrador'), updateOrder);
