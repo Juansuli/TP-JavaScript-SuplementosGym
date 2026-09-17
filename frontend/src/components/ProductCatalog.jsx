@@ -6,12 +6,17 @@ import { getProducts, getProductById } from '../services/product.service'
 function ProductCatalog({ cartQuantities, onAddToCart, showToast }) {
   const [products, setProducts] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
+  const [nameFilter, setNameFilter] = useState('')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [filterErrors, setFilterErrors] = useState({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const selectedProductIdRef = useRef(null)
+  const normalizedName = nameFilter.trim().toLocaleLowerCase('es')
+  const filteredProducts = products.filter((product) => (
+    product.nombre.toLocaleLowerCase('es').includes(normalizedName)
+  ))
 
   async function loadProducts(filters) {
     setIsLoading(true)
@@ -60,6 +65,7 @@ function ProductCatalog({ cartQuantities, onAddToCart, showToast }) {
   }
 
   function handleClearFilters() {
+    setNameFilter('')
     setMinPrice('')
     setMaxPrice('')
     setFilterErrors({})
@@ -95,12 +101,21 @@ function ProductCatalog({ cartQuantities, onAddToCart, showToast }) {
 
         <form className="price-filter" noValidate onSubmit={handleFilterSubmit}>
           <div className="filter-title">
-            <span>Filtrar por precio</span>
-            {(minPrice || maxPrice) && (
+            <span>Filtrar productos</span>
+            {(nameFilter || minPrice || maxPrice) && (
               <button type="button" onClick={handleClearFilters}>Limpiar</button>
             )}
           </div>
           <div className="filter-fields">
+            <label className="filter-name">
+              Buscar por nombre
+              <input
+                type="search"
+                value={nameFilter}
+                placeholder="Ej. proteína"
+                onChange={(event) => setNameFilter(event.target.value)}
+              />
+            </label>
             <label>
               Desde
               <span className="price-input">
@@ -125,17 +140,17 @@ function ProductCatalog({ cartQuantities, onAddToCart, showToast }) {
 
       <div className="catalog-results-head">
         <h2>Productos</h2>
-        {!isLoading && !error && <span className="result-count tabnum">{products.length} resultados</span>}
+        {!isLoading && !error && <span className="result-count tabnum">{filteredProducts.length} resultados</span>}
       </div>
 
       {isLoading && <p className="catalog-message">Cargando productos...</p>}
       {!isLoading && error && <p className="catalog-message catalog-error">{error}</p>}
-      {!isLoading && !error && products.length === 0 && (
-        <p className="catalog-message">No hay productos para mostrar con ese rango.</p>
+      {!isLoading && !error && filteredProducts.length === 0 && (
+        <p className="catalog-message">No hay productos que coincidan con los filtros.</p>
       )}
-      {!isLoading && !error && products.length > 0 && (
+      {!isLoading && !error && filteredProducts.length > 0 && (
         <div className="product-grid">
-          {products.map((product) => (
+          {filteredProducts.map((product) => (
             <ProductCard
               key={product.id_producto}
               product={product}
