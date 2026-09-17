@@ -17,14 +17,23 @@ function AdminProducts({ token, showToast }) {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [productPendingDelete, setProductPendingDelete] = useState(null)
   const [nameFilter, setNameFilter] = useState('')
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [isBulkDeletePending, setIsBulkDeletePending] = useState(false)
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
   const selectAllRef = useRef(null)
 
   const normalizedFilter = nameFilter.trim().toLocaleLowerCase('es')
-  const filteredProducts = products.filter((product) => (
-    product.nombre.toLocaleLowerCase('es').includes(normalizedFilter)
+  const minimum = minPrice === '' ? null : Number(minPrice)
+  const maximum = maxPrice === '' ? null : Number(maxPrice)
+  const priceFilterError = (minimum !== null && (!Number.isFinite(minimum) || minimum < 0)) ||
+    (maximum !== null && (!Number.isFinite(maximum) || maximum < 0)) ||
+    (minimum !== null && maximum !== null && minimum > maximum)
+  const filteredProducts = priceFilterError ? [] : products.filter((product) => (
+    product.nombre.toLocaleLowerCase('es').includes(normalizedFilter) &&
+    (minimum === null || Number(product.precio) >= minimum) &&
+    (maximum === null || Number(product.precio) <= maximum)
   ))
   const visibleIds = filteredProducts.map((product) => product.id_producto)
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id))
@@ -220,15 +229,45 @@ function AdminProducts({ token, showToast }) {
       {!isLoading && !error && products.length > 0 && (
         <>
           <div className="admin-products-toolbar">
-            <label className="admin-products-search">
-              Buscar por nombre
-              <input
-                type="search"
-                value={nameFilter}
-                placeholder="Ej. proteína"
-                onChange={(event) => setNameFilter(event.target.value)}
-              />
-            </label>
+            <div className="admin-products-filters">
+              <label className="admin-products-search">
+                Buscar por nombre
+                <input
+                  type="search"
+                  value={nameFilter}
+                  placeholder="Ej. proteína"
+                  onChange={(event) => setNameFilter(event.target.value)}
+                />
+              </label>
+              <label className="admin-products-search admin-products-price">
+                Precio desde
+                <input
+                  type="number"
+                  min="0"
+                  value={minPrice}
+                  placeholder="0"
+                  onChange={(event) => setMinPrice(event.target.value)}
+                />
+              </label>
+              <label className="admin-products-search admin-products-price">
+                Precio hasta
+                <input
+                  type="number"
+                  min="0"
+                  value={maxPrice}
+                  placeholder="Sin límite"
+                  onChange={(event) => setMaxPrice(event.target.value)}
+                />
+              </label>
+              {(nameFilter || minPrice || maxPrice) && (
+                <button type="button" onClick={() => {
+                  setNameFilter('')
+                  setMinPrice('')
+                  setMaxPrice('')
+                }}>Limpiar</button>
+              )}
+              {priceFilterError && <p className="admin-products-filter-error">Ingresá un rango de precio válido.</p>}
+            </div>
             <div className="admin-products-bulk-actions">
               <span>{selectedIds.size} seleccionados</span>
               <button
@@ -241,8 +280,8 @@ function AdminProducts({ token, showToast }) {
             </div>
           </div>
 
-          {filteredProducts.length === 0 ? (
-            <p className="catalog-message">No hay productos que coincidan con la búsqueda.</p>
+          {priceFilterError ? null : filteredProducts.length === 0 ? (
+            <p className="catalog-message">No hay productos que coincidan con los filtros.</p>
           ) : (
             <table className="admin-products-table">
               <thead>
