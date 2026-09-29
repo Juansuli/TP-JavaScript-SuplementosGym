@@ -38,6 +38,15 @@ function validateClientData(data) {
     errors.push('Los días de entrenamiento deben ser un número entero entre 0 y 7.');
   }
 
+  if (
+    data.descuento_categoria !== undefined &&
+    data.descuento_categoria !== null &&
+    (typeof data.descuento_categoria !== 'string' ||
+      data.descuento_categoria.trim() === '')
+  ) {
+    errors.push('La categoría de descuento debe ser un string no vacío.');
+  }
+
   return errors;
 }
 

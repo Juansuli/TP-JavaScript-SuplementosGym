@@ -7,6 +7,7 @@ const Administrador = require('../models/administrador.model');
 const Cliente = require('../models/cliente.model');
 const Pedido = require('../models/pedido.model');
 const { validateRegistration, validateClientData } = require('../middlewares/cliente-validation.middleware');
+const Descuento = require('../models/descuento.model');
 
 const USER_FIELDS = ['email', 'nombre', 'apellido'];
 const CLIENT_FIELDS = [
@@ -157,6 +158,19 @@ async function createClient(req, res) {
 
   try {
     const client = await sequelize.transaction(async (transaction) => {
+      if (
+        clientData.descuento_categoria !== undefined &&
+        clientData.descuento_categoria !== null
+      ) {
+        const discount = await Descuento.findByPk(
+          clientData.descuento_categoria,
+          { transaction }
+        );
+
+        if (!discount) {
+          throw new Error('DISCOUNT_CATEGORY_NOT_FOUND');
+        }
+      }
       const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
       const user = await Usuario.create(
@@ -181,6 +195,11 @@ async function createClient(req, res) {
 
     return res.status(201).json(client);
   } catch (error) {
+    if (error.message === 'DISCOUNT_CATEGORY_NOT_FOUND') {
+      return res.status(400).json({
+        error: 'La categoría de descuento no existe.',
+      });
+    }
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ error: 'Ya existe un usuario con ese email.' });
     }
