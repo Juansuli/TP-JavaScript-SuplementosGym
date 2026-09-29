@@ -16,6 +16,13 @@ const CONFIRMED_STATUSES = ['procesando', 'enviado', 'entregado'];
 const CREATE_ORDER_FIELDS = ['nombre_receptor', 'direccion_entrega', 'metodo_pago'];
 const ORDER_FIELDS = ['nombre_receptor', 'direccion_entrega', 'metodo_pago', 'estado'];
 
+// Guarda qué clientes tienen un pedido creándose ahora mismo. Vive en
+// memoria (un solo proceso de Node), pero alcanza para este proyecto: evita
+// que un doble clic, dos pestañas abiertas o un reintento de red del mismo
+// cliente terminen creando dos pedidos mientras el primero todavía se está
+// procesando.
+const clientsCreatingOrder = new Set();
+
 function getPositiveInteger(value) {
   const number = Number(value);
   return Number.isInteger(number) && number > 0 ? number : null;
@@ -154,6 +161,11 @@ async function createOrder(req, res) {
 
   if (errors.length) return res.status(400).json({ error: errors });
 
+  if (clientsCreatingOrder.has(clientId)) {
+    return res.status(409).json({ error: 'Ya hay un pedido tuyo en proceso. Esperá a que termine antes de volver a intentarlo.' });
+  }
+  clientsCreatingOrder.add(clientId);
+
   try {
     const order = await sequelize.transaction(async (transaction) => {
       const client = await Cliente.findByPk(clientId, { transaction });
@@ -238,6 +250,8 @@ async function createOrder(req, res) {
     }
 
     return res.status(500).json({ error: 'No se pudo crear el pedido.' });
+  } finally {
+    clientsCreatingOrder.delete(clientId);
   }
 }
 
