@@ -1,19 +1,32 @@
 const jwt = require('jsonwebtoken');
+const Usuario = require('../models/usuario.model');
 
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Token de autenticación requerido.' });
   }
 
+  let payload;
+
   try {
-    const payload = jwt.verify(header.slice('Bearer '.length), process.env.JWT_SECRET, {
+    payload = jwt.verify(header.slice('Bearer '.length), process.env.JWT_SECRET, {
       algorithms: ['HS256'],
     });
+  } catch (error) {
+    return res.status(401).json({ error: 'Token inválido o expirado.' });
+  }
+
+  try {
+    const user = await Usuario.findByPk(payload.id_usuario);
+    if (!user || !user.activo) {
+      return res.status(403).json({ error: 'Tu cuenta está inhabilitada.' });
+    }
+
     req.user = { id_usuario: payload.id_usuario, rol: payload.rol };
     return next();
   } catch (error) {
-    return res.status(401).json({ error: 'Token inválido o expirado.' });
+    return res.status(500).json({ error: 'No se pudo verificar el estado de la cuenta.' });
   }
 }
 
