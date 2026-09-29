@@ -1,6 +1,7 @@
 // Validaciones de los datos de pedido: campos del pedido en sí y los productos que incluye.
 // El controlador llama a estas funciones y solo se encarga de responder según el resultado.
 const ORDER_STATUSES = ['pendiente', 'procesando', 'enviado', 'entregado', 'cancelado'];
+const PAYMENT_METHODS = ['tarjeta', 'efectivo', 'transferencia'];
 
 function getPositiveInteger(value) {
   const number = Number(value);
@@ -15,6 +16,14 @@ function validateOrderData(data, isUpdate = false) {
         (typeof data[field] !== 'string' || data[field].trim() === '')) {
       errors.push(`El campo ${field} es obligatorio.`);
     }
+  }
+
+  if (
+    typeof data.metodo_pago === 'string' &&
+    data.metodo_pago.trim() !== '' &&
+    !PAYMENT_METHODS.includes(data.metodo_pago)
+  ) {
+    errors.push('El método de pago no es válido.');
   }
 
   if (data.estado !== undefined && !ORDER_STATUSES.includes(data.estado)) {
