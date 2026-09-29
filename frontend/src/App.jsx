@@ -9,6 +9,7 @@ import Cart from './components/Cart'
 import ToastStack from './components/ToastStack'
 import { getRemainingStock } from './utils/stock'
 import { enableClientProfile } from './services/client.service'
+import { getProducts } from './services/product.service'
 import './App.css'
 
 const CURRENT_USER_STORAGE_KEY = 'dosis_current_user'
@@ -130,6 +131,49 @@ function App() {
     )
   }
 
+  // El carrito guarda una "foto" del stock de cada producto en el momento
+  // en que se agrega. Esa foto queda vieja si el stock cambia mientras el
+  // producto sigue en el carrito (por ejemplo, otro cliente compra el mismo
+  // producto). Esta función vuelve a consultar el stock real al backend y
+  // ajusta las cantidades del carrito si hace falta, para no dejar que el
+  // usuario confirme un pedido con una cantidad que ya no está disponible.
+  async function refreshCartStock() {
+    if (cart.length === 0) return { cart, didClamp: false }
+
+    try {
+      const products = await getProducts()
+      let didClamp = false
+
+      const nextCart = cart
+        .map((item) => {
+          const product = products.find((p) => p.id_producto === item.id_producto)
+          if (!product) {
+            didClamp = true
+            return null
+          }
+
+          const nextQuantity = Math.min(item.cantidad, product.stock)
+          if (nextQuantity !== item.cantidad) didClamp = true
+
+          return { ...item, stock: product.stock, cantidad: nextQuantity }
+        })
+        .filter((item) => item !== null && item.cantidad > 0)
+
+      setCart(nextCart)
+      return { cart: nextCart, didClamp }
+    } catch {
+      return { cart, didClamp: false }
+    }
+  }
+
+  function openCart() {
+    // Dispara la revalidación del stock apenas se abre el carrito, sin
+    // esperar la respuesta, para que la cantidad máxima del input no
+    // quede mostrando el valor viejo mientras el pedido sigue abierto.
+    refreshCartStock()
+    setIsCartOpen(true)
+  }
+
   function removeFromCart(id_producto) {
     setCart((prev) => prev.filter((item) => item.id_producto !== id_producto))
   }
@@ -189,7 +233,7 @@ function App() {
 
           <div className="nav-actions">
             {canOrder && (
-              <button type="button" className="icon-btn" onClick={() => setIsCartOpen(true)}>
+              <button type="button" className="icon-btn" onClick={openCart}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="9" cy="21" r="1" />
                   <circle cx="20" cy="21" r="1" />
@@ -274,7 +318,7 @@ function App() {
           )}
           {canOrder && (
             <>
-              <button type="button" onClick={() => { setIsCartOpen(true); setIsMenuOpen(false) }}>
+              <button type="button" onClick={() => { openCart(); setIsMenuOpen(false) }}>
                 Mi pedido ({cartCount})
               </button>
               <button type="button" onClick={() => changeView('mis-compras')}>Mis compras</button>
@@ -341,6 +385,7 @@ function App() {
           onUpdateQuantity={updateCartQuantity}
           onRemoveItem={removeFromCart}
           onOrderPlaced={clearCart}
+          onRevalidateStock={refreshCartStock}
           onClose={() => setIsCartOpen(false)}
         />
       )}
