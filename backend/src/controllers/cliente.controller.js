@@ -7,6 +7,7 @@ const Administrador = require('../models/administrador.model');
 const Cliente = require('../models/cliente.model');
 const Pedido = require('../models/pedido.model');
 const { validateRegistration, validateClientData } = require('../middlewares/cliente-validation.middleware');
+const Descuento = require('../models/descuento.model');
 
 const USER_FIELDS = ['email', 'nombre', 'apellido'];
 const CLIENT_FIELDS = [
@@ -41,6 +42,19 @@ function getAllowedData(body, fields) {
       .filter((field) => body[field] !== undefined)
       .map((field) => [field, typeof body[field] === 'string' ? body[field].trim() : body[field]])
   );
+}
+
+async function ensureDiscountCategoryExists(category, transaction) {
+  if (category === undefined || category === null) return;
+
+  const discount = await Descuento.findByPk(
+    category,
+    transaction ? { transaction } : {}
+  );
+
+  if (!discount) {
+    throw new Error('DISCOUNT_CATEGORY_NOT_FOUND');
+  }
 }
 
 function buildClientResponse(client, user) {
@@ -157,6 +171,11 @@ async function createClient(req, res) {
 
   try {
     const client = await sequelize.transaction(async (transaction) => {
+      await ensureDiscountCategoryExists(
+        clientData.descuento_categoria,
+        transaction
+      );
+
       const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
       const user = await Usuario.create(
@@ -181,6 +200,11 @@ async function createClient(req, res) {
 
     return res.status(201).json(client);
   } catch (error) {
+    if (error.message === 'DISCOUNT_CATEGORY_NOT_FOUND') {
+      return res.status(400).json({
+        error: 'La categoría de descuento no existe.',
+      });
+    }
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ error: 'Ya existe un usuario con ese email.' });
     }
@@ -214,6 +238,11 @@ async function updateClient(req, res) {
 
       if (!existingClient || !existingUser) return null;
 
+      await ensureDiscountCategoryExists(
+        clientData.descuento_categoria,
+        transaction
+      );
+
       if (Object.keys(userData).length > 0) {
         await existingUser.update(userData, { transaction });
       }
@@ -228,6 +257,12 @@ async function updateClient(req, res) {
     if (!client) return res.status(404).json({ error: 'Cliente no encontrado.' });
     return res.json(client);
   } catch (error) {
+    if (error.message === 'DISCOUNT_CATEGORY_NOT_FOUND') {
+      return res.status(400).json({
+        error: 'La categoría de descuento no existe.',
+      });
+    }
+
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ error: 'Ya existe un usuario con ese email.' });
     }
@@ -252,11 +287,19 @@ async function enableClientProfile(req, res) {
       return res.status(409).json({ error: 'Ya tenés un perfil de cliente.' });
     }
 
+    await ensureDiscountCategoryExists(clientData.descuento_categoria);
+
     const user = await Usuario.findByPk(id);
     const newClient = await Cliente.create({ id_cliente: id, ...clientData });
 
     return res.status(201).json(buildClientResponse(newClient, user));
   } catch (error) {
+    if (error.message === 'DISCOUNT_CATEGORY_NOT_FOUND') {
+      return res.status(400).json({
+        error: 'La categoría de descuento no existe.',
+      });
+    }
+
     return res.status(500).json({ error: 'No se pudo habilitar el perfil de cliente.' });
   }
 }
