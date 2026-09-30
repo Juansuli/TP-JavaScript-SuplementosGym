@@ -1,4 +1,4 @@
-const API_ORIGIN = 'http://localhost:3001'
+import { API_ORIGIN } from '../config/api'
 
 function getProductImageUrl(imageUrl) {
   return imageUrl ? `${API_ORIGIN}${imageUrl}` : null

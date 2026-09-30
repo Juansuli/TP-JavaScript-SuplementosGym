@@ -1,6 +1,8 @@
 // Concentrates every call to the backend's pedido endpoints so the
 // components never talk to fetch() directly.
-const API_BASE_URL = 'http://localhost:3001/api/pedidos'
+import { API_ORIGIN } from '../config/api'
+
+const API_BASE_URL = `${API_ORIGIN}/api/pedidos`
 
 // Same inconsistent error shape as product.service.js: sometimes a single
 // string, sometimes an array of validation messages.

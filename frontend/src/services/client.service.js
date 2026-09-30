@@ -1,7 +1,9 @@
 // Concentrates the calls to the backend's client-management endpoints
 // (admin panel: list clients, enable/disable them), same pattern as
 // product.service.js and pedido.service.js.
-const API_BASE_URL = 'http://localhost:3001/api/clientes'
+import { API_ORIGIN } from '../config/api'
+
+const API_BASE_URL = `${API_ORIGIN}/api/clientes`
 
 function parseErrorMessage(body) {
   if (!body || !body.error) return 'Ocurrió un error inesperado.'
