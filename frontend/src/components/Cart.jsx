@@ -15,7 +15,7 @@ const paymentLabels = {
   efectivo: 'Efectivo al retirar en el local',
 }
 
-function Cart({ cart, token, onUpdateQuantity, onRemoveItem, onOrderPlaced, onClose }) {
+function Cart({ cart, token, onUpdateQuantity, onRemoveItem, onOrderPlaced, onRevalidateStock, onClose }) {
   const [values, setValues] = useState({
     nombre_receptor: '',
     direccion_entrega: '',
@@ -66,9 +66,21 @@ function Cart({ cart, token, onUpdateQuantity, onRemoveItem, onOrderPlaced, onCl
     if (Object.keys(nextFieldErrors).length > 0) return
     setIsSaving(true)
     try {
+      const { cart: freshCart, didClamp } = await onRevalidateStock()
+
+      if (freshCart.length === 0) {
+        setSubmitErrors(['Los productos de tu pedido ya no tienen stock disponible.'])
+        return
+      }
+
+      if (didClamp) {
+        setSubmitErrors(['El stock disponible cambió. Revisá las cantidades antes de confirmar el pedido.'])
+        return
+      }
+
       const order = await createOrder({
         ...values,
-        productos: cart.map((item) => ({ id_producto: item.id_producto, cantidad: item.cantidad })),
+        productos: freshCart.map((item) => ({ id_producto: item.id_producto, cantidad: item.cantidad })),
       }, token)
       setConfirmedOrder(order)
       onOrderPlaced()
