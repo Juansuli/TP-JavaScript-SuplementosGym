@@ -86,6 +86,15 @@ function AdminProducts({ token, showToast }) {
     }
 
     if (editingProduct) {
+      // El producto en memoria puede estar desactualizado (por ejemplo, si
+      // se vendió stock por un pedido mientras el formulario seguía
+      // abierto). Si el admin no tocó el campo de stock, no lo mandamos:
+      // así no pisamos cambios de stock que pasaron después de abrir el
+      // formulario.
+      if (payload.stock === editingProduct.stock) {
+        delete payload.stock
+      }
+
       const updated = await updateProduct(editingProduct.id_producto, payload, token)
       setProducts((prev) =>
         prev.map((product) => (product.id_producto === updated.id_producto ? updated : product))
