@@ -2442,3 +2442,89 @@
 .filter-range-error {
   margin: .75rem 0 0;
 }
+
+/* Mi perfil (datos del cliente para las futuras sugerencias de IA) */
+.client-profile {
+  width: min(860px, 100%);
+  margin-inline: auto;
+  padding: 4.25rem 1.25rem 5rem;
+}
+
+.client-profile-header::before {
+  content: 'Tu cuenta';
+}
+
+.client-profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-top: 2rem;
+}
+
+.client-profile-intro {
+  color: var(--ink-soft);
+  font-size: .88rem;
+}
+
+.client-profile-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.client-profile-section legend {
+  padding-inline: .4rem;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.client-profile-section label {
+  display: grid;
+  align-content: start;
+  gap: .4rem;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: .67rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.client-profile-section .client-profile-wide {
+  grid-column: 1 / -1;
+}
+
+.client-profile-section input,
+.client-profile-section select {
+  width: 100%;
+  padding: .75rem;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  outline: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: .86rem;
+  text-transform: none;
+  color-scheme: dark;
+}
+
+.client-profile-section input:focus,
+.client-profile-section select:focus {
+  border-color: var(--accent);
+}
+
+.client-profile-section input[aria-invalid='true'],
+.client-profile-section select[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.client-profile-section input:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
