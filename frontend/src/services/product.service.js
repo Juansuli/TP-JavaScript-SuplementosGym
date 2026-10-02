@@ -1,4 +1,6 @@
-const API_BASE_URL = 'http://localhost:3001/api/productos'
+import { API_ORIGIN } from '../config/api'
+
+const API_BASE_URL = `${API_ORIGIN}/api/productos`
 
 function parseErrorMessage(body) {
   if (!body || !body.error) return 'Ocurrió un error inesperado.'
