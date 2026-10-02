@@ -15,10 +15,10 @@ const paymentLabels = {
   efectivo: 'Efectivo al retirar en el local',
 }
 
-function Cart({ cart, token, onUpdateQuantity, onRemoveItem, onOrderPlaced, onRevalidateStock, onClose }) {
+function Cart({ cart, token, deliveryAddress, onUpdateQuantity, onRemoveItem, onOrderPlaced, onRevalidateStock, onClose }) {
   const [values, setValues] = useState({
     nombre_receptor: '',
-    direccion_entrega: '',
+    direccion_entrega: deliveryAddress ?? '',
     metodo_pago: PAYMENT_METHODS[0],
   })
   const [fieldErrors, setFieldErrors] = useState({})
