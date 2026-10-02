@@ -4,6 +4,7 @@ import AdminProducts from './components/AdminProducts'
 import AdminOrders from './components/AdminOrders'
 import AdminClients from './components/AdminClients'
 import MyOrders from './components/MyOrders'
+import ClientProfile from './components/ClientProfile'
 import AuthModal from './components/AuthModal'
 import Cart from './components/Cart'
 import ToastStack from './components/ToastStack'
@@ -90,6 +91,14 @@ function App() {
     } catch (err) {
       showToast(err.message, 'error')
     }
+  }
+
+  // Se conserva el token (la API no lo devuelve al actualizar el perfil) y
+  // se pisan los datos viejos, por ejemplo el nombre del saludo del header.
+  function handleProfileUpdated(updatedClient) {
+    const updatedUser = { ...currentUser, ...updatedClient }
+    setCurrentUser(updatedUser)
+    localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(updatedUser))
   }
 
   function addToCart(product) {
@@ -248,20 +257,23 @@ function App() {
 
             {currentUser ? (
               <div className="user-menu">
-                <div className="user-menu-toggle" ref={userMenuRef}>
-                  <button
-                    type="button"
-                    className="user-menu-trigger"
-                    aria-haspopup="true"
-                    aria-expanded={isUserMenuOpen}
-                    onClick={() => setIsUserMenuOpen((isOpen) => !isOpen)}
-                  >
-                    <span>Hola, {currentUser.nombre}</span>
-                  </button>
+                {/* Las opciones del menú necesitan un perfil de cliente: a un
+                    administrador que no habilitó compras solo se lo saluda,
+                    sin un botón que no abriría nada. */}
+                {canOrder ? (
+                  <div className="user-menu-toggle" ref={userMenuRef}>
+                    <button
+                      type="button"
+                      className="user-menu-trigger"
+                      aria-haspopup="true"
+                      aria-expanded={isUserMenuOpen}
+                      onClick={() => setIsUserMenuOpen((isOpen) => !isOpen)}
+                    >
+                      <span>Hola, {currentUser.nombre}</span>
+                    </button>
 
-                  {isUserMenuOpen && (
-                    <div className="user-menu-dropdown" role="menu">
-                      {canOrder && (
+                    {isUserMenuOpen && (
+                      <div className="user-menu-dropdown" role="menu">
                         <button
                           type="button"
                           role="menuitem"
@@ -272,13 +284,22 @@ function App() {
                         >
                           Mis compras
                         </button>
-                      )}
-                      <button type="button" role="menuitem" onClick={() => setIsUserMenuOpen(false)}>
-                        Ajustes
-                      </button>
-                    </div>
-                  )}
-                </div>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            changeView('mi-perfil')
+                            setIsUserMenuOpen(false)
+                          }}
+                        >
+                          Mi perfil
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <span>Hola, {currentUser.nombre}</span>
+                )}
                 {isAdmin && !canOrder && (
                   <button type="button" onClick={handleEnableClientProfile}>Habilitar compras</button>
                 )}
@@ -322,6 +343,7 @@ function App() {
                 Mi pedido ({cartCount})
               </button>
               <button type="button" onClick={() => changeView('mis-compras')}>Mis compras</button>
+              <button type="button" onClick={() => changeView('mi-perfil')}>Mi perfil</button>
             </>
           )}
         </nav>
@@ -336,6 +358,8 @@ function App() {
           <AdminProducts token={currentUser.token} showToast={showToast} />
         ) : view === 'mis-compras' && canOrder ? (
           <MyOrders token={currentUser.token} showToast={showToast} />
+        ) : view === 'mi-perfil' && canOrder ? (
+          <ClientProfile currentUser={currentUser} onProfileUpdated={handleProfileUpdated} showToast={showToast} />
         ) : (
           <ProductCatalog
             cartQuantities={cartQuantities}

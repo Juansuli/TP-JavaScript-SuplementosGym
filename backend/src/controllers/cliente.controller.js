@@ -6,7 +6,7 @@ const Usuario = require('../models/usuario.model');
 const Administrador = require('../models/administrador.model');
 const Cliente = require('../models/cliente.model');
 const Pedido = require('../models/pedido.model');
-const { validateRegistration, validateClientData } = require('../middlewares/cliente-validation.middleware');
+const { validateRegistration, validateUserUpdate, validateClientData } = require('../middlewares/cliente-validation.middleware');
 const Descuento = require('../models/descuento.model');
 
 const USER_FIELDS = ['email', 'nombre', 'apellido'];
@@ -22,6 +22,7 @@ const CLIENT_FIELDS = [
   'direccion_entrega',
   'descuento_categoria',
 ];
+const DISCOUNT_FORBIDDEN_MESSAGE = 'Solo un administrador puede asignar una categoría de descuento.';
 
 function signToken(user) {
   return jwt.sign(
@@ -160,6 +161,11 @@ async function login(req, res) {
 }
 
 async function createClient(req, res) {
+  // El registro es público: nadie puede elegir su propio descuento.
+  if (req.body.descuento_categoria !== undefined) {
+    return res.status(403).json({ error: DISCOUNT_FORBIDDEN_MESSAGE });
+  }
+
   const registrationErrors = validateRegistration(req.body);
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
   const clientErrors = validateClientData(clientData);
@@ -171,11 +177,6 @@ async function createClient(req, res) {
 
   try {
     const client = await sequelize.transaction(async (transaction) => {
-      await ensureDiscountCategoryExists(
-        clientData.descuento_categoria,
-        transaction
-      );
-
       const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
       const user = await Usuario.create(
@@ -200,11 +201,6 @@ async function createClient(req, res) {
 
     return res.status(201).json(client);
   } catch (error) {
-    if (error.message === 'DISCOUNT_CATEGORY_NOT_FOUND') {
-      return res.status(400).json({
-        error: 'La categoría de descuento no existe.',
-      });
-    }
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ error: 'Ya existe un usuario con ese email.' });
     }
@@ -221,11 +217,16 @@ async function updateClient(req, res) {
     return res.status(404).json({ error: 'Cliente no encontrado.' });
   }
 
+  // Un cliente puede editar su perfil, pero no asignarse un descuento.
+  if (req.user.rol !== 'administrador' && req.body.descuento_categoria !== undefined) {
+    return res.status(403).json({ error: DISCOUNT_FORBIDDEN_MESSAGE });
+  }
+
   const userData = getAllowedData(req.body, USER_FIELDS);
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
-  const clientErrors = validateClientData(clientData);
+  const errors = [...validateUserUpdate(userData), ...validateClientData(clientData)];
 
-  if (clientErrors.length) return res.status(400).json({ error: clientErrors });
+  if (errors.length) return res.status(400).json({ error: errors });
 
   if (Object.keys(userData).length === 0 && Object.keys(clientData).length === 0) {
     return res.status(400).json({ error: 'Enviá al menos un campo editable.' });

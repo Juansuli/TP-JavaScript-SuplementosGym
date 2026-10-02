@@ -42,7 +42,11 @@ test('order lists enforce administrative and personal scopes', async (t) => {
     '../middlewares/pedido-validation.middleware': require('../src/middlewares/pedido-validation.middleware'),
   });
   const secret = 'order-list-tests-only-secret-at-least-32-characters';
-  const auth = loadModule('middlewares/auth.middleware.js', { jsonwebtoken: jwt }, {
+  const auth = loadModule('middlewares/auth.middleware.js', {
+    jsonwebtoken: jwt,
+    // authenticate checks that the account is still enabled on every request.
+    '../models/usuario.model': { findByPk: async id => ({ id_usuario: id, activo: true }) },
+  }, {
     process: { env: { JWT_SECRET: secret } },
   });
   const router = loadModule('routes/pedido.routes.js', {
