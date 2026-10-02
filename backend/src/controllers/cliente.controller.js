@@ -6,7 +6,7 @@ const Usuario = require('../models/usuario.model');
 const Administrador = require('../models/administrador.model');
 const Cliente = require('../models/cliente.model');
 const Pedido = require('../models/pedido.model');
-const { validateRegistration, validateClientData } = require('../middlewares/cliente-validation.middleware');
+const { validateRegistration, validateUserUpdate, validateClientData } = require('../middlewares/cliente-validation.middleware');
 const Descuento = require('../models/descuento.model');
 
 const USER_FIELDS = ['email', 'nombre', 'apellido'];
@@ -224,9 +224,9 @@ async function updateClient(req, res) {
 
   const userData = getAllowedData(req.body, USER_FIELDS);
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
-  const clientErrors = validateClientData(clientData);
+  const errors = [...validateUserUpdate(userData), ...validateClientData(clientData)];
 
-  if (clientErrors.length) return res.status(400).json({ error: clientErrors });
+  if (errors.length) return res.status(400).json({ error: errors });
 
   if (Object.keys(userData).length === 0 && Object.keys(clientData).length === 0) {
     return res.status(400).json({ error: 'Enviá al menos un campo editable.' });

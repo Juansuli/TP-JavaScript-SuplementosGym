@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { test } = require('node:test');
-const { validateClientData } = require('../src/middlewares/cliente-validation.middleware');
+const { validateUserUpdate, validateClientData } = require('../src/middlewares/cliente-validation.middleware');
 
 function loadModule(file, dependencies) {
   const context = {
@@ -87,6 +87,15 @@ test('profile validation rejects the values a user could realistically mistype',
   });
 });
 
+test('editing the account rejects an empty name, surname or email', () => {
+  assert.deepEqual(validateUserUpdate({}), []);
+  assert.deepEqual(validateUserUpdate({ nombre: 'Ana', apellido: 'Paz' }), []);
+
+  [{ nombre: '' }, { nombre: '   ' }, { apellido: '' }, { apellido: null }, { email: 'sin-arroba' }].forEach((data) => {
+    assert.equal(validateUserUpdate(data).length, 1, `Expected an error for ${JSON.stringify(data)}`);
+  });
+});
+
 test('a cliente cannot assign themselves a discount category', async () => {
   const controller = loadModule('controllers/cliente.controller.js', {
     sequelize: { Op: {} },
@@ -98,7 +107,7 @@ test('a cliente cannot assign themselves a discount category', async () => {
     '../models/cliente.model': {},
     '../models/pedido.model': {},
     '../models/descuento.model': {},
-    '../middlewares/cliente-validation.middleware': { validateRegistration: () => [], validateClientData: () => [] },
+    '../middlewares/cliente-validation.middleware': { validateRegistration: () => [], validateUserUpdate: () => [], validateClientData: () => [] },
   });
 
   const updateResponse = fakeResponse();

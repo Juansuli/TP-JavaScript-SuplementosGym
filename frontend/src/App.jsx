@@ -257,44 +257,49 @@ function App() {
 
             {currentUser ? (
               <div className="user-menu">
-                <div className="user-menu-toggle" ref={userMenuRef}>
-                  <button
-                    type="button"
-                    className="user-menu-trigger"
-                    aria-haspopup="true"
-                    aria-expanded={isUserMenuOpen}
-                    onClick={() => setIsUserMenuOpen((isOpen) => !isOpen)}
-                  >
-                    <span>Hola, {currentUser.nombre}</span>
-                  </button>
+                {/* Las opciones del menú necesitan un perfil de cliente: a un
+                    administrador que no habilitó compras solo se lo saluda,
+                    sin un botón que no abriría nada. */}
+                {canOrder ? (
+                  <div className="user-menu-toggle" ref={userMenuRef}>
+                    <button
+                      type="button"
+                      className="user-menu-trigger"
+                      aria-haspopup="true"
+                      aria-expanded={isUserMenuOpen}
+                      onClick={() => setIsUserMenuOpen((isOpen) => !isOpen)}
+                    >
+                      <span>Hola, {currentUser.nombre}</span>
+                    </button>
 
-                  {/* Las dos opciones necesitan un perfil de cliente, así que un
-                      administrador que no habilitó compras no ve el menú. */}
-                  {isUserMenuOpen && canOrder && (
-                    <div className="user-menu-dropdown" role="menu">
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          changeView('mis-compras')
-                          setIsUserMenuOpen(false)
-                        }}
-                      >
-                        Mis compras
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          changeView('mi-perfil')
-                          setIsUserMenuOpen(false)
-                        }}
-                      >
-                        Mi perfil
-                      </button>
-                    </div>
-                  )}
-                </div>
+                    {isUserMenuOpen && (
+                      <div className="user-menu-dropdown" role="menu">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            changeView('mis-compras')
+                            setIsUserMenuOpen(false)
+                          }}
+                        >
+                          Mis compras
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            changeView('mi-perfil')
+                            setIsUserMenuOpen(false)
+                          }}
+                        >
+                          Mi perfil
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <span>Hola, {currentUser.nombre}</span>
+                )}
                 {isAdmin && !canOrder && (
                   <button type="button" onClick={handleEnableClientProfile}>Habilitar compras</button>
                 )}

@@ -22,6 +22,26 @@ function validateRegistration(data) {
   return errors;
 }
 
+// Al editar se manda solo lo que cambia, así que cada dato de usuario es
+// opcional; pero si llega, tiene que cumplir la misma regla del registro.
+function validateUserUpdate(data) {
+  const errors = [];
+
+  if (data.email !== undefined && (typeof data.email !== 'string' || !data.email.includes('@'))) {
+    errors.push('El email es obligatorio y debe ser válido.');
+  }
+
+  if (data.nombre !== undefined && (typeof data.nombre !== 'string' || data.nombre.trim() === '')) {
+    errors.push('El nombre es obligatorio.');
+  }
+
+  if (data.apellido !== undefined && (typeof data.apellido !== 'string' || data.apellido.trim() === '')) {
+    errors.push('El apellido es obligatorio.');
+  }
+
+  return errors;
+}
+
 // Listas cerradas para que la sugerencia de IA reciba siempre los mismos
 // valores (el frontend muestra estas mismas opciones en un <select>).
 const GENDER_OPTIONS = ['femenino', 'masculino', 'otro', 'prefiero_no_decir'];
@@ -116,4 +136,4 @@ function validateClientData(data) {
   return errors;
 }
 
-module.exports = { validateRegistration, validateClientData };
+module.exports = { validateRegistration, validateUserUpdate, validateClientData };
