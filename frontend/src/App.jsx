@@ -406,6 +406,7 @@ function App() {
         <Cart
           cart={cart}
           token={currentUser?.token}
+          deliveryAddress={currentUser?.direccion_entrega ?? ''}
           onUpdateQuantity={updateCartQuantity}
           onRemoveItem={removeFromCart}
           onOrderPlaced={clearCart}
