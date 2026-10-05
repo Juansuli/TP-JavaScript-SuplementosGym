@@ -136,4 +136,48 @@ function validateClientData(data) {
   return errors;
 }
 
-module.exports = { validateRegistration, validateUserUpdate, validateClientData };
+function validateRequiredProfileData(data) {
+  const errors = [];
+  const missingFields = new Set();
+  const requiredFields = [
+    'nombre',
+    'apellido',
+    'fecha_nacimiento',
+    'genero',
+    'ocupacion',
+    'peso_kg',
+    'altura_cm',
+    'deporte',
+    'dias_entrenamiento',
+    'objetivo',
+  ];
+
+  requiredFields.forEach((field) => {
+    const value = data[field];
+
+    if (
+      value === undefined ||
+      value === null ||
+      (typeof value === 'string' && value.trim() === '')
+    ) {
+      errors.push(`El campo ${field} es obligatorio.`);
+      missingFields.add(field);
+    }
+  });
+
+  const dataToValidate = Object.fromEntries(
+    Object.entries(data).filter(([field]) => !missingFields.has(field))
+  );
+
+  errors.push(...validateUserUpdate(dataToValidate));
+  errors.push(...validateClientData(dataToValidate));
+
+  return errors;
+}
+
+module.exports = {
+  validateRegistration,
+  validateUserUpdate,
+  validateClientData,
+  validateRequiredProfileData,
+};
