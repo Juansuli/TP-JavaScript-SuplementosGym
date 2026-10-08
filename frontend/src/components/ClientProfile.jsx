@@ -19,10 +19,11 @@ const GOAL_OPTIONS = [
 const MIN_AGE = 14
 const MAX_AGE = 100
 
-// Campos del perfil que son opcionales: si quedan vacíos se mandan como
-// null para que el backend los borre.
-const OPTIONAL_TEXT_FIELDS = ['fecha_nacimiento', 'genero', 'ocupacion', 'deporte', 'objetivo', 'direccion_entrega']
-const OPTIONAL_NUMBER_FIELDS = ['peso_kg', 'altura_cm', 'dias_entrenamiento']
+// Campos del perfil agrupados por tipo para construir el payload.
+// Los valores vacíos se convierten en null; validateForm impide enviar vacíos
+// en los campos obligatorios.
+const PROFILE_TEXT_FIELDS = ['fecha_nacimiento', 'genero', 'ocupacion', 'deporte', 'objetivo', 'direccion_entrega']
+const PROFILE_NUMBER_FIELDS = ['peso_kg', 'altura_cm', 'dias_entrenamiento']
 
 const EMPTY_VALUES = {
   nombre: '',
@@ -110,27 +111,58 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
   function validateForm() {
     const nextErrors = {}
 
-    if (values.nombre.trim() === '') nextErrors.nombre = 'El nombre es obligatorio.'
-    if (values.apellido.trim() === '') nextErrors.apellido = 'El apellido es obligatorio.'
+    const isMissing = (value) =>
+      value === undefined ||
+      value === null ||
+      (typeof value === 'string' && value.trim() === '')
 
-    if (values.fecha_nacimiento !== '') {
+    if (isMissing(values.nombre)) nextErrors.nombre = 'El nombre es obligatorio.'
+    if (isMissing(values.apellido)) nextErrors.apellido = 'El apellido es obligatorio.'
+
+    if (isMissing(values.fecha_nacimiento)) {
+      nextErrors.fecha_nacimiento = 'La fecha de nacimiento es obligatoria.'
+    } else {
       const age = getAge(values.fecha_nacimiento)
       if (Number.isNaN(age) || age < MIN_AGE || age > MAX_AGE) {
         nextErrors.fecha_nacimiento = `Tenés que tener entre ${MIN_AGE} y ${MAX_AGE} años.`
       }
     }
 
-    if (values.peso_kg !== '' && !isNumberInRange(values.peso_kg, 20, 300)) {
+    if (isMissing(values.genero)) {
+      nextErrors.genero = 'El género es obligatorio.'
+    }
+
+    if (isMissing(values.ocupacion)) {
+      nextErrors.ocupacion = 'La ocupación es obligatoria.'
+    }
+
+    if (isMissing(values.peso_kg)) {
+      nextErrors.peso_kg = 'El peso es obligatorio.'
+    } else if (!isNumberInRange(values.peso_kg, 20, 300)) {
       nextErrors.peso_kg = 'El peso debe estar entre 20 y 300 kg.'
     }
 
-    if (values.altura_cm !== '' && !isNumberInRange(values.altura_cm, 100, 250)) {
+    if (isMissing(values.altura_cm)) {
+      nextErrors.altura_cm = 'La altura es obligatoria.'
+    } else if (!isNumberInRange(values.altura_cm, 100, 250)) {
       nextErrors.altura_cm = 'La altura debe estar entre 100 y 250 cm (por ejemplo, 175).'
     }
 
-    if (values.dias_entrenamiento !== '' &&
-        (!Number.isInteger(Number(values.dias_entrenamiento)) || !isNumberInRange(values.dias_entrenamiento, 0, 7))) {
+    if (isMissing(values.deporte)) {
+      nextErrors.deporte = 'El deporte o actividad es obligatorio.'
+    }
+
+    if (isMissing(values.dias_entrenamiento)) {
+      nextErrors.dias_entrenamiento = 'Los días de entrenamiento son obligatorios.'
+    } else if (
+      !Number.isInteger(Number(values.dias_entrenamiento)) ||
+      !isNumberInRange(values.dias_entrenamiento, 0, 7)
+    ) {
       nextErrors.dias_entrenamiento = 'Ingresá un número entero entre 0 y 7.'
+    }
+
+    if (isMissing(values.objetivo)) {
+      nextErrors.objetivo = 'El objetivo es obligatorio.'
     }
 
     return nextErrors
@@ -161,10 +193,21 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
       if (normalizedMessage.includes('apellido')) nextFieldErrors.apellido = message
       else if (normalizedMessage.includes('nombre')) nextFieldErrors.nombre = message
       else if (normalizedMessage.includes('nacimiento')) nextFieldErrors.fecha_nacimiento = message
-      else if (normalizedMessage.includes('género')) nextFieldErrors.genero = message
+      else if (
+        normalizedMessage.includes('género') ||
+        normalizedMessage.includes('genero')
+      ) nextFieldErrors.genero = message
+      else if (
+        normalizedMessage.includes('ocupación') ||
+        normalizedMessage.includes('ocupacion')
+      ) nextFieldErrors.ocupacion = message
       else if (normalizedMessage.includes('peso')) nextFieldErrors.peso_kg = message
       else if (normalizedMessage.includes('altura')) nextFieldErrors.altura_cm = message
-      else if (normalizedMessage.includes('días')) nextFieldErrors.dias_entrenamiento = message
+      else if (normalizedMessage.includes('deporte')) nextFieldErrors.deporte = message
+      else if (
+        normalizedMessage.includes('días') ||
+        normalizedMessage.includes('dias_entrenamiento')
+      ) nextFieldErrors.dias_entrenamiento = message
       else if (normalizedMessage.includes('objetivo')) nextFieldErrors.objetivo = message
       else generalErrors.push(message)
     })
@@ -178,12 +221,12 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
       apellido: values.apellido.trim(),
     }
 
-    OPTIONAL_TEXT_FIELDS.forEach((field) => {
+    PROFILE_TEXT_FIELDS.forEach((field) => {
       const text = values[field].trim()
       payload[field] = text === '' ? null : text
     })
 
-    OPTIONAL_NUMBER_FIELDS.forEach((field) => {
+    PROFILE_NUMBER_FIELDS.forEach((field) => {
       payload[field] = values[field] === '' ? null : Number(values[field])
     })
 
@@ -246,7 +289,7 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
         <form className="client-profile-form" noValidate onSubmit={handleSubmit}>
           <p className="client-profile-intro">
             Completá tus datos para que más adelante podamos recomendarte suplementos según tu objetivo.
-            Todos los campos, salvo nombre y apellido, son opcionales.
+            La dirección de entrega es opcional.
           </p>
 
           <fieldset className="client-profile-section">
@@ -271,7 +314,7 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
 
             <label>
               Fecha de nacimiento
-              <input type="date" max={today} value={values.fecha_nacimiento} onChange={handleChange('fecha_nacimiento')} {...errorProps('fecha_nacimiento')} />
+              <input type="date" required max={today} value={values.fecha_nacimiento} onChange={handleChange('fecha_nacimiento')} {...errorProps('fecha_nacimiento')} />
               {renderFieldError('fecha_nacimiento')}
               {!fieldErrors.fecha_nacimiento && age !== null && !Number.isNaN(age) && (
                 <span className="product-form-help">Edad: {age} años</span>
@@ -280,8 +323,8 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
 
             <label>
               Género
-              <select value={values.genero} onChange={handleChange('genero')} {...errorProps('genero')}>
-                <option value="">Sin especificar</option>
+              <select required value={values.genero} onChange={handleChange('genero')} {...errorProps('genero')}>
+                <option value="">Seleccioná una opción</option>
                 {GENDER_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
@@ -291,7 +334,15 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
 
             <label>
               Ocupación
-              <input type="text" placeholder="Ej.: estudiante, oficinista" value={values.ocupacion} onChange={handleChange('ocupacion')} />
+              <input
+                type="text"
+                required
+                placeholder="Ej.: estudiante, oficinista"
+                value={values.ocupacion}
+                onChange={handleChange('ocupacion')}
+                {...errorProps('ocupacion')}
+              />
+              {renderFieldError('ocupacion')}
             </label>
           </fieldset>
 
@@ -300,13 +351,13 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
 
             <label>
               Peso (kg)
-              <input type="number" min="20" max="300" step="0.1" value={values.peso_kg} onChange={handleChange('peso_kg')} {...errorProps('peso_kg')} />
+              <input type="number" required min="20" max="300" step="0.1" value={values.peso_kg} onChange={handleChange('peso_kg')} {...errorProps('peso_kg')} />
               {renderFieldError('peso_kg')}
             </label>
 
             <label>
               Altura (cm)
-              <input type="number" min="100" max="250" step="0.1" placeholder="Ej.: 175" value={values.altura_cm} onChange={handleChange('altura_cm')} {...errorProps('altura_cm')} />
+              <input type="number" required min="100" max="250" step="0.1" placeholder="Ej.: 175" value={values.altura_cm} onChange={handleChange('altura_cm')} {...errorProps('altura_cm')} />
               {renderFieldError('altura_cm')}
             </label>
           </fieldset>
@@ -316,19 +367,27 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
 
             <label>
               Deporte o actividad
-              <input type="text" placeholder="Ej.: musculación, running" value={values.deporte} onChange={handleChange('deporte')} />
+              <input
+                type="text"
+                required
+                placeholder="Ej.: musculación, running"
+                value={values.deporte}
+                onChange={handleChange('deporte')}
+                {...errorProps('deporte')}
+              />
+              {renderFieldError('deporte')}
             </label>
 
             <label>
               Días de entrenamiento por semana
-              <input type="number" min="0" max="7" step="1" value={values.dias_entrenamiento} onChange={handleChange('dias_entrenamiento')} {...errorProps('dias_entrenamiento')} />
+              <input type="number" required min="0" max="7" step="1" value={values.dias_entrenamiento} onChange={handleChange('dias_entrenamiento')} {...errorProps('dias_entrenamiento')} />
               {renderFieldError('dias_entrenamiento')}
             </label>
 
             <label>
               Objetivo
-              <select value={values.objetivo} onChange={handleChange('objetivo')} {...errorProps('objetivo')}>
-                <option value="">Sin especificar</option>
+              <select required value={values.objetivo} onChange={handleChange('objetivo')} {...errorProps('objetivo')}>
+                <option value="">Seleccioná una opción</option>
                 {GOAL_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}

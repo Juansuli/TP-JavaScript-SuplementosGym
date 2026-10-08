@@ -55,8 +55,9 @@ const GOAL_OPTIONS = [
 const MIN_AGE = 14;
 const MAX_AGE = 100;
 
-// Todos los campos del perfil son opcionales: "undefined" significa que no
-// se envió y "null" que el cliente lo quiere dejar vacío.
+// La validación base permite omitir campos o enviarlos como null durante el
+// registro y "Habilitar compras". Al guardar el perfil propio,
+// validateRequiredProfileData exige todos los campos salvo direccion_entrega.
 function isProvided(value) {
   return value !== undefined && value !== null;
 }
@@ -136,4 +137,48 @@ function validateClientData(data) {
   return errors;
 }
 
-module.exports = { validateRegistration, validateUserUpdate, validateClientData };
+function validateRequiredProfileData(data) {
+  const errors = [];
+  const missingFields = new Set();
+  const requiredFields = [
+    'nombre',
+    'apellido',
+    'fecha_nacimiento',
+    'genero',
+    'ocupacion',
+    'peso_kg',
+    'altura_cm',
+    'deporte',
+    'dias_entrenamiento',
+    'objetivo',
+  ];
+
+  requiredFields.forEach((field) => {
+    const value = data[field];
+
+    if (
+      value === undefined ||
+      value === null ||
+      (typeof value === 'string' && value.trim() === '')
+    ) {
+      errors.push(`El campo ${field} es obligatorio.`);
+      missingFields.add(field);
+    }
+  });
+
+  const dataToValidate = Object.fromEntries(
+    Object.entries(data).filter(([field]) => !missingFields.has(field))
+  );
+
+  errors.push(...validateUserUpdate(dataToValidate));
+  errors.push(...validateClientData(dataToValidate));
+
+  return errors;
+}
+
+module.exports = {
+  validateRegistration,
+  validateUserUpdate,
+  validateClientData,
+  validateRequiredProfileData,
+};

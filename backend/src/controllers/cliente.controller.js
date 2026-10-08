@@ -6,7 +6,7 @@ const Usuario = require('../models/usuario.model');
 const Administrador = require('../models/administrador.model');
 const Cliente = require('../models/cliente.model');
 const Pedido = require('../models/pedido.model');
-const { validateRegistration, validateUserUpdate, validateClientData } = require('../middlewares/cliente-validation.middleware');
+const { validateRegistration, validateUserUpdate, validateClientData, validateRequiredProfileData } = require('../middlewares/cliente-validation.middleware');
 const Descuento = require('../models/descuento.model');
 
 const USER_FIELDS = ['email', 'nombre', 'apellido'];
@@ -224,8 +224,11 @@ async function updateClient(req, res) {
 
   const userData = getAllowedData(req.body, USER_FIELDS);
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
-  const errors = [...validateUserUpdate(userData), ...validateClientData(clientData)];
+  const profileData = { ...userData, ...clientData };
 
+  const errors = req.user.id_usuario === id
+    ? validateRequiredProfileData(profileData)
+    : [...validateUserUpdate(userData), ...validateClientData(clientData)];
   if (errors.length) return res.status(400).json({ error: errors });
 
   if (Object.keys(userData).length === 0 && Object.keys(clientData).length === 0) {
@@ -274,7 +277,8 @@ async function updateClient(req, res) {
 
 // Le crea un perfil de cliente a un administrador ya logueado, para que
 // pueda hacer pedidos como cualquier cliente sin dejar de ser
-// administrador. Los campos de perfil son opcionales (ver cliente.model.js).
+// administrador. En este flujo, los datos del perfil son opcionales.
+// Al guardar el perfil propio, se exigen todos salvo direccion_entrega.
 async function enableClientProfile(req, res) {
   const id = req.user.id_usuario;
 
