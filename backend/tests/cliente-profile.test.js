@@ -141,6 +141,76 @@ test('a client cannot update their own profile with incomplete data', async () =
   assert.ok(response.body.error.includes('El campo apellido es obligatorio.'));
 });
 
+test('a client can update their own profile with complete required data', async () => {
+  const user = fakeRecord({
+    id_usuario: 7,
+    rol: 'cliente',
+    email: 'ana@example.com',
+    nombre: 'Nombre anterior',
+    apellido: 'Apellido anterior',
+    activo: true,
+    contraseña: 'hashed-password',
+  });
+
+  const client = fakeRecord({
+    id_cliente: 7,
+    fecha_nacimiento: null,
+    genero: null,
+    ocupacion: null,
+    peso_kg: null,
+    altura_cm: null,
+    deporte: null,
+    dias_entrenamiento: null,
+    objetivo: null,
+    direccion_entrega: null,
+    descuento_categoria: null,
+  });
+
+  const controller = loadClientController({
+    '../models/usuario.model': {
+      findByPk: async () => user,
+    },
+    '../models/cliente.model': {
+      findByPk: async () => client,
+    },
+  });
+
+  const response = fakeResponse();
+
+  await controller.updateClient(
+    {
+      params: { id: '7' },
+      user: { id_usuario: 7, rol: 'cliente' },
+      body: { ...COMPLETE_REQUIRED_PROFILE },
+    },
+    response
+  );
+
+  assert.equal(response.statusCode, 200);
+
+  Object.entries(COMPLETE_REQUIRED_PROFILE).forEach(([field, value]) => {
+    assert.equal(response.body[field], value);
+  });
+
+  assert.equal(response.body.direccion_entrega, null);
+
+  assert.equal(user.toJSON().nombre, COMPLETE_REQUIRED_PROFILE.nombre);
+  assert.equal(user.toJSON().apellido, COMPLETE_REQUIRED_PROFILE.apellido);
+
+  [
+    'fecha_nacimiento',
+    'genero',
+    'ocupacion',
+    'peso_kg',
+    'altura_cm',
+    'deporte',
+    'dias_entrenamiento',
+    'objetivo',
+  ].forEach((field) => {
+    assert.equal(client.toJSON()[field], COMPLETE_REQUIRED_PROFILE[field]);
+  });
+});
+
 test('an administrator can partially update another client', async () => {
   const user = fakeRecord({
     id_usuario: 7,

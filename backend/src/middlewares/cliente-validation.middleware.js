@@ -55,8 +55,9 @@ const GOAL_OPTIONS = [
 const MIN_AGE = 14;
 const MAX_AGE = 100;
 
-// Todos los campos del perfil son opcionales: "undefined" significa que no
-// se envió y "null" que el cliente lo quiere dejar vacío.
+// La validación base permite omitir campos o enviarlos como null durante el
+// registro y "Habilitar compras". Al guardar el perfil propio,
+// validateRequiredProfileData exige todos los campos salvo direccion_entrega.
 function isProvided(value) {
   return value !== undefined && value !== null;
 }

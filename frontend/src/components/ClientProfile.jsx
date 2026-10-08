@@ -19,10 +19,11 @@ const GOAL_OPTIONS = [
 const MIN_AGE = 14
 const MAX_AGE = 100
 
-// Campos del perfil que son opcionales: si quedan vacíos se mandan como
-// null para que el backend los borre.
-const OPTIONAL_TEXT_FIELDS = ['fecha_nacimiento', 'genero', 'ocupacion', 'deporte', 'objetivo', 'direccion_entrega']
-const OPTIONAL_NUMBER_FIELDS = ['peso_kg', 'altura_cm', 'dias_entrenamiento']
+// Campos del perfil agrupados por tipo para construir el payload.
+// Los valores vacíos se convierten en null; validateForm impide enviar vacíos
+// en los campos obligatorios.
+const PROFILE_TEXT_FIELDS = ['fecha_nacimiento', 'genero', 'ocupacion', 'deporte', 'objetivo', 'direccion_entrega']
+const PROFILE_NUMBER_FIELDS = ['peso_kg', 'altura_cm', 'dias_entrenamiento']
 
 const EMPTY_VALUES = {
   nombre: '',
@@ -220,12 +221,12 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
       apellido: values.apellido.trim(),
     }
 
-    OPTIONAL_TEXT_FIELDS.forEach((field) => {
+    PROFILE_TEXT_FIELDS.forEach((field) => {
       const text = values[field].trim()
       payload[field] = text === '' ? null : text
     })
 
-    OPTIONAL_NUMBER_FIELDS.forEach((field) => {
+    PROFILE_NUMBER_FIELDS.forEach((field) => {
       payload[field] = values[field] === '' ? null : Number(values[field])
     })
 
@@ -323,7 +324,7 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
             <label>
               Género
               <select required value={values.genero} onChange={handleChange('genero')} {...errorProps('genero')}>
-                <option value="">Sin especificar</option>
+                <option value="">Seleccioná una opción</option>
                 {GENDER_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
@@ -386,7 +387,7 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
             <label>
               Objetivo
               <select required value={values.objetivo} onChange={handleChange('objetivo')} {...errorProps('objetivo')}>
-                <option value="">Sin especificar</option>
+                <option value="">Seleccioná una opción</option>
                 {GOAL_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}

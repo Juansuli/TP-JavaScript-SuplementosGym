@@ -277,7 +277,8 @@ async function updateClient(req, res) {
 
 // Le crea un perfil de cliente a un administrador ya logueado, para que
 // pueda hacer pedidos como cualquier cliente sin dejar de ser
-// administrador. Los campos de perfil son opcionales (ver cliente.model.js).
+// administrador. En este flujo, los datos del perfil son opcionales.
+// Al guardar el perfil propio, se exigen todos salvo direccion_entrega.
 async function enableClientProfile(req, res) {
   const id = req.user.id_usuario;
 
