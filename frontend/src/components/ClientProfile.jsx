@@ -296,13 +296,13 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
             <legend>Datos personales</legend>
 
             <label>
-              Nombre
+              Nombre *
               <input type="text" required value={values.nombre} onChange={handleChange('nombre')} {...errorProps('nombre')} />
               {renderFieldError('nombre')}
             </label>
 
             <label>
-              Apellido
+              Apellido *
               <input type="text" required value={values.apellido} onChange={handleChange('apellido')} {...errorProps('apellido')} />
               {renderFieldError('apellido')}
             </label>
@@ -313,7 +313,7 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
             </label>
 
             <label>
-              Fecha de nacimiento
+              Fecha de nacimiento *
               <input type="date" required max={today} value={values.fecha_nacimiento} onChange={handleChange('fecha_nacimiento')} {...errorProps('fecha_nacimiento')} />
               {renderFieldError('fecha_nacimiento')}
               {!fieldErrors.fecha_nacimiento && age !== null && !Number.isNaN(age) && (
@@ -322,7 +322,7 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
             </label>
 
             <label>
-              Género
+              Género *
               <select required value={values.genero} onChange={handleChange('genero')} {...errorProps('genero')}>
                 <option value="">Seleccioná una opción</option>
                 {GENDER_OPTIONS.map((option) => (
@@ -333,7 +333,7 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
             </label>
 
             <label>
-              Ocupación
+              Ocupación *
               <input
                 type="text"
                 required
@@ -350,13 +350,13 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
             <legend>Datos físicos</legend>
 
             <label>
-              Peso (kg)
+              Peso (kg) *
               <input type="number" required min="20" max="300" step="0.1" value={values.peso_kg} onChange={handleChange('peso_kg')} {...errorProps('peso_kg')} />
               {renderFieldError('peso_kg')}
             </label>
 
             <label>
-              Altura (cm)
+              Altura (cm) *
               <input type="number" required min="100" max="250" step="0.1" placeholder="Ej.: 175" value={values.altura_cm} onChange={handleChange('altura_cm')} {...errorProps('altura_cm')} />
               {renderFieldError('altura_cm')}
             </label>
@@ -366,7 +366,7 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
             <legend>Entrenamiento</legend>
 
             <label>
-              Deporte o actividad
+              Deporte o actividad *
               <input
                 type="text"
                 required
@@ -379,13 +379,13 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
             </label>
 
             <label>
-              Días de entrenamiento por semana
+              Días de entrenamiento por semana *
               <input type="number" required min="0" max="7" step="1" value={values.dias_entrenamiento} onChange={handleChange('dias_entrenamiento')} {...errorProps('dias_entrenamiento')} />
               {renderFieldError('dias_entrenamiento')}
             </label>
 
             <label>
-              Objetivo
+              Objetivo *
               <select required value={values.objetivo} onChange={handleChange('objetivo')} {...errorProps('objetivo')}>
                 <option value="">Seleccioná una opción</option>
                 {GOAL_OPTIONS.map((option) => (
