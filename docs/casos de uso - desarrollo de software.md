@@ -43,7 +43,7 @@ Cliente
 
 1. Cliente inicia sesión con su cuenta pre-creada.
 2. Cliente selecciona los productos que va a comprar.
-3. Sistema muestra una sugerencia basada en IA. (Ver CUU6)
+3. Cliente solicita una sugerencia basada en IA y el sistema la muestra. (Ver CUU6)
 4. Cliente confirma su carrito con todos los productos seleccionados.
 5. Cliente indica la forma de pago elegida.
 6. Cliente confirma el pago.
@@ -53,7 +53,7 @@ Cliente
 
 2.a \<durante\> Producto no tiene stock solicitado.
 	2.a.1 Sistema informa la situación.
-3.a \<durante\> Cliente rechaza sugerencia de la IA.
+3.a \<durante\> Cliente no quiere la sugerencia de la IA (la ignora o solicita otra, ver CUU6).
 	3.a.1 Prosigue con el paso 4.
 3.b \<durante\> Cliente acepta sugerencia de la IA.
 	3.b.1 Sistema agrega sugerencia al carrito.
@@ -156,10 +156,13 @@ Cliente
 
 **Curso Básico (CB):**
 
-1. Cliente solicita una sugerencia desde su carrito.
+1. Cliente presiona el botón "Sugerime un producto según mis datos" desde su carrito.
 2. Sistema verifica que el perfil del cliente esté completo.
-3. Sistema envía el perfil del cliente y el catálogo disponible al servicio de IA.
-4. Sistema muestra de 1 a 3 productos sugeridos con el motivo de cada uno.
+3. Sistema envía los datos del cliente y los productos disponibles al servicio de IA.
+4. Sistema identifica los productos que sugiere la IA y muestra de 1 a 3 productos con el motivo de cada uno.
+5. Cliente presiona "Agregar sugerencia al carrito".
+6. Sistema agrega al carrito los productos sugeridos que tienen stock.
+7. Sistema registra la sugerencia como "aceptada".
 
 **Cursos Alternativos (CA):**
 
@@ -169,11 +172,14 @@ Cliente
 	3.a.1 Sistema informa la situación. FCU.
 3.b \<durante\> El servicio de IA no está disponible.
 	3.b.1 Sistema informa que la sugerencia no pudo generarse y que reintente más tarde. FCU.
-4.a \<durante\> Cliente rechaza la sugerencia.
-	4.a.1 Sistema registra la sugerencia como "rechazada". FCU.
-4.b \<durante\> Cliente acepta la sugerencia.
-	4.b.1 Sistema agrega al carrito los productos sugeridos que tienen stock.
-	4.b.2 Sistema registra la sugerencia como "aceptada".
+5.a \<durante\> Cliente presiona "Solicitar otra sugerencia".
+	5.a.1 Sistema registra la sugerencia anterior como "rechazada".
+	5.a.2 Sistema consulta de nuevo a la IA, excluyendo los productos ya sugeridos.
+	5.a.3 Prosigue con el paso 4.
+5.b \<durante\> No quedan productos para sugerir.
+	5.b.1 Sistema informa que no hay más productos disponibles para sugerir. FCU.
+5.c \<durante\> Cliente no quiere ninguna sugerencia.
+	5.c.1 Cliente continúa con su compra sin responder la sugerencia. FCU.
 
 **Precondiciones:**
 

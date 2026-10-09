@@ -12,7 +12,7 @@ function parseErrorMessage(body) {
   return Array.isArray(body.error) ? body.error.join('\n') : body.error
 }
 
-async function requestSuggestion(cart, token) {
+async function requestSuggestion(cart, excludedProductIds, token) {
   let response
   try {
     response = await fetch(API_BASE_URL, {
@@ -23,6 +23,7 @@ async function requestSuggestion(cart, token) {
       },
       body: JSON.stringify({
         carrito: cart.map((item) => ({ id_producto: item.id_producto, cantidad: item.cantidad })),
+        excluir_productos: excludedProductIds,
       }),
     })
   } catch {
@@ -41,10 +42,12 @@ async function requestSuggestion(cart, token) {
   return body
 }
 
+// Always only the logged-in user's suggestions, even for an administrator
+// (GET /api/sugerencias returns everyone's for admins).
 async function getSuggestions(token) {
   let response
   try {
-    response = await fetch(API_BASE_URL, {
+    response = await fetch(`${API_BASE_URL}/mis-sugerencias`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
   } catch {

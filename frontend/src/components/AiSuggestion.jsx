@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import ProductImage from './ProductImage'
 import { requestSuggestion, updateSuggestionStatus } from '../services/suggestion.service'
 
@@ -17,28 +17,50 @@ function isProductAvailable(product) {
 
 function AiSuggestion({ cart, token, onAddToCart, onGoToProfile, showToast }) {
   const [suggestion, setSuggestion] = useState(null)
+  // Ids of every product suggested while this block stayed open, so
+  // "Solicitar otra sugerencia" never repeats one.
+  const [alreadySuggestedIds, setAlreadySuggestedIds] = useState([])
   const [error, setError] = useState(null)
   const [missingFields, setMissingFields] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [isAnswering, setIsAnswering] = useState(false)
+  // A ref changes immediately, while disabled buttons only update after the
+  // next render: it stops a very fast double click from sending two requests.
+  const isBusyRef = useRef(false)
 
   const availableProducts = suggestion ? suggestion.productos.filter(isProductAvailable) : []
 
+  // Asks the backend for a suggestion that leaves out the given product ids.
+  // It throws when the request fails; the caller decides what to show.
+  async function fetchSuggestion(idsToExclude) {
+    const newSuggestion = await requestSuggestion(cart, idsToExclude, token)
+    setSuggestion(newSuggestion)
+    setAlreadySuggestedIds([
+      ...idsToExclude,
+      ...newSuggestion.productos.map((product) => product.id_producto),
+    ])
+  }
+
   async function handleRequest() {
+    if (isBusyRef.current) return
+    isBusyRef.current = true
     setIsLoading(true)
     setError(null)
     setMissingFields([])
     try {
-      setSuggestion(await requestSuggestion(cart, token))
+      await fetchSuggestion(alreadySuggestedIds)
     } catch (err) {
       setError(err.message)
       setMissingFields(err.missingFields ?? [])
     } finally {
       setIsLoading(false)
+      isBusyRef.current = false
     }
   }
 
   async function handleAccept() {
+    if (isBusyRef.current) return
+    isBusyRef.current = true
     setIsAnswering(true)
     setError(null)
     try {
@@ -48,23 +70,39 @@ function AiSuggestion({ cart, token, onAddToCart, onGoToProfile, showToast }) {
       availableProducts.forEach((product) => onAddToCart(product))
       showToast('Se agregaron las sugerencias al carrito')
       setSuggestion(null)
+      setAlreadySuggestedIds([])
     } catch (err) {
       setError(err.message)
     } finally {
       setIsAnswering(false)
+      isBusyRef.current = false
     }
   }
 
-  async function handleReject() {
+  async function handleRequestAnother() {
+    if (isBusyRef.current) return
+    isBusyRef.current = true
     setIsAnswering(true)
     setError(null)
     try {
       await updateSuggestionStatus(suggestion.id_sugerencia, 'rechazada', token)
-      setSuggestion(null)
+    } catch (err) {
+      setError(err.message)
+      setIsAnswering(false)
+      isBusyRef.current = false
+      return
+    }
+
+    // The previous suggestion is already rejected: whatever happens next
+    // (a new one, "no more products", a failure) it must leave the screen.
+    setSuggestion(null)
+    try {
+      await fetchSuggestion(alreadySuggestedIds)
     } catch (err) {
       setError(err.message)
     } finally {
       setIsAnswering(false)
+      isBusyRef.current = false
     }
   }
 
@@ -77,8 +115,8 @@ function AiSuggestion({ cart, token, onAddToCart, onGoToProfile, showToast }) {
           <p className="ai-suggestion-intro">
             La IA puede recomendarte productos según tu perfil y lo que ya elegiste.
           </p>
-          <button type="button" className="btn btn-outline" onClick={handleRequest} disabled={isLoading}>
-            {isLoading ? 'Pensando tu sugerencia…' : 'Pedir sugerencia de IA'}
+          <button type="button" className="btn btn-outline" onClick={handleRequest} disabled={isLoading || isAnswering}>
+            {isLoading || isAnswering ? 'Pensando tu sugerencia…' : 'Sugerime un producto según mis datos'}
           </button>
         </>
       ) : (
@@ -109,15 +147,15 @@ function AiSuggestion({ cart, token, onAddToCart, onGoToProfile, showToast }) {
               onClick={handleAccept}
               disabled={isAnswering || availableProducts.length === 0}
             >
-              Agregar al carrito
+              Agregar sugerencia al carrito
             </button>
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={handleReject}
+              onClick={handleRequestAnother}
               disabled={isAnswering}
             >
-              No, gracias
+              Solicitar otra sugerencia
             </button>
           </div>
         </>

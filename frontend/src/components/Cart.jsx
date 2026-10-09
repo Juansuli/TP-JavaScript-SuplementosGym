@@ -124,6 +124,15 @@ function Cart({ cart, token, deliveryAddress, onAddToCart, onGoToProfile, onUpda
             <p className="eyebrow">Carrito</p>
             <h2 id="cart-title">Tu pedido está vacío.</h2>
             <p>Agregá productos desde el catálogo para continuar.</p>
+            {token && (
+              <AiSuggestion
+                cart={cart}
+                token={token}
+                onAddToCart={onAddToCart}
+                onGoToProfile={onGoToProfile}
+                showToast={showToast}
+              />
+            )}
             <button type="button" className="btn btn-accent" onClick={onClose}>Volver al catálogo</button>
           </div>
         ) : (
