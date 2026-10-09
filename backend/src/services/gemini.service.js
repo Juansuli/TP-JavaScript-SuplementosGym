@@ -8,7 +8,7 @@
 //   AI_UNAVAILABLE      -> network error, timeout or non-2xx from Gemini
 //   AI_INVALID_RESPONSE -> Gemini answered but the text was unusable
 
-const DEFAULT_MODEL = 'gemini-3.8-flash';
+const DEFAULT_MODEL = 'gemini-3.5-flash';
 const REQUEST_TIMEOUT_MS = 15000;
 
 function buildError(code, message) {
@@ -40,6 +40,10 @@ async function generateProductSuggestions({ systemInstruction, userPrompt, respo
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema,
+      // Without this the model "thinks" 750-980 tokens before answering
+      // and can take up to 15 s. With 0 the answer arrives in a few
+      // seconds and the reasons stay coherent.
+      thinkingConfig: { thinkingBudget: 0 },
     },
   };
 

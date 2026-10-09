@@ -312,7 +312,7 @@ test('POST returns 409 when no product can be suggested', async () => {
   await controller.createSuggestion({ user: CLIENT_REQUEST, body: {} }, response);
 
   assert.equal(response.statusCode, 409);
-  assert.equal(response.body.error, 'No hay productos disponibles para sugerir en este momento.');
+  assert.equal(response.body.error, 'No hay más productos disponibles para sugerirte en este momento.');
 });
 
 test('POST filters ids outside the candidate list, duplicates and caps at 3', async () => {
@@ -338,6 +338,75 @@ test('POST filters ids outside the candidate list, duplicates and caps at 3', as
     toPlain(response.body.productos.map((p) => p.id_producto)),
     [1, 2, 5]
   );
+});
+
+test('POST excluir_productos removes those products from the candidates sent to the AI', async () => {
+  const { controller, getCapturedPrompt } = loadPostController({
+    geminiResult: { sugerencias: [{ id_producto: 5, motivo: 'Otra opción.' }] },
+  });
+  const response = fakeResponse();
+
+  await controller.createSuggestion(
+    { user: CLIENT_REQUEST, body: { carrito: [], excluir_productos: [1, 2] } },
+    response
+  );
+
+  assert.equal(response.statusCode, 201);
+  const { userPrompt } = getCapturedPrompt();
+  assert.ok(!userPrompt.includes('"nombre":"Proteína Whey"'));
+  assert.ok(!userPrompt.includes('"nombre":"Creatina"'));
+  assert.ok(userPrompt.includes('"nombre":"BCAA"'));
+  assert.ok(userPrompt.includes('"nombre":"Pre-entreno"'));
+});
+
+test('POST drops an excluded id even if the AI returns it', async () => {
+  const { controller } = loadPostController({
+    geminiResult: {
+      sugerencias: [
+        { id_producto: 1, motivo: 'Ya estaba excluido.' },
+        { id_producto: 5, motivo: 'Esta sí.' },
+      ],
+    },
+  });
+  const response = fakeResponse();
+
+  await controller.createSuggestion(
+    { user: CLIENT_REQUEST, body: { excluir_productos: [1] } },
+    response
+  );
+
+  assert.equal(response.statusCode, 201);
+  assert.deepEqual(toPlain(response.body.productos.map((p) => p.id_producto)), [5]);
+});
+
+test('POST validates excluir_productos: it must be an array of positive integers', async () => {
+  const { controller } = loadPostController();
+  const bodies = [
+    { excluir_productos: 'todos' },
+    { excluir_productos: [1, -3] },
+    { excluir_productos: [0] },
+    { excluir_productos: [1.5] },
+  ];
+
+  for (const body of bodies) {
+    const response = fakeResponse();
+    await controller.createSuggestion({ user: CLIENT_REQUEST, body }, response);
+    assert.equal(response.statusCode, 400, JSON.stringify(body));
+    assert.ok(Array.isArray(response.body.error));
+  }
+});
+
+test('POST returns 409 when every available product is excluded', async () => {
+  const { controller } = loadPostController();
+  const response = fakeResponse();
+
+  await controller.createSuggestion(
+    { user: CLIENT_REQUEST, body: { carrito: [], excluir_productos: [1, 2, 5, 6] } },
+    response
+  );
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.body.error, 'No hay más productos disponibles para sugerirte en este momento.');
 });
 
 test('POST returns 502 when every AI suggestion is invalid', async () => {
@@ -420,6 +489,34 @@ test('GET list: a client only sees their own suggestions, admin sees all newest 
   const adminResponse = fakeResponse();
   await controller.listSuggestions({ user: { id_usuario: 1, rol: 'administrador' }, query: {} }, adminResponse);
   assert.deepEqual(toPlain(adminResponse.body.map((s) => s.id_sugerencia)), [3, 2, 1]);
+});
+
+test('GET mis-sugerencias: an admin with a client profile only sees their own', async () => {
+  const sugerencias = createSugerenciaModel([
+    { id_sugerencia: 1, usuario_id: 20, estado: 'pendiente', fecha_generacion: 'f1', respuesta_IA: '{"sugerencias":[]}' },
+    { id_sugerencia: 2, usuario_id: 1, estado: 'aceptada', fecha_generacion: 'f2', respuesta_IA: '{"sugerencias":[]}' },
+    { id_sugerencia: 3, usuario_id: 1, estado: 'rechazada', fecha_generacion: 'f3', respuesta_IA: '{"sugerencias":[]}' },
+  ]);
+  const controller = loadController({
+    '../models/sugerencia_ia.model': sugerencias,
+    '../models/producto.model': createProductoModel(PRODUCTS),
+  });
+
+  const response = fakeResponse();
+  await controller.listMySuggestions({ user: { id_usuario: 1, rol: 'administrador' }, query: {} }, response);
+
+  assert.deepEqual(toPlain(response.body.map((s) => s.id_sugerencia)), [3, 2]);
+});
+
+test('the route /mis-sugerencias is declared before /:id so it is not captured by it', () => {
+  const router = require('../src/routes/sugerencia.routes');
+
+  const getPaths = router.stack
+    .filter((layer) => layer.route?.methods.get)
+    .map((layer) => layer.route.path);
+
+  assert.ok(getPaths.includes('/mis-sugerencias'));
+  assert.ok(getPaths.indexOf('/mis-sugerencias') < getPaths.indexOf('/:id'));
 });
 
 test('GET by id: owner gets 200, another client gets 403, missing gets 404', async () => {
@@ -570,6 +667,8 @@ test('gemini service sends the key in the header and parses the JSON answer', as
   assert.equal(captured.options.headers['x-goog-api-key'], 'test-secret-key');
   assert.ok(!captured.url.includes('test-secret-key'), 'the API key must never go in the URL');
   assert.equal(JSON.parse(captured.options.body).generationConfig.responseMimeType, 'application/json');
+  // Without this the model spends seconds "thinking" before answering.
+  assert.equal(JSON.parse(captured.options.body).generationConfig.thinkingConfig.thinkingBudget, 0);
 });
 
 test('gemini service maps HTTP errors and network failures to AI_UNAVAILABLE', async () => {

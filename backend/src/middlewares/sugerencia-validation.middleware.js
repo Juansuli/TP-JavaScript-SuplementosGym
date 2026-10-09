@@ -28,6 +28,18 @@ function validateCart(cart) {
   return errors;
 }
 
+// Ids de productos que el cliente ya vio y no quiere que se repitan
+// ("Solicitar otra sugerencia"). Es opcional.
+function validateExcludedProducts(excludedProductIds) {
+  if (excludedProductIds === undefined || excludedProductIds === null) return [];
+  if (!Array.isArray(excludedProductIds)) {
+    return ['Los productos a excluir deben ser una lista de ids.'];
+  }
+
+  const hasInvalidId = excludedProductIds.some((id) => !getPositiveInteger(id));
+  return hasInvalidId ? ['Cada producto a excluir debe ser un id entero mayor a 0.'] : [];
+}
+
 function validateSuggestionStatus(estado) {
   return SUGGESTION_RESPONSES.includes(estado) ? [] : ['Estado inválido.'];
 }
@@ -35,5 +47,6 @@ function validateSuggestionStatus(estado) {
 module.exports = {
   getPositiveInteger,
   validateCart,
+  validateExcludedProducts,
   validateSuggestionStatus,
 };

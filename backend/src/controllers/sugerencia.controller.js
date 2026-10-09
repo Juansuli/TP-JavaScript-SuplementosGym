@@ -8,6 +8,7 @@ const { validateRequiredProfileData } = require('../middlewares/cliente-validati
 const {
   getPositiveInteger,
   validateCart,
+  validateExcludedProducts,
   validateSuggestionStatus,
 } = require('../middlewares/sugerencia-validation.middleware');
 
@@ -171,6 +172,9 @@ async function createSuggestion(req, res) {
   const cartErrors = validateCart(req.body.carrito);
   if (cartErrors.length) return res.status(400).json({ error: cartErrors });
 
+  const excludedErrors = validateExcludedProducts(req.body.excluir_productos);
+  if (excludedErrors.length) return res.status(400).json({ error: excludedErrors });
+
   try {
     const client = await Cliente.findByPk(req.user.id_usuario);
     if (!client) {
@@ -192,12 +196,17 @@ async function createSuggestion(req, res) {
     const cartItems = Array.isArray(req.body.carrito) ? req.body.carrito : [];
     const cartProductIds = cartItems.map((item) => Number(item.id_producto));
 
+    // Los productos del carrito y los que el cliente ya rechazó
+    // ("Solicitar otra sugerencia") no pueden volver a ser candidatos.
+    const excludedProductIds = (req.body.excluir_productos ?? []).map(Number);
+    const idsToLeaveOut = [...new Set([...cartProductIds, ...excludedProductIds])];
+
     const where = { estado: 'disponible', stock: { [Op.gt]: 0 } };
-    if (cartProductIds.length) where.id_producto = { [Op.notIn]: cartProductIds };
+    if (idsToLeaveOut.length) where.id_producto = { [Op.notIn]: idsToLeaveOut };
 
     const candidates = await Producto.findAll({ where });
     if (candidates.length === 0) {
-      return res.status(409).json({ error: 'No hay productos disponibles para sugerir en este momento.' });
+      return res.status(409).json({ error: 'No hay más productos disponibles para sugerirte en este momento.' });
     }
 
     // Del carrito solo se mandan los nombres, para que la IA no repita
@@ -252,7 +261,18 @@ async function createSuggestion(req, res) {
 // GET /api/sugerencias — el cliente ve solo las suyas; el administrador
 // las ve todas. En ambos casos las más nuevas primero.
 async function listSuggestions(req, res) {
-  const where = req.user.rol === 'administrador' ? {} : { usuario_id: req.user.id_usuario };
+  return listSuggestionsByScope(req, res, req.user.rol !== 'administrador');
+}
+
+// GET /api/sugerencias/mis-sugerencias — siempre solo las del usuario
+// logueado, también para un administrador con perfil de cliente (mismo
+// patrón que /api/pedidos/mis-pedidos).
+async function listMySuggestions(req, res) {
+  return listSuggestionsByScope(req, res, true);
+}
+
+async function listSuggestionsByScope(req, res, onlyOwnSuggestions) {
+  const where = onlyOwnSuggestions ? { usuario_id: req.user.id_usuario } : {};
 
   try {
     const suggestions = await SugerenciaIA.findAll({
@@ -336,6 +356,7 @@ async function deleteSuggestion(req, res) {
 module.exports = {
   createSuggestion,
   listSuggestions,
+  listMySuggestions,
   getSuggestion,
   updateSuggestionStatus,
   deleteSuggestion,
