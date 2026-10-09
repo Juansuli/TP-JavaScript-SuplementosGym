@@ -4,6 +4,7 @@ import AdminProducts from './components/AdminProducts'
 import AdminOrders from './components/AdminOrders'
 import AdminClients from './components/AdminClients'
 import MyOrders from './components/MyOrders'
+import MySuggestions from './components/MySuggestions'
 import ClientProfile from './components/ClientProfile'
 import AuthModal from './components/AuthModal'
 import Cart from './components/Cart'
@@ -64,7 +65,11 @@ function App() {
 
   function showToast(message, type = 'success') {
     nextToastId.current += 1
-    setToasts((prev) => [...prev, { id: nextToastId.current, message, type }])
+    // Capture the id now: React runs the updater below later, and when
+    // showToast is called several times in a row (e.g. accepting an AI
+    // suggestion) every toast would otherwise read the last counter value.
+    const toastId = nextToastId.current
+    setToasts((prev) => [...prev, { id: toastId, message, type }])
   }
 
   function handleAuthSuccess(user) {
@@ -288,6 +293,16 @@ function App() {
                           type="button"
                           role="menuitem"
                           onClick={() => {
+                            changeView('mis-sugerencias')
+                            setIsUserMenuOpen(false)
+                          }}
+                        >
+                          Mis sugerencias
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
                             changeView('mi-perfil')
                             setIsUserMenuOpen(false)
                           }}
@@ -343,6 +358,7 @@ function App() {
                 Mi pedido ({cartCount})
               </button>
               <button type="button" onClick={() => changeView('mis-compras')}>Mis compras</button>
+              <button type="button" onClick={() => changeView('mis-sugerencias')}>Mis sugerencias</button>
               <button type="button" onClick={() => changeView('mi-perfil')}>Mi perfil</button>
             </>
           )}
@@ -358,6 +374,8 @@ function App() {
           <AdminProducts token={currentUser.token} showToast={showToast} />
         ) : view === 'mis-compras' && canOrder ? (
           <MyOrders token={currentUser.token} showToast={showToast} />
+        ) : view === 'mis-sugerencias' && canOrder ? (
+          <MySuggestions token={currentUser.token} showToast={showToast} />
         ) : view === 'mi-perfil' && canOrder ? (
           <ClientProfile currentUser={currentUser} onProfileUpdated={handleProfileUpdated} showToast={showToast} />
         ) : (
@@ -407,10 +425,16 @@ function App() {
           cart={cart}
           token={currentUser?.token}
           deliveryAddress={currentUser?.direccion_entrega ?? ''}
+          onAddToCart={addToCart}
+          onGoToProfile={() => {
+            setIsCartOpen(false)
+            changeView('mi-perfil')
+          }}
           onUpdateQuantity={updateCartQuantity}
           onRemoveItem={removeFromCart}
           onOrderPlaced={clearCart}
           onRevalidateStock={refreshCartStock}
+          showToast={showToast}
           onClose={() => setIsCartOpen(false)}
         />
       )}

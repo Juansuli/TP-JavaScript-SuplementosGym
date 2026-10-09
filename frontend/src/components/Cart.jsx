@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createOrder } from '../services/pedido.service'
+import AiSuggestion from './AiSuggestion'
 import ProductImage from './ProductImage'
 
 const PAYMENT_METHODS = ['tarjeta', 'efectivo', 'transferencia']
@@ -15,7 +16,7 @@ const paymentLabels = {
   efectivo: 'Efectivo al retirar en el local',
 }
 
-function Cart({ cart, token, deliveryAddress, onUpdateQuantity, onRemoveItem, onOrderPlaced, onRevalidateStock, onClose }) {
+function Cart({ cart, token, deliveryAddress, onAddToCart, onGoToProfile, onUpdateQuantity, onRemoveItem, onOrderPlaced, onRevalidateStock, showToast, onClose }) {
   const [values, setValues] = useState({
     nombre_receptor: '',
     direccion_entrega: deliveryAddress ?? '',
@@ -156,6 +157,16 @@ function Cart({ cart, token, deliveryAddress, onUpdateQuantity, onRemoveItem, on
                   </li>
                 ))}
               </ul>
+
+              {token && (
+                <AiSuggestion
+                  cart={cart}
+                  token={token}
+                  onAddToCart={onAddToCart}
+                  onGoToProfile={onGoToProfile}
+                  showToast={showToast}
+                />
+              )}
             </section>
 
             <aside className="order-summary">

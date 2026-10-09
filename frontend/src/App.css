@@ -688,6 +688,10 @@
   content: 'Tus pedidos';
 }
 
+.my-suggestions-header::before {
+  content: 'Tus sugerencias';
+}
+
 .admin-products-header {
   position: relative;
   display: flex;
@@ -2527,4 +2531,86 @@
 .client-profile-section input:disabled {
   color: var(--ink-faint);
   cursor: not-allowed;
+}
+
+/* Sugerencias de IA: bloque dentro del carrito (CUU2) y lista de productos
+   en "Mis sugerencias". Reusa .eyebrow, .status-tag, .cart-field-error,
+   .cart-errors y .admin-order-delete ya definidas más arriba. */
+.ai-suggestion {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.ai-suggestion-intro {
+  margin-top: .55rem;
+  color: var(--ink-soft);
+  font-size: .84rem;
+}
+
+.ai-suggestion .btn {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.ai-suggestion-products {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.ai-suggestion-products li {
+  display: flex;
+  align-items: flex-start;
+  gap: .85rem;
+}
+
+.ai-suggestion-products .cart-item-thumb {
+  width: 3.25rem;
+  height: 3.25rem;
+  flex: 0 0 auto;
+}
+
+.ai-suggestion-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-suggestion-motivo {
+  margin-top: .3rem;
+  color: var(--ink-faint);
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+.ai-suggestion-products li.is-unavailable {
+  opacity: .5;
+}
+
+.ai-suggestion-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.ai-suggestion-error {
+  margin-top: .75rem;
+}
+
+.suggestion-products {
+  display: grid;
+  gap: .7rem;
+  font-size: .8rem;
+}
+
+.suggestion-products li {
+  display: grid;
+  gap: .15rem;
+}
+
+.suggestion-products span {
+  color: var(--ink-faint);
+  font-size: .72rem;
 }
