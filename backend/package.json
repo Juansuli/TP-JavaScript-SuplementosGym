@@ -9,6 +9,7 @@
     "migrate:product-images": "node scripts/add-product-image-column.js",
     "migrate:usuario-activo": "node scripts/add-usuario-activo-column.js",
     "migrate:pedido-confirmacion": "node scripts/add-pedido-confirmacion-column.js",
+    "migrate:sugerencia-estado": "node scripts/add-sugerencia-estado-column.js",
     "test": "node --test"
   },
   "keywords": [],

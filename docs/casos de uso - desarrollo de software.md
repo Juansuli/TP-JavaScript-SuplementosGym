@@ -147,3 +147,38 @@ Cliente
 **Postcondiciones:**
 
 * Reseña registrada y visible en el detalle del producto.
+
+# CUU6: Generar sugerencia de IA
+
+**Actor:**
+
+Cliente
+
+**Curso Básico (CB):**
+
+1. Cliente solicita una sugerencia desde su carrito.
+2. Sistema verifica que el perfil del cliente esté completo.
+3. Sistema envía el perfil del cliente y el catálogo disponible al servicio de IA.
+4. Sistema muestra de 1 a 3 productos sugeridos con el motivo de cada uno.
+
+**Cursos Alternativos (CA):**
+
+2.a \<durante\> El perfil del cliente está incompleto.
+	2.a.1 Sistema informa que debe completar su perfil para recibir sugerencias. FCU.
+3.a \<durante\> No hay productos disponibles para sugerir.
+	3.a.1 Sistema informa la situación. FCU.
+3.b \<durante\> El servicio de IA no está disponible.
+	3.b.1 Sistema informa que la sugerencia no pudo generarse y que reintente más tarde. FCU.
+4.a \<durante\> Cliente rechaza la sugerencia.
+	4.a.1 Sistema registra la sugerencia como "rechazada". FCU.
+4.b \<durante\> Cliente acepta la sugerencia.
+	4.b.1 Sistema agrega al carrito los productos sugeridos que tienen stock.
+	4.b.2 Sistema registra la sugerencia como "aceptada".
+
+**Precondiciones:**
+
+* El cliente inició sesión y tiene su perfil completo. (Ver CUU4)
+
+**Postcondiciones:**
+
+* Sugerencia registrada con estado "pendiente", "aceptada" o "rechazada".

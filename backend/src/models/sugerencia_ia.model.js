@@ -20,6 +20,14 @@ const SugerenciaIA = sequelize.define(
     respuesta_IA: {
       type: DataTypes.TEXT,
     },
+    // "pendiente" | "aceptada" | "rechazada" — ver CUU2 3.a/3.b.
+    // Todavía no está en el DER (igual que producto.estado, el equipo
+    // actualiza el diagrama aparte).
+    estado: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'pendiente',
+    },
     fecha_generacion: {
       type: DataTypes.DATE,
       allowNull: false,
