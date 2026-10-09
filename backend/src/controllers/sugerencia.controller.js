@@ -326,7 +326,18 @@ async function updateSuggestionStatus(req, res) {
       return res.status(409).json({ error: 'Esta sugerencia ya fue respondida.' });
     }
 
-    await suggestion.update({ estado: req.body.estado });
+    // La condición "estado = pendiente" va dentro del propio UPDATE: si dos
+    // pedidos llegan a la vez, la base deja pasar solo a uno y el otro
+    // actualiza 0 filas. Con "leer y después actualizar" ambos pasaban.
+    const [updatedRows] = await SugerenciaIA.update(
+      { estado: req.body.estado },
+      { where: { id_sugerencia: suggestionId, estado: 'pendiente' } }
+    );
+    if (updatedRows === 0) {
+      return res.status(409).json({ error: 'Esta sugerencia ya fue respondida.' });
+    }
+
+    await suggestion.reload();
 
     return res.json(await buildSuggestionResponse(suggestion));
   } catch (error) {

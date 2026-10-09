@@ -50,6 +50,10 @@ function fakeRecord(data) {
       Object.assign(this, changes);
       return this;
     },
+    async reload() {
+      Object.assign(this, stored);
+      return this;
+    },
     async destroy() {
       stored.deleted = true;
       this.deleted = true;
@@ -86,6 +90,15 @@ function createSugerenciaModel(initialRecords = []) {
     },
     async findByPk(id) {
       return records.find((r) => r.id_sugerencia === id && !r.deleted) ?? null;
+    },
+    // Mimics UPDATE ... WHERE id = ? AND estado = ?: only touches the row
+    // when the condition still holds and returns [affectedRows].
+    async update(changes, { where }) {
+      const matching = records.filter(
+        (r) => r.id_sugerencia === where.id_sugerencia && (where.estado === undefined || r.toJSON().estado === where.estado)
+      );
+      for (const record of matching) await record.update(changes);
+      return [matching.length];
     },
   };
 }
@@ -592,6 +605,30 @@ test('PATCH estado: pendiente -> aceptada once, a second PATCH gets 409', async 
     otherClientResponse
   );
   assert.equal(otherClientResponse.statusCode, 403);
+});
+
+test('PATCH estado: two simultaneous answers, only one succeeds and the other gets 409', async () => {
+  const sugerencias = createSugerenciaModel([
+    { id_sugerencia: 1, usuario_id: 20, estado: 'pendiente', fecha_generacion: 'f1', respuesta_IA: '{"sugerencias":[]}' },
+  ]);
+  const controller = loadController({
+    '../models/sugerencia_ia.model': sugerencias,
+    '../models/producto.model': createProductoModel(PRODUCTS),
+  });
+
+  // Both requests read "pendiente" before either one writes.
+  const responses = [fakeResponse(), fakeResponse(), fakeResponse()];
+  await Promise.all(
+    responses.map((response) =>
+      controller.updateSuggestionStatus(
+        { user: CLIENT_REQUEST, params: { id: '1' }, body: { estado: 'rechazada' } },
+        response
+      )
+    )
+  );
+
+  const statusCodes = responses.map((response) => response.statusCode).sort();
+  assert.deepEqual(statusCodes, [200, 409, 409]);
 });
 
 test('DELETE: the owner gets 204, another client gets 403, admin can delete', async () => {
