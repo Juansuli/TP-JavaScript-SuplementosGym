@@ -45,3 +45,5 @@ desktop.ini
 # Product images are uploaded locally and must not be committed
 backend/uploads/productos/*
 !backend/uploads/productos/.gitkeep
+
+/frontend/test-results/
