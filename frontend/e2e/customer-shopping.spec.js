@@ -3,16 +3,10 @@ import { expect, test } from '@playwright/test'
 const testProductName = 'PRODUCTO TEST E2E'
 
 function getTestCredentials() {
-  const email = process.env.E2E_CLIENT_EMAIL
-  const password = process.env.E2E_CLIENT_PASSWORD
-
-  if (!email || !password) {
-    throw new Error(
-      'Definí E2E_CLIENT_EMAIL y E2E_CLIENT_PASSWORD antes de ejecutar el test E2E.'
-    )
+  return {
+    email: process.env.E2E_CLIENT_EMAIL || 'cliente.e2e@dosis.com',
+    password: process.env.E2E_CLIENT_PASSWORD || 'contraclientetest',
   }
-
-  return { email, password }
 }
 
 test('un cliente puede agregar un producto disponible a su pedido', async ({ page }) => {
