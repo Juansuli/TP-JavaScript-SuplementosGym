@@ -66,16 +66,16 @@ describe('ClientProfile', () => {
     await renderProfile()
 
     expect(getClient).toHaveBeenCalledWith(7, 'fake-token')
-    expect(screen.getByLabelText('Nombre')).toHaveValue('Lucía')
+    expect(screen.getByLabelText('Nombre *')).toHaveValue('Lucía')
     expect(screen.getByLabelText('Email')).toHaveValue('lucia@example.com')
-    expect(screen.getByLabelText('Peso (kg)')).toHaveValue(60)
+    expect(screen.getByLabelText('Peso (kg) *')).toHaveValue(60)
   })
 
   test('shows "El peso es obligatorio." and does not save when the weight is empty', async () => {
     const user = userEvent.setup()
     await renderProfile()
 
-    await user.clear(screen.getByLabelText('Peso (kg)'))
+    await user.clear(screen.getByLabelText('Peso (kg) *'))
     await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
 
     expect(screen.getByText('El peso es obligatorio.')).toBeInTheDocument()
@@ -87,7 +87,7 @@ describe('ClientProfile', () => {
     const user = userEvent.setup()
     await renderProfile()
 
-    const weightInput = screen.getByLabelText('Peso (kg)')
+    const weightInput = screen.getByLabelText('Peso (kg) *')
     await user.clear(weightInput)
     await user.type(weightInput, '-5')
     await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
@@ -100,7 +100,7 @@ describe('ClientProfile', () => {
     const user = userEvent.setup()
     await renderProfile()
 
-    const weightInput = screen.getByLabelText('Peso (kg)')
+    const weightInput = screen.getByLabelText('Peso (kg) *')
     await user.clear(weightInput)
     await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
     expect(screen.getByText('El peso es obligatorio.')).toBeInTheDocument()
@@ -117,7 +117,7 @@ describe('ClientProfile', () => {
     updateClient.mockResolvedValue(updatedClient)
     const { onProfileUpdated, showToast } = await renderProfile()
 
-    const weightInput = screen.getByLabelText('Peso (kg)')
+    const weightInput = screen.getByLabelText('Peso (kg) *')
     await user.clear(weightInput)
     await user.type(weightInput, '62.5')
     await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
@@ -141,8 +141,8 @@ describe('ClientProfile', () => {
     await renderProfile()
 
     // Looked up before saving: once the error appears, its text becomes part
-    // of the label and "Altura (cm)" no longer matches exactly.
-    const heightInput = screen.getByLabelText('Altura (cm)')
+    // of the label and "Altura (cm) *" no longer matches exactly.
+    const heightInput = screen.getByLabelText('Altura (cm) *')
     await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
 
     expect(await screen.findByText('La altura debe ser un número válido.')).toBeInTheDocument()
