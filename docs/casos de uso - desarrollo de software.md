@@ -171,7 +171,10 @@ Cliente
 3.a \<durante\> No hay productos disponibles para sugerir.
 	3.a.1 Sistema informa la situación. FCU.
 3.b \<durante\> El servicio de IA no está disponible.
-	3.b.1 Sistema informa que la sugerencia no pudo generarse y que reintente más tarde. FCU.
+	3.b.1 Sistema reintenta una vez con un modelo de IA de respaldo.
+	3.b.2 Si el modelo de respaldo también falla, sistema informa que la sugerencia no pudo generarse y que reintente más tarde. FCU.
+3.c \<durante\> Se agotó la cuota de consultas de la IA.
+	3.c.1 Sistema informa que se agotaron las consultas de IA disponibles y que reintente más tarde. FCU.
 5.a \<durante\> Cliente presiona "Solicitar otra sugerencia".
 	5.a.1 Sistema registra la sugerencia anterior como "rechazada".
 	5.a.2 Sistema consulta de nuevo a la IA, excluyendo los productos ya sugeridos.

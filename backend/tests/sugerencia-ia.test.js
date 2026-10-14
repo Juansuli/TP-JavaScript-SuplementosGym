@@ -448,7 +448,7 @@ test('POST returns 502 when the AI answer is not valid JSON', async () => {
 test('POST maps a missing API key and a Gemini outage to 503', async () => {
   const notConfigured = new Error('GEMINI_API_KEY is not set');
   notConfigured.code = 'AI_NOT_CONFIGURED';
-  const unavailable = new Error('Gemini responded with HTTP 429');
+  const unavailable = new Error('Gemini responded with HTTP 503');
   unavailable.code = 'AI_UNAVAILABLE';
 
   const cases = [
@@ -465,6 +465,18 @@ test('POST maps a missing API key and a Gemini outage to 503', async () => {
     assert.equal(response.statusCode, 503);
     assert.equal(response.body.error, message);
   }
+});
+
+test('POST maps an exhausted AI quota to 429', async () => {
+  const quotaExceeded = new Error('Gemini responded with HTTP 429');
+  quotaExceeded.code = 'AI_QUOTA_EXCEEDED';
+  const { controller } = loadPostController({ geminiError: quotaExceeded });
+  const response = fakeResponse();
+
+  await controller.createSuggestion({ user: CLIENT_REQUEST, body: {} }, response);
+
+  assert.equal(response.statusCode, 429);
+  assert.equal(response.body.error, 'Se agotaron las consultas de IA disponibles por hoy. Probá de nuevo más tarde.');
 });
 
 test('POST validates the cart: it must be an array of positive integers', async () => {
@@ -708,7 +720,130 @@ test('gemini service sends the key in the header and parses the JSON answer', as
   assert.equal(JSON.parse(captured.options.body).generationConfig.thinkingConfig.thinkingBudget, 0);
 });
 
-test('gemini service maps HTTP errors and network failures to AI_UNAVAILABLE', async () => {
+// Fake fetch helpers for the main -> fallback tests. Each call to the
+// returned fetch consumes the next step; `calls` records url and body so
+// tests can check which model was used and what was sent.
+const PROMPT = { systemInstruction: 'a', userPrompt: 'b', responseSchema: {} };
+const GOOD_ANSWER = '{"sugerencias":[{"id_producto":1,"motivo":"ok"}]}';
+
+function httpFailure(status) {
+  return {
+    ok: false,
+    status,
+    json: async () => ({ error: { code: status, message: 'simulated failure' } }),
+  };
+}
+
+function goodResponse(text = GOOD_ANSWER) {
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({ candidates: [{ content: { parts: [{ text }] } }] }),
+  };
+}
+
+function timeoutFailure() {
+  const error = new Error('The operation was aborted due to timeout');
+  error.name = 'TimeoutError';
+  return error;
+}
+
+function createSequencedFetch(steps) {
+  const calls = [];
+  const fakeFetch = async (url, options) => {
+    calls.push({ url, body: JSON.parse(options.body) });
+    const step = steps[calls.length - 1];
+    if (step instanceof Error) throw step;
+    return step;
+  };
+  return { fakeFetch, calls };
+}
+
+test('gemini service uses the fallback model without thinkingConfig when the main one answers 503', async () => {
+  const { fakeFetch, calls } = createSequencedFetch([httpFailure(503), goodResponse()]);
+  const service = loadGeminiService({ GEMINI_API_KEY: 'k' }, fakeFetch);
+
+  const result = await service.generateProductSuggestions(PROMPT);
+
+  assert.deepEqual(toPlain(result), { sugerencias: [{ id_producto: 1, motivo: 'ok' }] });
+  assert.equal(calls.length, 2);
+  assert.ok(calls[0].url.includes('/models/gemini-3.6-flash:'));
+  assert.ok(calls[1].url.includes('/models/gemini-3.5-flash-lite:'));
+  // flash-lite rejects thinkingConfig with HTTP 400, so it must not be sent.
+  assert.equal(calls[0].body.generationConfig.thinkingConfig.thinkingBudget, 0);
+  assert.equal(calls[1].body.generationConfig.thinkingConfig, undefined);
+  assert.equal(calls[1].body.generationConfig.responseMimeType, 'application/json');
+});
+
+test('gemini service reads the model names from the environment', async () => {
+  const { fakeFetch, calls } = createSequencedFetch([httpFailure(500), goodResponse()]);
+  const service = loadGeminiService(
+    { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'main-x', GEMINI_FALLBACK_MODEL: 'backup-y' },
+    fakeFetch
+  );
+
+  await service.generateProductSuggestions(PROMPT);
+
+  assert.ok(calls[0].url.includes('/models/main-x:'));
+  assert.ok(calls[1].url.includes('/models/backup-y:'));
+});
+
+test('gemini service uses the fallback model when the main one times out', async () => {
+  const { fakeFetch, calls } = createSequencedFetch([timeoutFailure(), goodResponse()]);
+  const service = loadGeminiService({ GEMINI_API_KEY: 'k' }, fakeFetch);
+
+  const result = await service.generateProductSuggestions(PROMPT);
+
+  assert.deepEqual(toPlain(result), { sugerencias: [{ id_producto: 1, motivo: 'ok' }] });
+  assert.equal(calls.length, 2);
+  assert.ok(calls[1].url.includes('/models/gemini-3.5-flash-lite:'));
+});
+
+test('gemini service does not retry a 400 or a plain network error', async () => {
+  const badRequest = createSequencedFetch([httpFailure(400), goodResponse()]);
+  const badRequestService = loadGeminiService({ GEMINI_API_KEY: 'k' }, badRequest.fakeFetch);
+  await expectErrorCode(badRequestService.generateProductSuggestions(PROMPT), 'AI_UNAVAILABLE');
+  assert.equal(badRequest.calls.length, 1);
+
+  const networkDown = createSequencedFetch([new Error('socket hang up'), goodResponse()]);
+  const networkDownService = loadGeminiService({ GEMINI_API_KEY: 'k' }, networkDown.fakeFetch);
+  await expectErrorCode(networkDownService.generateProductSuggestions(PROMPT), 'AI_UNAVAILABLE');
+  assert.equal(networkDown.calls.length, 1);
+});
+
+test('gemini service does not retry when Gemini answers but the text is unusable', async () => {
+  const { fakeFetch, calls } = createSequencedFetch([goodResponse('esto no es JSON'), goodResponse()]);
+  const service = loadGeminiService({ GEMINI_API_KEY: 'k' }, fakeFetch);
+
+  await expectErrorCode(service.generateProductSuggestions(PROMPT), 'AI_INVALID_RESPONSE');
+  assert.equal(calls.length, 1);
+});
+
+test('gemini service gives up after exactly two attempts and reports AI_UNAVAILABLE', async () => {
+  const { fakeFetch, calls } = createSequencedFetch([httpFailure(503), httpFailure(503), goodResponse()]);
+  const service = loadGeminiService({ GEMINI_API_KEY: 'k' }, fakeFetch);
+
+  await expectErrorCode(service.generateProductSuggestions(PROMPT), 'AI_UNAVAILABLE');
+  assert.equal(calls.length, 2);
+});
+
+test('gemini service reports AI_QUOTA_EXCEEDED when the LAST attempt was a 429', async () => {
+  const { fakeFetch, calls } = createSequencedFetch([httpFailure(503), httpFailure(429)]);
+  const service = loadGeminiService({ GEMINI_API_KEY: 'k' }, fakeFetch);
+
+  await expectErrorCode(service.generateProductSuggestions(PROMPT), 'AI_QUOTA_EXCEEDED');
+  assert.equal(calls.length, 2);
+});
+
+test('gemini service reports AI_UNAVAILABLE when a 429 on the main model is followed by a 503', async () => {
+  // The last attempt decides: the quota error of the main model is replaced.
+  const { fakeFetch } = createSequencedFetch([httpFailure(429), httpFailure(503)]);
+  const service = loadGeminiService({ GEMINI_API_KEY: 'k' }, fakeFetch);
+
+  await expectErrorCode(service.generateProductSuggestions(PROMPT), 'AI_UNAVAILABLE');
+});
+
+test('gemini service maps a 429 to AI_QUOTA_EXCEEDED and network failures to AI_UNAVAILABLE', async () => {
   const quotaExceeded = loadGeminiService({ GEMINI_API_KEY: 'k' }, async () => ({
     ok: false,
     status: 429,
@@ -716,7 +851,7 @@ test('gemini service maps HTTP errors and network failures to AI_UNAVAILABLE', a
   }));
   await expectErrorCode(
     quotaExceeded.generateProductSuggestions({ systemInstruction: 'a', userPrompt: 'b', responseSchema: {} }),
-    'AI_UNAVAILABLE'
+    'AI_QUOTA_EXCEEDED'
   );
 
   const networkDown = loadGeminiService({ GEMINI_API_KEY: 'k' }, async () => {

@@ -232,6 +232,9 @@ async function createSuggestion(req, res) {
       if (error.code === 'AI_INVALID_RESPONSE') {
         return res.status(502).json({ error: 'La IA no devolvió una sugerencia válida. Probá de nuevo.' });
       }
+      if (error.code === 'AI_QUOTA_EXCEEDED') {
+        return res.status(429).json({ error: 'Se agotaron las consultas de IA disponibles por hoy. Probá de nuevo más tarde.' });
+      }
       if (error.code === 'AI_UNAVAILABLE') {
         return res.status(503).json({ error: 'El servicio de sugerencias no está disponible ahora. Probá en unos minutos.' });
       }
