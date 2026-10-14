@@ -80,6 +80,22 @@ describe('AdminAdministrators', () => {
     expect(createAdmin).not.toHaveBeenCalled()
   })
 
+  test('rejects an incomplete email and a password made only of spaces', async () => {
+    const user = userEvent.setup()
+    await renderAdmins()
+
+    await user.click(screen.getByRole('button', { name: 'Nuevo administrador' }))
+    await user.type(screen.getByLabelText('Nombre *'), 'Caro')
+    await user.type(screen.getByLabelText('Apellido *'), 'Sosa')
+    await user.type(screen.getByLabelText('Email *'), 'a@b')
+    await user.type(screen.getByLabelText('Contraseña *'), '          ')
+    await user.click(screen.getByRole('button', { name: 'Crear administrador' }))
+
+    expect(screen.getByText('Ingresá un email válido (por ejemplo, nombre@dosis.com).')).toBeInTheDocument()
+    expect(screen.getByText('La contraseña no puede tener solo espacios.')).toBeInTheDocument()
+    expect(createAdmin).not.toHaveBeenCalled()
+  })
+
   test('editing without a new password keeps the current one', async () => {
     const user = userEvent.setup()
     updateAdmin.mockResolvedValue({ ...admins[1], nombre: 'Roberto' })

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 
 const MIN_PASSWORD_LENGTH = 8
+// Misma regla que el backend (cliente-validation.middleware.js).
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // Formulario para crear o editar un administrador (issue #58). Al editar,
 // la contraseña es opcional: si queda vacía, se conserva la actual.
@@ -22,12 +24,14 @@ function AdminForm({ admin, onSubmit, onCancel }) {
 
     if (values.nombre.trim() === '') nextErrors.nombre = 'El nombre es obligatorio.'
     if (values.apellido.trim() === '') nextErrors.apellido = 'El apellido es obligatorio.'
-    if (!values.email.includes('@')) nextErrors.email = 'Ingresá un email válido.'
+    if (!EMAIL_PATTERN.test(values.email.trim())) nextErrors.email = 'Ingresá un email válido (por ejemplo, nombre@dosis.com).'
 
     if (!isEditing && values.password === '') {
       nextErrors.password = 'La contraseña es obligatoria.'
     } else if (values.password !== '' && values.password.length < MIN_PASSWORD_LENGTH) {
       nextErrors.password = `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`
+    } else if (values.password !== '' && values.password.trim() === '') {
+      nextErrors.password = 'La contraseña no puede tener solo espacios.'
     }
 
     return nextErrors

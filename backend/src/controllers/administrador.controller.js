@@ -10,15 +10,30 @@ const bcrypt = require('bcryptjs');
 const sequelize = require('../config/db');
 const Usuario = require('../models/usuario.model');
 const Administrador = require('../models/administrador.model');
-const { validateRegistration, validateUserUpdate } = require('../middlewares/cliente-validation.middleware');
+const {
+  validateRegistration,
+  validateUserUpdate,
+  getPasswordError,
+} = require('../middlewares/cliente-validation.middleware');
+const { ensureAnotherActiveAdmin, LAST_ACTIVE_ADMIN_ERROR } = require('../utils/admin-guard');
 
 const USER_FIELDS = ['email', 'nombre', 'apellido'];
-const PASSWORD_ERROR = 'La contraseña debe tener al menos 8 caracteres.';
 const DUPLICATE_EMAIL_ERROR = 'Ya existe un usuario con ese email.';
 
+// Solo dígitos: rechaza formatos que Number() aceptaría, como "1e2",
+// "0x2" o "2.0".
 function getAdminId(value) {
+  if (typeof value !== 'string' || !/^\d+$/.test(value)) return null;
+
   const id = Number(value);
-  return Number.isInteger(id) && id > 0 ? id : null;
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+// Si la request llega sin body (o sin Content-Type JSON), req.body es
+// undefined: se usa un objeto vacío para que termine en 400 y no en 500.
+function getBody(req) {
+  const { body } = req;
+  return body && typeof body === 'object' && !Array.isArray(body) ? body : {};
 }
 
 function getAllowedData(body) {
@@ -77,14 +92,15 @@ async function getAdmin(req, res) {
 }
 
 async function createAdmin(req, res) {
-  const errors = validateRegistration(req.body);
+  const body = getBody(req);
+  const errors = validateRegistration(body);
   if (errors.length) return res.status(400).json({ error: errors });
 
-  const userData = getAllowedData(req.body);
+  const userData = getAllowedData(body);
 
   try {
     const admin = await sequelize.transaction(async (transaction) => {
-      const hashedPassword = await bcrypt.hash(req.body.password, 10);
+      const hashedPassword = await bcrypt.hash(body.password, 10);
 
       const user = await Usuario.create(
         {
@@ -110,18 +126,21 @@ async function createAdmin(req, res) {
   }
 }
 
-// Edita nombre, apellido y email. La contraseña es opcional: si no llega,
-// se conserva la actual.
+// Edita nombre, apellido y email. La contraseña es opcional: si no llega
+// o llega vacía (""), se conserva la actual. Si llega con algo, tiene que
+// cumplir las mismas reglas que al crear (una de solo espacios no vale).
 async function updateAdmin(req, res) {
   const id = getAdminId(req.params.id);
   if (!id) return res.status(400).json({ error: 'El id de administrador no es válido.' });
 
-  const userData = getAllowedData(req.body);
-  const { password } = req.body;
+  const body = getBody(req);
+  const userData = getAllowedData(body);
+  const password = body.password === '' || body.password === null ? undefined : body.password;
   const errors = validateUserUpdate(userData);
 
-  if (password !== undefined && (typeof password !== 'string' || password.length < 8)) {
-    errors.push(PASSWORD_ERROR);
+  if (password !== undefined) {
+    const passwordError = getPasswordError(password);
+    if (passwordError) errors.push(passwordError);
   }
 
   if (errors.length) return res.status(400).json({ error: errors });
@@ -154,27 +173,39 @@ async function updateAdmin(req, res) {
 }
 
 // Baja lógica: un administrador inhabilitado no puede iniciar sesión.
-// Nadie puede inhabilitarse a sí mismo, así siempre queda al menos un
-// administrador activo (el que hace la acción).
+// Nadie puede inhabilitarse a sí mismo, y además siempre tiene que quedar
+// otro administrador activo (ver utils/admin-guard.js).
 async function setAdminStatus(req, res) {
   const id = getAdminId(req.params.id);
   if (!id) return res.status(400).json({ error: 'El id de administrador no es válido.' });
 
-  if (typeof req.body.activo !== 'boolean') {
+  const { activo } = getBody(req);
+  if (typeof activo !== 'boolean') {
     return res.status(400).json({ error: 'El campo activo es obligatorio y debe ser true o false.' });
   }
 
-  if (id === req.user.id_usuario && !req.body.activo) {
+  if (id === req.user.id_usuario && !activo) {
     return res.status(409).json({ error: 'No podés inhabilitar tu propia cuenta.' });
   }
 
   try {
-    const user = await findAdminUser(id);
-    if (!user) return res.status(404).json({ error: 'Administrador no encontrado.' });
+    const admin = await sequelize.transaction(async (transaction) => {
+      const user = await findAdminUser(id, transaction);
+      if (!user) return null;
 
-    await user.update({ activo: req.body.activo });
-    return res.json(buildAdminResponse(user));
+      if (!activo) await ensureAnotherActiveAdmin(id, transaction);
+
+      await user.update({ activo }, { transaction });
+      return buildAdminResponse(user);
+    });
+
+    if (!admin) return res.status(404).json({ error: 'Administrador no encontrado.' });
+    return res.json(admin);
   } catch (error) {
+    if (error.message === LAST_ACTIVE_ADMIN_ERROR) {
+      return res.status(409).json({ error: 'Tiene que quedar al menos un administrador activo.' });
+    }
+
     return res.status(500).json({ error: 'No se pudo actualizar el estado del administrador.' });
   }
 }

@@ -9,6 +9,7 @@ const ClienteObjetivo = require('../models/cliente_objetivo.model');
 const Pedido = require('../models/pedido.model');
 const { validateRegistration, validateUserUpdate, validateClientData, validateRequiredProfileData } = require('../middlewares/cliente-validation.middleware');
 const Descuento = require('../models/descuento.model');
+const { ensureAnotherActiveAdmin, LAST_ACTIVE_ADMIN_ERROR } = require('../utils/admin-guard');
 
 const USER_FIELDS = ['email', 'nombre', 'apellido'];
 const CLIENT_FIELDS = [
@@ -420,21 +421,42 @@ async function setClientStatus(req, res) {
   const id = getClientId(req.params.id);
   if (!id) return res.status(400).json({ error: 'El id de cliente no es válido.' });
 
-  if (typeof req.body.activo !== 'boolean') {
+  const activo = req.body ? req.body.activo : undefined;
+  if (typeof activo !== 'boolean') {
     return res.status(400).json({ error: 'El campo activo es obligatorio y debe ser true o false.' });
   }
 
+  // Esta ruta cambia usuario.activo, así que también alcanza a un
+  // administrador con perfil de cliente: aplica las mismas reglas que
+  // /api/administradores/:id/estado.
+  if (id === req.user.id_usuario && !activo) {
+    return res.status(409).json({ error: 'No podés inhabilitar tu propia cuenta.' });
+  }
+
   try {
-    const client = await Cliente.findByPk(id);
-    if (!client) return res.status(404).json({ error: 'Cliente no encontrado.' });
+    const response = await sequelize.transaction(async (transaction) => {
+      const client = await Cliente.findByPk(id, { transaction });
+      if (!client) return null;
 
-    const user = await Usuario.findByPk(id);
-    if (!user) return res.status(404).json({ error: 'Cliente no encontrado.' });
+      const user = await Usuario.findByPk(id, { transaction });
+      if (!user) return null;
 
-    await user.update({ activo: req.body.activo });
+      if (!activo && await Administrador.findByPk(id, { transaction })) {
+        await ensureAnotherActiveAdmin(id, transaction);
+      }
 
-    return res.json(buildClientResponse(client, user, await getClientGoals(id)));
+      await user.update({ activo }, { transaction });
+
+      return buildClientResponse(client, user, await getClientGoals(id, transaction));
+    });
+
+    if (!response) return res.status(404).json({ error: 'Cliente no encontrado.' });
+    return res.json(response);
   } catch (error) {
+    if (error.message === LAST_ACTIVE_ADMIN_ERROR) {
+      return res.status(409).json({ error: 'Tiene que quedar al menos un administrador activo.' });
+    }
+
     return res.status(500).json({ error: 'No se pudo actualizar el estado del cliente.' });
   }
 }

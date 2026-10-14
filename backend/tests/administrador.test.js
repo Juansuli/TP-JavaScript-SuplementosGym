@@ -27,6 +27,7 @@ const IN = Symbol('in');
 function createFakeDatabase() {
   const users = new Map();
   const adminIds = new Set([1, 2]);
+  const lockedQueries = [];
   let nextId = 4;
 
   function uniqueError() {
@@ -71,9 +72,12 @@ function createFakeDatabase() {
     async findByPk(id) {
       return users.get(id) ?? null;
     },
-    async findAll({ where }) {
+    async findAll({ where, lock }) {
+      if (lock) lockedQueries.push(where);
       const ids = where.id_usuario[IN];
-      return ids.map((id) => users.get(id)).filter(Boolean);
+      return ids
+        .map((id) => users.get(id))
+        .filter((user) => user && (where.activo === undefined || user.data.activo === where.activo));
     },
     async create(data) {
       if (emailTaken(data.email)) throw uniqueError();
@@ -97,20 +101,55 @@ function createFakeDatabase() {
     },
   };
 
-  return { users, adminIds, Usuario, Administrador };
+  // Simula el bloqueo de la base: las transacciones corren de a una, como
+  // pasa en MySQL cuando dos de ellas bloquean las mismas filas.
+  let queue = Promise.resolve();
+  let gate = null;
+
+  // Retiene las próximas "count" transacciones hasta que lleguen todas,
+  // para que varias requests pasen la autenticación "al mismo tiempo".
+  function holdTransactions(count) {
+    let release;
+    gate = { pending: count, ready: new Promise((resolve) => { release = resolve; }) };
+    gate.release = release;
+  }
+
+  function transaction(callback) {
+    let ready = Promise.resolve();
+    if (gate) {
+      ready = gate.ready;
+      gate.pending -= 1;
+      if (gate.pending === 0) {
+        gate.release();
+        gate = null;
+      }
+    }
+
+    const run = queue.then(() => ready).then(() => callback({}));
+    queue = run.catch(() => {});
+    return run;
+  }
+
+  return { users, adminIds, lockedQueries, Usuario, Administrador, transaction, holdTransactions };
 }
 
 async function startServer(t) {
   const db = createFakeDatabase();
   const secret = 'admin-crud-tests-only-secret-at-least-32-characters';
 
+  const adminGuard = loadModule('utils/admin-guard.js', {
+    sequelize: { Op: { in: IN } },
+    '../models/usuario.model': db.Usuario,
+    '../models/administrador.model': db.Administrador,
+  });
   const controller = loadModule('controllers/administrador.controller.js', {
     sequelize: { Op: { in: IN } },
     bcryptjs: bcrypt,
-    '../config/db': { transaction: async (callback) => callback({}) },
+    '../config/db': { transaction: db.transaction },
     '../models/usuario.model': db.Usuario,
     '../models/administrador.model': db.Administrador,
     '../middlewares/cliente-validation.middleware': validators,
+    '../utils/admin-guard': adminGuard,
   });
   const auth = loadModule('middlewares/auth.middleware.js', {
     jsonwebtoken: jwt,
@@ -132,14 +171,15 @@ async function startServer(t) {
   await new Promise((resolve) => server.once('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}/api/administradores`;
 
+  // Sin body tampoco se manda Content-Type, como una request "pelada".
   async function request(method, url, user, body) {
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = body !== undefined ? { 'Content-Type': 'application/json' } : {};
     if (user) headers.Authorization = `Bearer ${jwt.sign(user, secret)}`;
 
     const response = await fetch(base + url, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     return { status: response.status, body: await response.json() };
   }
@@ -162,8 +202,24 @@ test('only administrators can use the administrator routes', async (t) => {
   ];
 
   for (const [method, url] of routes) {
-    assert.equal((await request(method, url, CLIENT, method === 'GET' ? undefined : {})).status, 403, `${method} ${url} as client`);
-    assert.equal((await request(method, url, null, method === 'GET' ? undefined : {})).status, 401, `${method} ${url} without token`);
+    assert.equal((await request(method, url, CLIENT)).status, 403, `${method} ${url} as client`);
+    assert.equal((await request(method, url, null)).status, 401, `${method} ${url} without token`);
+  }
+});
+
+test('write requests without a body answer 400, not 500', async (t) => {
+  const { request } = await startServer(t);
+
+  assert.equal((await request('POST', '', ADMIN)).status, 400);
+  assert.equal((await request('PUT', '/2', ADMIN)).status, 400);
+  assert.equal((await request('PATCH', '/2/estado', ADMIN)).status, 400);
+});
+
+test('only plain positive integers are accepted as ids', async (t) => {
+  const { request } = await startServer(t);
+
+  for (const id of ['1e2', '0x2', '2.0', '-2', '0', 'abc']) {
+    assert.equal((await request('GET', `/${id}`, ADMIN)).status, 400, `id ${id}`);
   }
 });
 
@@ -211,6 +267,15 @@ test('rejects missing data, a short password and a repeated email', async (t) =>
     'La contraseña debe tener al menos 8 caracteres.',
   ]);
 
+  for (const email of ['@', 'a@b', 'sin arroba.com', 'ana @dosis.com']) {
+    const invalidEmail = await request('POST', '', ADMIN, { ...NEW_ADMIN, email });
+    assert.equal(invalidEmail.status, 400, `email ${email}`);
+  }
+
+  const onlySpaces = await request('POST', '', ADMIN, { ...NEW_ADMIN, password: '        ' });
+  assert.equal(onlySpaces.status, 400);
+  assert.deepEqual(onlySpaces.body.error, ['La contraseña no puede tener solo espacios.']);
+
   const repeated = await request('POST', '', ADMIN, { ...NEW_ADMIN, email: 'cli@dosis.com' });
   assert.equal(repeated.status, 409);
 
@@ -228,6 +293,15 @@ test('edits an administrator and only changes the password when one is sent', as
 
   const shortPassword = await request('PUT', '/2', ADMIN, { password: 'corta' });
   assert.equal(shortPassword.status, 400);
+
+  const spacesPassword = await request('PUT', '/2', ADMIN, { password: '          ' });
+  assert.equal(spacesPassword.status, 400);
+
+  // Una contraseña vacía al editar significa "no cambiarla".
+  const emptyPassword = await request('PUT', '/2', ADMIN, { nombre: 'Beto', password: '' });
+  assert.equal(emptyPassword.status, 200);
+  assert.equal(db.users.get(2).data.contraseña, 'hash');
+  assert.equal((await request('PUT', '/2', ADMIN, { password: '' })).status, 400);
 
   const newPassword = await request('PUT', '/2', ADMIN, { password: 'otra-clave-segura' });
   assert.equal(newPassword.status, 200);
@@ -255,4 +329,21 @@ test('an administrator can disable another one, but not themselves', async (t) =
 
   const enabled = await request('PATCH', '/2/estado', ADMIN, { activo: true });
   assert.equal(enabled.body.activo, true);
+});
+
+test('two administrators disabling each other at the same time leave one active', async (t) => {
+  const { db, request } = await startServer(t);
+  const otherAdmin = { id_usuario: 2, rol: 'administrador' };
+  db.holdTransactions(2);
+
+  const results = await Promise.all([
+    request('PATCH', '/2/estado', ADMIN, { activo: false }),
+    request('PATCH', '/1/estado', otherAdmin, { activo: false }),
+  ]);
+
+  assert.deepEqual(results.map((result) => result.status).sort(), [200, 409]);
+  assert.ok(results.some((result) => result.body.error === 'Tiene que quedar al menos un administrador activo.'));
+  assert.equal([1, 2].filter((id) => db.users.get(id).data.activo).length, 1);
+  // La comprobación lee los administradores activos bloqueando sus filas.
+  assert.ok(db.lockedQueries.length > 0);
 });

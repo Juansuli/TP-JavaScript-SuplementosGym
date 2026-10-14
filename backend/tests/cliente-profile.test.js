@@ -93,6 +93,10 @@ function loadClientController(overrides = {}) {
     '../models/pedido.model': {},
     '../models/descuento.model': {},
     '../middlewares/cliente-validation.middleware': validators,
+    '../utils/admin-guard': {
+      ensureAnotherActiveAdmin: async () => {},
+      LAST_ACTIVE_ADMIN_ERROR: 'LAST_ACTIVE_ADMIN',
+    },
     ...overrides,
   }, {
     process: { env: { JWT_SECRET: 'profile-tests-only-secret' } },
@@ -490,6 +494,7 @@ test('a cliente cannot assign themselves a discount category', async () => {
     '../models/pedido.model': {},
     '../models/descuento.model': {},
     '../middlewares/cliente-validation.middleware': validators,
+    '../utils/admin-guard': {},
   });
 
   const updateResponse = fakeResponse();
@@ -505,4 +510,80 @@ test('a cliente cannot assign themselves a discount category', async () => {
     registerResponse
   );
   assert.equal(registerResponse.statusCode, 403);
+});
+
+// Un administrador con perfil de cliente también aparece en
+// /api/clientes, y esa ruta cambia el mismo usuario.activo: tiene que
+// respetar las reglas de /api/administradores/:id/estado.
+function loadStatusController({ isAdmin, guardError }) {
+  const user = fakeRecord({ id_usuario: 2, rol: 'administrador', email: 'beto@dosis.com', activo: true });
+  const guardCalls = [];
+  const controller = loadClientController({
+    '../models/usuario.model': { findByPk: async () => user },
+    '../models/cliente.model': { findByPk: async () => fakeRecord({ id_cliente: 2 }) },
+    '../models/administrador.model': { findByPk: async () => (isAdmin ? { id_administrador: 2 } : null) },
+    '../utils/admin-guard': {
+      LAST_ACTIVE_ADMIN_ERROR: 'LAST_ACTIVE_ADMIN',
+      async ensureAnotherActiveAdmin(id) {
+        guardCalls.push(id);
+        if (guardError) throw new Error('LAST_ACTIVE_ADMIN');
+      },
+    },
+  });
+
+  return { controller, user, guardCalls };
+}
+
+test('the client status route does not let a user disable their own account', async () => {
+  const { controller, user } = loadStatusController({ isAdmin: true });
+  const response = fakeResponse();
+
+  await controller.setClientStatus(
+    { params: { id: '2' }, user: { id_usuario: 2, rol: 'administrador' }, body: { activo: false } },
+    response
+  );
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(user.activo, true);
+});
+
+test('disabling an administrator through the client route checks that another admin stays active', async () => {
+  const { controller, user, guardCalls } = loadStatusController({ isAdmin: true, guardError: true });
+  const response = fakeResponse();
+
+  await controller.setClientStatus(
+    { params: { id: '2' }, user: { id_usuario: 1, rol: 'administrador' }, body: { activo: false } },
+    response
+  );
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.body.error, 'Tiene que quedar al menos un administrador activo.');
+  assert.deepEqual(guardCalls, [2]);
+  assert.equal(user.activo, true);
+});
+
+test('disabling a regular client does not need the administrator check', async () => {
+  const { controller, user, guardCalls } = loadStatusController({ isAdmin: false });
+  const response = fakeResponse();
+
+  await controller.setClientStatus(
+    { params: { id: '2' }, user: { id_usuario: 1, rol: 'administrador' }, body: { activo: false } },
+    response
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(user.activo, false);
+  assert.deepEqual(guardCalls, []);
+});
+
+test('the client status route answers 400 when the request has no body', async () => {
+  const { controller } = loadStatusController({ isAdmin: false });
+  const response = fakeResponse();
+
+  await controller.setClientStatus(
+    { params: { id: '2' }, user: { id_usuario: 1, rol: 'administrador' }, body: undefined },
+    response
+  );
+
+  assert.equal(response.statusCode, 400);
 });
