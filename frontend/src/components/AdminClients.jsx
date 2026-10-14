@@ -53,7 +53,7 @@ function AdminClients({ token, showToast }) {
   return (
     <div className="admin-clients">
       <div className="admin-products-header admin-clients-header">
-        <h1>Administrar clientes</h1>
+        <h1>Clientes</h1>
       </div>
 
       {isLoading && <p className="catalog-message">Cargando clientes...</p>}

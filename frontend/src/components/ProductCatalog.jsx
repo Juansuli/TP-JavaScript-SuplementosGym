@@ -3,7 +3,7 @@ import ProductCard from './ProductCard'
 import ProductDetail from './ProductDetail'
 import { getProducts, getProductById } from '../services/product.service'
 
-function ProductCatalog({ cartQuantities, onAddToCart, showToast }) {
+function ProductCatalog({ cartQuantities, onAddToCart, showDiscountInfo, showToast }) {
   const [products, setProducts] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [nameFilter, setNameFilter] = useState('')
@@ -142,6 +142,24 @@ function ProductCatalog({ cartQuantities, onAddToCart, showToast }) {
         <h2>Productos</h2>
         {!isLoading && !error && <span className="result-count tabnum">{filteredProducts.length} resultados</span>}
       </div>
+
+      {showDiscountInfo && (
+        <section className="discount-notice" aria-labelledby="discount-notice-title">
+          <div>
+            <p className="eyebrow">Beneficios DOSIS</p>
+            <h2 id="discount-notice-title">Descuentos disponibles</h2>
+            <p>Los descuentos se asignan luego de que administración revise la información enviada.</p>
+          </div>
+          <ul className="discount-notice-list">
+            <li><strong>Estudiante</strong><span>Presentá un certificado de alumno regular vigente.</span></li>
+            <li><strong>Mayorista</strong><span>Solicitá el beneficio para compras por volumen.</span></li>
+            <li><strong>VIP</strong><span>Disponible para clientes frecuentes, sujeto a evaluación.</span></li>
+          </ul>
+          <p className="discount-notice-contact">
+            Enviá la información a <a href="mailto:administracion@dosis.com">administracion@dosis.com</a>.
+          </p>
+        </section>
+      )}
 
       {isLoading && <p className="catalog-message">Cargando productos...</p>}
       {!isLoading && error && <p className="catalog-message catalog-error">{error}</p>}
