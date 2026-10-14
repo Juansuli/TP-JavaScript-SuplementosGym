@@ -781,6 +781,22 @@
   content: 'Gestión de clientes';
 }
 
+.admin-clients-header.admin-admins-header::before {
+  content: 'Gestión de administradores';
+}
+
+.admin-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.admin-self-tag {
+  color: var(--ink-faint);
+  font-style: normal;
+  font-weight: 400;
+}
+
 .admin-products-header > button {
   padding: .75rem 1.3rem;
   border-radius: var(--radius);

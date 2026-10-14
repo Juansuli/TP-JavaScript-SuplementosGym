@@ -3,6 +3,7 @@ import ProductCatalog from './components/ProductCatalog'
 import AdminProducts from './components/AdminProducts'
 import AdminOrders from './components/AdminOrders'
 import AdminClients from './components/AdminClients'
+import AdminAdministrators from './components/AdminAdministrators'
 import MyOrders from './components/MyOrders'
 import ClientProfile from './components/ClientProfile'
 import AuthModal from './components/AuthModal'
@@ -238,6 +239,13 @@ function App() {
                 >
                   Clientes
                 </button>
+                <button
+                  type="button"
+                  className={view === 'admin-admins' ? 'is-active' : ''}
+                  onClick={() => changeView('admin-admins')}
+                >
+                  Administradores
+                </button>
               </>
             )}
           </nav>
@@ -295,6 +303,7 @@ function App() {
               <button type="button" onClick={() => changeView('admin')}>Productos</button>
               <button type="button" onClick={() => changeView('admin-orders')}>Pedidos</button>
               <button type="button" onClick={() => changeView('admin-clients')}>Clientes</button>
+              <button type="button" onClick={() => changeView('admin-admins')}>Administradores</button>
             </>
           )}
           {canOrder && (
@@ -314,6 +323,8 @@ function App() {
           <AdminOrders token={currentUser.token} showToast={showToast} />
         ) : view === 'admin-clients' && isAdmin ? (
           <AdminClients token={currentUser.token} showToast={showToast} />
+        ) : view === 'admin-admins' && isAdmin ? (
+          <AdminAdministrators currentUser={currentUser} showToast={showToast} onSelfUpdated={handleProfileUpdated} />
         ) : view === 'admin' && isAdmin ? (
           <AdminProducts token={currentUser.token} showToast={showToast} />
         ) : view === 'mis-compras' && canOrder ? (
