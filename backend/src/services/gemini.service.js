@@ -8,7 +8,7 @@
 //   AI_UNAVAILABLE      -> network error, timeout or non-2xx from Gemini
 //   AI_INVALID_RESPONSE -> Gemini answered but the text was unusable
 
-const DEFAULT_MODEL = 'gemini-3.5-flash';
+const DEFAULT_MODEL = 'gemini-3.6-flash';
 const REQUEST_TIMEOUT_MS = 15000;
 
 function buildError(code, message) {
