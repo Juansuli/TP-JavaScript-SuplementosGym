@@ -10,6 +10,7 @@ const productRoutes = require('./routes/producto.routes');
 const clientRoutes = require('./routes/cliente.routes');
 const orderRoutes = require('./routes/pedido.routes');
 const adminRoutes = require('./routes/administrador.routes');
+const suggestionRoutes = require('./routes/sugerencia.routes');
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
   console.error('JWT_SECRET debe estar definido en .env y tener al menos 32 caracteres.');
@@ -57,6 +58,7 @@ app.use('/api/productos', productRoutes);
 app.use('/api/clientes', clientRoutes);
 app.use('/api/pedidos', orderRoutes);
 app.use('/api/administradores', adminRoutes);
+app.use('/api/sugerencias', suggestionRoutes);
 
 async function startServer() {
   try {

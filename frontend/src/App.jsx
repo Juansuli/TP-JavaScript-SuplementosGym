@@ -5,6 +5,7 @@ import AdminOrders from './components/AdminOrders'
 import AdminClients from './components/AdminClients'
 import AdminAdministrators from './components/AdminAdministrators'
 import MyOrders from './components/MyOrders'
+import MySuggestions from './components/MySuggestions'
 import ClientProfile from './components/ClientProfile'
 import AuthModal from './components/AuthModal'
 import Cart from './components/Cart'
@@ -50,7 +51,11 @@ function App() {
 
   function showToast(message, type = 'success') {
     nextToastId.current += 1
-    setToasts((prev) => [...prev, { id: nextToastId.current, message, type }])
+    // Capture the id now: React runs the updater below later, and when
+    // showToast is called several times in a row (e.g. accepting an AI
+    // suggestion) every toast would otherwise read the last counter value.
+    const toastId = nextToastId.current
+    setToasts((prev) => [...prev, { id: toastId, message, type }])
   }
 
   function handleAuthSuccess(user) {
@@ -86,12 +91,15 @@ function App() {
     localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(updatedUser))
   }
 
-  function addToCart(product) {
-    const quantityInCart = cartQuantities[product.id_producto] ?? 0
-    if (getRemainingStock(product, quantityInCart) === 0) return
-
+  // Adds one unit of the product to the cart without ever going over its
+  // stock. Shared by addToCart (one product from the catalog, with its
+  // own toast) and addProductsToCart (several from an AI suggestion: the
+  // caller shows a single summary toast).
+  function addProductToCart(product) {
     setCart((prev) => {
       const existing = prev.find((item) => item.id_producto === product.id_producto)
+      const quantityInCart = existing?.cantidad ?? 0
+      if (getRemainingStock(product, quantityInCart) === 0) return prev
 
       if (existing) {
         const nextQuantity = Math.min(existing.cantidad + 1, product.stock)
@@ -112,7 +120,20 @@ function App() {
         },
       ]
     })
+  }
+
+  function addToCart(product) {
+    const quantityInCart = cartQuantities[product.id_producto] ?? 0
+    if (getRemainingStock(product, quantityInCart) === 0) return
+
+    addProductToCart(product)
     showToast(`Se agregó ${product.nombre} al carrito`)
+  }
+
+  // Adds one unit of each product; shows no toast itself so the caller
+  // can summarize the whole operation in a single message.
+  function addProductsToCart(products) {
+    products.forEach(addProductToCart)
   }
 
   function updateCartQuantity(id_producto, cantidad) {
@@ -206,6 +227,13 @@ function App() {
                   onClick={() => changeView('mis-compras')}
                 >
                   Mis compras
+                </button>
+                <button
+                  type="button"
+                  className={view === 'mis-sugerencias' ? 'is-active' : ''}
+                  onClick={() => changeView('mis-sugerencias')}
+                >
+                  Mis sugerencias
                 </button>
                 <button
                   type="button"
@@ -312,6 +340,7 @@ function App() {
                 Mi pedido ({cartCount})
               </button>
               <button type="button" onClick={() => changeView('mis-compras')}>Mis compras</button>
+              <button type="button" onClick={() => changeView('mis-sugerencias')}>Mis sugerencias</button>
               <button type="button" onClick={() => changeView('mi-perfil')}>Mi perfil</button>
             </>
           )}
@@ -329,6 +358,15 @@ function App() {
           <AdminProducts token={currentUser.token} showToast={showToast} />
         ) : view === 'mis-compras' && canOrder ? (
           <MyOrders token={currentUser.token} showToast={showToast} />
+        ) : view === 'mis-sugerencias' && canOrder ? (
+          <MySuggestions
+            cart={cart}
+            cartQuantities={cartQuantities}
+            token={currentUser.token}
+            addProductsToCart={addProductsToCart}
+            onGoToProfile={() => changeView('mi-perfil')}
+            showToast={showToast}
+          />
         ) : view === 'mi-perfil' && canOrder ? (
           <ClientProfile currentUser={currentUser} onProfileUpdated={handleProfileUpdated} showToast={showToast} />
         ) : (
@@ -377,12 +415,19 @@ function App() {
       {isCartOpen && (
         <Cart
           cart={cart}
+          cartQuantities={cartQuantities}
           token={currentUser?.token}
           deliveryAddress={currentUser?.direccion_entrega ?? ''}
+          addProductsToCart={addProductsToCart}
+          onGoToProfile={() => {
+            setIsCartOpen(false)
+            changeView('mi-perfil')
+          }}
           onUpdateQuantity={updateCartQuantity}
           onRemoveItem={removeFromCart}
           onOrderPlaced={clearCart}
           onRevalidateStock={refreshCartStock}
+          showToast={showToast}
           onClose={() => setIsCartOpen(false)}
         />
       )}

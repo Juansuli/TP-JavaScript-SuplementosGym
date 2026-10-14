@@ -750,6 +750,10 @@
   content: 'Tus pedidos';
 }
 
+.my-suggestions-header::before {
+  content: 'Tus sugerencias';
+}
+
 .admin-products-header {
   position: relative;
   display: flex;
@@ -956,6 +960,7 @@
 
 .admin-products-checkbox input:disabled,
 .admin-products-actions button:disabled,
+.admin-order-detail-button:disabled,
 .admin-order-delete:disabled {
   opacity: .4;
   cursor: not-allowed;
@@ -1735,7 +1740,7 @@
   }
 }
 
-/* ===========================================================================
+/* ====================================================================
    SESSION NAVIGATION
    ========================================================================== */
 .nav-actions .icon-btn svg {
@@ -1841,7 +1846,7 @@
   margin-top: 0;
 }
 
-/* ===========================================================================
+/* ====================================================================
    AUTH - visual implementation of login.html
    ========================================================================== */
 .auth-modal-overlay {
@@ -1989,7 +1994,7 @@
   }
 }
 
-/* ===========================================================================
+/* ====================================================================
    CART / CHECKOUT - visual implementation of carrito.html
    ========================================================================== */
 .cart-overlay {
@@ -2581,6 +2586,144 @@
 .client-profile-section input:disabled {
   color: var(--ink-faint);
   cursor: not-allowed;
+}
+
+/* AI suggestions (CUU2): a low-key trigger that expands the suggestion
+   below it — above the cart content and in the "Mis sugerencias" header —
+   plus the per-row product list and actions. Reuses .status-tag,
+   .cart-field-error, .btn, .admin-order-detail-button and
+   .admin-order-delete already defined above. */
+.ai-suggestion {
+  text-align: left;
+}
+
+.ai-suggestion-trigger {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: .8rem;
+  letter-spacing: .02em;
+}
+
+.ai-suggestion-trigger:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.ai-suggestion-trigger:disabled {
+  cursor: default;
+}
+
+/* The trigger sits above the cart content; only .cart-page/.cart-empty
+   carry their own padding, so the block needs one here. */
+.cart .ai-suggestion {
+  padding: .9rem clamp(1.5rem, 4vw, 2.5rem) 0;
+}
+
+/* In the "Mis sugerencias" header the expanded panel should not stretch
+   across the whole header width. */
+.my-suggestions .ai-suggestion {
+  width: min(24rem, 100%);
+  margin-top: .25rem;
+}
+
+.ai-suggestion-products {
+  display: grid;
+  gap: .75rem;
+  margin-top: .75rem;
+}
+
+.ai-suggestion-products li {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+}
+
+.ai-suggestion-products .cart-item-thumb {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+}
+
+.ai-suggestion-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-suggestion-motivo {
+  margin-top: .2rem;
+  color: var(--ink-faint);
+  font-size: .75rem;
+  line-height: 1.45;
+}
+
+.ai-suggestion-products li.is-unavailable {
+  opacity: .5;
+}
+
+.ai-suggestion-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .5rem;
+  margin-top: .75rem;
+}
+
+.ai-suggestion-actions .btn {
+  padding: .55rem .9rem;
+  font-size: .8rem;
+}
+
+.ai-suggestion-close {
+  margin-top: .5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: .75rem;
+}
+
+.ai-suggestion-close:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+/* The "Completar mi perfil" button, the only direct-child .btn. */
+.ai-suggestion > .btn {
+  margin-top: .5rem;
+}
+
+.ai-suggestion-error {
+  margin-top: .5rem;
+}
+
+.suggestion-products {
+  display: grid;
+  gap: .7rem;
+  font-size: .8rem;
+}
+
+.suggestion-products li {
+  display: grid;
+  gap: .15rem;
+}
+
+/* The "Sin stock" tag inside a row is a grid item: without justify-self
+   it would stretch full-width, and this rule must also override the faint
+   color of .suggestion-products span. */
+.suggestion-products .status-tag {
+  justify-self: start;
+  margin-top: .15rem;
+  color: var(--danger);
+}
+
+.suggestion-products span {
+  color: var(--ink-faint);
+  font-size: .72rem;
+}
+
+.suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
 }
 
 /* Objetivos: de 1 a 3 checkboxes (issue #49) */
