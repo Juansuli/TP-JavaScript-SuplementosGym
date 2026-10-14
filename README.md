@@ -2,6 +2,14 @@
 
 E-commerce de suplementos nutricionales desarrollado para la materia Desarrollo de Software de UTN FRRo.
 
+## Migraciones de base de datos
+
+Si ya tenes una base de datos creada, ejecuta las migraciones pendientes desde la raiz del proyecto. Para la columna `estado` de las sugerencias de IA:
+
+```cmd
+npm --prefix backend run migrate:sugerencia-estado
+```
+
 ## Prueba end-to-end
 
 La prueba E2E verifica que un cliente inicia sesion, busca un producto disponible, lo agrega al pedido y lo visualiza en el carrito. No confirma el pedido ni modifica el stock.
