@@ -238,8 +238,12 @@ async function updateClient(req, res) {
   const userData = getAllowedData(req.body, USER_FIELDS);
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
   const profileData = { ...userData, ...clientData };
+  const isAdminDiscountOnlyUpdate = req.user.rol === 'administrador'
+    && Object.keys(userData).length === 0
+    && Object.keys(clientData).length === 1
+    && clientData.descuento_categoria !== undefined;
 
-  const errors = req.user.id_usuario === id
+  const errors = req.user.id_usuario === id && !isAdminDiscountOnlyUpdate
     ? validateRequiredProfileData(profileData)
     : [...validateUserUpdate(userData), ...validateClientData(clientData)];
   if (errors.length) return res.status(400).json({ error: errors });

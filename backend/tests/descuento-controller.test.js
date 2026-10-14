@@ -92,6 +92,26 @@ test('rejects invalid discount data before saving it', async () => {
   assert.ok(response.body.error.includes('porcentaje'));
 });
 
+test('rejects non-object bodies and percentages with invalid precision', async () => {
+  const controller = loadController({
+    '../models/descuento.model': {},
+    '../models/cliente.model': {},
+  });
+
+  const nullBodyResponse = fakeResponse();
+  await controller.createDiscount({ body: null }, nullBodyResponse);
+  assert.equal(nullBodyResponse.statusCode, 400);
+
+  for (const percentage of [true, [10], '10.123']) {
+    const response = fakeResponse();
+    await controller.createDiscount(
+      { body: { categoria: 'VIP', porcentaje: percentage } },
+      response
+    );
+    assert.equal(response.statusCode, 400, `Expected 400 for ${JSON.stringify(percentage)}`);
+  }
+});
+
 test('does not delete a discount assigned to clients', async () => {
   const discount = fakeDiscount({ categoría: 'VIP', porcentaje: 15 });
   const controller = loadController({

@@ -30,6 +30,7 @@ function Cart({ cart, token, userId, deliveryAddress, discountCategory, discount
     category: discountCategory,
     percentage: discountPercentage,
     isLoading: Boolean(userId && token),
+    hasError: false,
   })
 
   const total = cart.reduce((sum, item) => sum + item.precio * item.cantidad, 0)
@@ -49,10 +50,18 @@ function Cart({ cart, token, userId, deliveryAddress, discountCategory, discount
           category: client.descuento_categoria ?? null,
           percentage: client.descuento_porcentaje ?? null,
           isLoading: false,
+          hasError: false,
         })
       })
       .catch(() => {
-        if (isActive) setDiscount((current) => ({ ...current, isLoading: false }))
+        if (isActive) {
+          setDiscount({
+            category: null,
+            percentage: null,
+            isLoading: false,
+            hasError: true,
+          })
+        }
       })
 
     return () => { isActive = false }
@@ -211,12 +220,21 @@ function Cart({ cart, token, userId, deliveryAddress, discountCategory, discount
                   <span className="amount tabnum">-{priceFormatter.format(discountAmount)}</span>
                 </div>
               )}
+              {discount.hasError && (
+                <div className="summary-row">
+                  <span>Descuento</span>
+                  <span className="amount">No disponible</span>
+                </div>
+              )}
               <div className="summary-total">
                 <span>Total</span>
                 <span className="amount tabnum">
-                  {discount.isLoading ? 'Calculando...' : priceFormatter.format(totalWithDiscount)}
+                  {discount.isLoading || discount.hasError ? 'No disponible' : priceFormatter.format(totalWithDiscount)}
                 </span>
               </div>
+              {discount.hasError && (
+                <p className="cart-field-error">No se pudo obtener tu descuento actual. Se calculará al confirmar el pedido.</p>
+              )}
 
               <form className="cart-checkout-form" noValidate onSubmit={handleSubmit}>
                 <label>

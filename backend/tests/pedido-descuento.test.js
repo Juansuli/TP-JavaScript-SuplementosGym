@@ -82,9 +82,51 @@ test('creating an order stores the client discount and final total', async () =>
   }, response);
 
   assert.equal(response.statusCode, 201, JSON.stringify(response.body));
-  assert.equal(createdOrderData.subtotal, 2000);
+  assert.equal(createdOrderData.subtotal, '2000.00');
   assert.equal(createdOrderData.descuento_categoria, 'VIP');
-  assert.equal(createdOrderData.descuento_porcentaje, 15);
-  assert.equal(createdOrderData.descuento_monto, 300);
-  assert.equal(createdOrderData.total, 1700);
+  assert.equal(createdOrderData.descuento_porcentaje, '15.00');
+  assert.equal(createdOrderData.descuento_monto, '300.00');
+  assert.equal(createdOrderData.total, '1700.00');
+});
+
+test('rounds a discount with decimal prices using integer cents', async () => {
+  let createdOrderData;
+  const product = {
+    id_producto: 1,
+    stock: 10,
+    precio: '20.10',
+    estado: 'disponible',
+    async update() {},
+  };
+  const transaction = { LOCK: { UPDATE: 'UPDATE' } };
+  const controller = loadController({
+    sequelize: { Op: {} },
+    '../config/db': { transaction: async (callback) => callback(transaction) },
+    '../models/pedido.model': {
+      create: async (data) => {
+        createdOrderData = data;
+        return { id_pedido: 1, ...data, toJSON: () => ({ id_pedido: 1, ...data }) };
+      },
+    },
+    '../models/pedido_producto.model': { create: async () => {}, findAll: async () => [] },
+    '../models/cliente.model': { findByPk: async () => ({ descuento_categoria: 'VIP' }) },
+    '../models/descuento.model': { findByPk: async () => ({ porcentaje: '5.00' }) },
+    '../models/producto.model': { findByPk: async () => product, findAll: async () => [] },
+    '../utils/product-status': { getProductStatus: () => 'disponible' },
+    '../middlewares/pedido-validation.middleware': require('../src/middlewares/pedido-validation.middleware'),
+  });
+
+  await controller.createOrder({
+    user: { id_usuario: 7 },
+    body: {
+      nombre_receptor: 'Ana Paz',
+      direccion_entrega: 'Calle 123',
+      metodo_pago: 'tarjeta',
+      productos: [{ id_producto: 1, cantidad: 1 }],
+    },
+  }, fakeResponse());
+
+  assert.equal(createdOrderData.subtotal, '20.10');
+  assert.equal(createdOrderData.descuento_monto, '1.01');
+  assert.equal(createdOrderData.total, '19.09');
 });

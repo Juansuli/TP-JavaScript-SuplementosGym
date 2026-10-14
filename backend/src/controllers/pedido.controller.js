@@ -37,27 +37,38 @@ function getAllowedData(body, fields) {
   );
 }
 
-function roundMoney(value) {
-  return Math.round(value * 100) / 100;
+function decimalToScaledInteger(value, decimalPlaces) {
+  const match = String(value).trim().match(/^(\d+)(?:\.(\d+))?$/);
+  if (!match) throw new Error('INVALID_DECIMAL_VALUE');
+
+  const scale = 10 ** decimalPlaces;
+  const whole = Number(match[1]);
+  const fraction = (match[2] || '').padEnd(decimalPlaces, '0').slice(0, decimalPlaces);
+  return whole * scale + Number(fraction);
 }
 
-function calculateSubtotal(items) {
-  const total = items.reduce(
-    (currentTotal, item) => currentTotal + Number(item.precio_unitario) * item.cantidad,
+function centsToDecimal(cents) {
+  const whole = Math.floor(cents / 100);
+  const fraction = String(cents % 100).padStart(2, '0');
+  return `${whole}.${fraction}`;
+}
+
+function calculateSubtotalInCents(items) {
+  return items.reduce(
+    (currentTotal, item) => currentTotal + decimalToScaledInteger(item.precio_unitario, 2) * item.cantidad,
     0
   );
-
-  return roundMoney(total);
 }
 
 async function calculateOrderAmounts(client, items, transaction) {
-  const subtotal = calculateSubtotal(items);
+  const subtotalInCents = calculateSubtotalInCents(items);
+  const subtotal = centsToDecimal(subtotalInCents);
   if (!client.descuento_categoria) {
     return {
       subtotal,
       descuento_categoria: null,
       descuento_porcentaje: null,
-      descuento_monto: 0,
+      descuento_monto: '0.00',
       total: subtotal,
     };
   }
@@ -65,15 +76,19 @@ async function calculateOrderAmounts(client, items, transaction) {
   const discount = await Descuento.findByPk(client.descuento_categoria, { transaction });
   if (!discount) throw new Error('DISCOUNT_CATEGORY_NOT_FOUND');
 
-  const percentage = Number(discount.porcentaje);
-  const discountAmount = roundMoney(subtotal * percentage / 100);
+  const percentageInBasisPoints = decimalToScaledInteger(discount.porcentaje, 2);
+  const discountInCents = Math.floor(
+    (subtotalInCents * percentageInBasisPoints + 5000) / 10000
+  );
+  const percentage = centsToDecimal(percentageInBasisPoints);
+  const discountAmount = centsToDecimal(discountInCents);
 
   return {
     subtotal,
     descuento_categoria: client.descuento_categoria,
     descuento_porcentaje: percentage,
     descuento_monto: discountAmount,
-    total: roundMoney(subtotal - discountAmount),
+    total: centsToDecimal(subtotalInCents - discountInCents),
   };
 }
 

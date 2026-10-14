@@ -9,9 +9,12 @@ function getCategory(value) {
 }
 
 function getPercentage(value) {
-  if (value === '' || !Number.isFinite(Number(value))) return null;
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
 
-  const percentage = Number(value);
+  const normalizedValue = String(value).trim();
+  if (!/^\d+(?:\.\d{1,2})?$/.test(normalizedValue)) return null;
+
+  const percentage = Number(normalizedValue);
   return percentage > 0 && percentage <= 100 ? percentage : null;
 }
 
@@ -24,6 +27,10 @@ function serializeDiscount(discount) {
 }
 
 function validateBody(body, allowedFields) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return 'El cuerpo de la solicitud debe ser un objeto JSON válido.';
+  }
+
   const unknownFields = Object.keys(body).filter((field) => !allowedFields.includes(field));
   if (unknownFields.length > 0) {
     return 'Se enviaron campos no permitidos.';
