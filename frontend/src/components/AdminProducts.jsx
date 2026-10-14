@@ -222,7 +222,7 @@ function AdminProducts({ token, showToast }) {
   return (
     <div className="admin-products">
       <div className="admin-products-header">
-        <h1>Administrar productos</h1>
+        <h1>Productos</h1>
         <button type="button" onClick={openCreateForm}>
           Nuevo producto
         </button>
