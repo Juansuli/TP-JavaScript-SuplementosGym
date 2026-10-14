@@ -57,6 +57,8 @@ Cliente
 	3.a.1 Prosigue con el paso 4.
 3.b \<durante\> Cliente acepta sugerencia de la IA.
 	3.b.1 Sistema agrega sugerencia al carrito.
+7.a \<durante\> El pedido incluye un producto de una sugerencia pendiente.
+	7.a.1 Sistema registra esa sugerencia como "aceptada".
 
 **Precondiciones:**
 
@@ -156,7 +158,7 @@ Cliente
 
 **Curso Básico (CB):**
 
-1. Cliente presiona el botón "Sugerime un producto según mis datos" desde su carrito.
+1. Cliente presiona el botón "Sugerime un producto según mis datos" desde su carrito o desde "Mis sugerencias".
 2. Sistema verifica que el perfil del cliente esté completo.
 3. Sistema envía los datos del cliente y los productos disponibles al servicio de IA.
 4. Sistema identifica los productos que sugiere la IA y muestra de 1 a 3 productos con el motivo de cada uno.
@@ -182,7 +184,12 @@ Cliente
 5.b \<durante\> No quedan productos para sugerir.
 	5.b.1 Sistema informa que no hay más productos disponibles para sugerir. FCU.
 5.c \<durante\> Cliente no quiere ninguna sugerencia.
-	5.c.1 Cliente continúa con su compra sin responder la sugerencia. FCU.
+	5.c.1 Cliente continúa con su compra sin responder la sugerencia. La sugerencia queda "pendiente" hasta que el cliente la responda desde "Mis sugerencias" o compre uno de sus productos. FCU.
+5.d \<durante\> Cliente acepta o descarta una sugerencia pendiente más tarde desde "Mis sugerencias".
+	5.d.1 Si la acepta, sistema agrega los productos con stock al carrito y registra la sugerencia como "aceptada" (mismo resultado que los pasos 5 a 7). FCU.
+	5.d.2 Si la descarta, sistema registra la sugerencia como "rechazada" (mismo resultado que 5.a.1). FCU.
+5.e \<durante\> Ningún producto sugerido tiene stock disponible.
+	5.e.1 Sistema informa la situación y la sugerencia queda "pendiente". FCU.
 
 **Precondiciones:**
 

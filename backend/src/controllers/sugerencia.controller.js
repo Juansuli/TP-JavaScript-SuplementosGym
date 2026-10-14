@@ -4,6 +4,7 @@ const Cliente = require('../models/cliente.model');
 const Producto = require('../models/producto.model');
 const SugerenciaIA = require('../models/sugerencia_ia.model');
 const { generateProductSuggestions } = require('../services/gemini.service');
+const { parseSuggestedItems, getSuggestedProductIds } = require('../utils/suggested-products');
 const { validateRequiredProfileData } = require('../middlewares/cliente-validation.middleware');
 const {
   getPositiveInteger,
@@ -126,15 +127,9 @@ function validateAiSuggestions(aiResult, candidates) {
 // o descontinuado desde que se generó la sugerencia, y el front necesita
 // saberlo para deshabilitarlo). Si el producto ya no existe, se omite.
 async function buildSuggestionResponse(suggestion) {
-  let items = [];
-  try {
-    const parsed = JSON.parse(suggestion.respuesta_IA);
-    items = Array.isArray(parsed?.sugerencias) ? parsed.sugerencias : [];
-  } catch (error) {
-    items = [];
-  }
+  const items = parseSuggestedItems(suggestion);
 
-  const motivoById = new Map(items.map((item) => [Number(item.id_producto), item.motivo]));
+  const motivoById = new Map(items.map((item) => [item.id_producto, item.motivo]));
   const productIds = [...motivoById.keys()];
 
   const products = productIds.length
@@ -327,6 +322,26 @@ async function updateSuggestionStatus(req, res) {
 
     if (suggestion.estado !== 'pendiente') {
       return res.status(409).json({ error: 'Esta sugerencia ya fue respondida.' });
+    }
+
+    // Aceptar solo tiene sentido si queda algo para comprar. Es un
+    // chequeo de sanidad, no una reserva: el carrito vive en el navegador
+    // y la garantía real de stock la sigue dando createOrder (bloqueo de
+    // fila + 409 cuando el stock no alcanza). Rechazar no lo necesita.
+    if (req.body.estado === 'aceptada') {
+      const productIds = getSuggestedProductIds(suggestion);
+      const availableProducts = productIds.length
+        ? await Producto.findAll({
+          where: {
+            id_producto: { [Op.in]: productIds },
+            estado: 'disponible',
+            stock: { [Op.gt]: 0 },
+          },
+        })
+        : [];
+      if (availableProducts.length === 0) {
+        return res.status(409).json({ error: 'Ningún producto de esta sugerencia tiene stock disponible.' });
+      }
     }
 
     // La condición "estado = pendiente" va dentro del propio UPDATE: si dos

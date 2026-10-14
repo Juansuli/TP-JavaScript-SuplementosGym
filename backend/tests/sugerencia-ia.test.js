@@ -65,7 +65,7 @@ function fakeRecord(data) {
 }
 
 // Fake SugerenciaIA model backed by an in-memory list, with the query
-// options the controller uses (where.usuario_id, order DESC).
+// options the controllers use (where.usuario_id, where.estado, order DESC).
 function createSugerenciaModel(initialRecords = []) {
   const records = initialRecords.map((data) => fakeRecord(data));
   let nextId = records.reduce((max, r) => Math.max(max, r.id_sugerencia), 0) + 1;
@@ -83,7 +83,9 @@ function createSugerenciaModel(initialRecords = []) {
     },
     async findAll({ where = {}, order } = {}) {
       const result = records.filter(
-        (r) => !r.deleted && (where.usuario_id === undefined || r.usuario_id === where.usuario_id)
+        (r) => !r.deleted
+          && (where.usuario_id === undefined || r.usuario_id === where.usuario_id)
+          && (where.estado === undefined || r.toJSON().estado === where.estado)
       );
       if (order?.[0]?.[1] === 'DESC') result.sort((a, b) => b.id_sugerencia - a.id_sugerencia);
       return result;
@@ -136,6 +138,7 @@ function loadController(overrides = {}) {
     '../models/producto.model': createProductoModel([]),
     '../models/sugerencia_ia.model': createSugerenciaModel(),
     '../services/gemini.service': { generateProductSuggestions: async () => ({ sugerencias: [] }) },
+    '../utils/suggested-products': require('../src/utils/suggested-products'),
     '../middlewares/cliente-validation.middleware': clientValidators,
     '../middlewares/sugerencia-validation.middleware': suggestionValidators,
     ...overrides,
@@ -227,6 +230,86 @@ function loadPostController({ client = COMPLETE_CLIENT, products = PRODUCTS, gem
 }
 
 const CLIENT_REQUEST = { id_usuario: 20, rol: 'cliente' };
+
+const ORDER_BODY = {
+  nombre_receptor: 'Ana Paz',
+  direccion_entrega: 'Calle Falsa 123',
+  metodo_pago: 'tarjeta',
+};
+
+// Loads pedido.controller.js with in-memory fakes, so the createOrder
+// tests can check what happens to the client's suggestions when an order
+// is placed. `transaction` is a stand-in for the real Sequelize
+// transaction: every fake model method asserts it was passed along.
+function loadOrderController({ products = [], sugerencias } = {}) {
+  const transaction = { LOCK: { UPDATE: 'UPDATE' } };
+  const productRecords = new Map(products.map((data) => [data.id_producto, fakeRecord(data)]));
+  const createdItems = [];
+  const sugerenciaModel = sugerencias ?? createSugerenciaModel();
+
+  const controller = loadModule('controllers/pedido.controller.js', {
+    sequelize: { Op },
+    '../config/db': {
+      async transaction(callback) {
+        return callback(transaction);
+      },
+    },
+    '../models/pedido.model': {
+      async create(data, options) {
+        assert.equal(options.transaction, transaction);
+        return fakeRecord({ id_pedido: 1, ...data });
+      },
+    },
+    '../models/pedido_producto.model': {
+      async create(data, options) {
+        assert.equal(options.transaction, transaction);
+        const item = fakeRecord(data);
+        createdItems.push(item);
+        return item;
+      },
+      async findAll({ where, transaction: tx }) {
+        assert.equal(tx, transaction);
+        return createdItems.filter((item) => item.id_pedido === where.id_pedido);
+      },
+    },
+    '../models/cliente.model': {
+      async findByPk(id, options) {
+        assert.equal(options.transaction, transaction);
+        return fakeRecord({ id_cliente: id });
+      },
+    },
+    '../models/producto.model': {
+      async findByPk(id, options) {
+        assert.equal(options.transaction, transaction);
+        return productRecords.get(id) ?? null;
+      },
+      async findAll({ where = {}, transaction: tx }) {
+        assert.equal(tx, transaction);
+        let result = [...productRecords.values()];
+        if (where.id_producto?.[Op.in]) {
+          result = result.filter((p) => where.id_producto[Op.in].includes(p.id_producto));
+        }
+        return result;
+      },
+    },
+    '../models/sugerencia_ia.model': {
+      records: sugerenciaModel.records,
+      async findAll(options) {
+        assert.equal(options.transaction, transaction);
+        return sugerenciaModel.findAll(options);
+      },
+      async update(changes, options) {
+        assert.equal(options.transaction, transaction);
+        return sugerenciaModel.update(changes, options);
+      },
+    },
+    '../utils/product-status': require('../src/utils/product-status'),
+    '../utils/suggested-products': require('../src/utils/suggested-products'),
+    '../middlewares/pedido-validation.middleware': require('../src/middlewares/pedido-validation.middleware'),
+  });
+
+  return { controller };
+}
 
 test('POST creates a pendiente suggestion and returns products with motivo', async () => {
   const sugerencias = createSugerenciaModel();
@@ -579,7 +662,13 @@ test('GET by id: owner gets 200, another client gets 403, missing gets 404', asy
 
 test('PATCH estado: pendiente -> aceptada once, a second PATCH gets 409', async () => {
   const sugerencias = createSugerenciaModel([
-    { id_sugerencia: 1, usuario_id: 20, estado: 'pendiente', fecha_generacion: 'f1', respuesta_IA: '{"sugerencias":[]}' },
+    {
+      id_sugerencia: 1,
+      usuario_id: 20,
+      estado: 'pendiente',
+      fecha_generacion: 'f1',
+      respuesta_IA: '{"sugerencias":[{"id_producto":1,"motivo":"Para tu objetivo."}]}',
+    },
     { id_sugerencia: 2, usuario_id: 30, estado: 'pendiente', fecha_generacion: 'f2', respuesta_IA: '{"sugerencias":[]}' },
   ]);
   const controller = loadController({
@@ -641,6 +730,113 @@ test('PATCH estado: two simultaneous answers, only one succeeds and the other ge
 
   const statusCodes = responses.map((response) => response.statusCode).sort();
   assert.deepEqual(statusCodes, [200, 409, 409]);
+});
+
+test('PATCH estado: aceptada needs at least one product with stock, rechazada does not', async () => {
+  const sugerencias = createSugerenciaModel([
+    {
+      id_sugerencia: 1,
+      usuario_id: 20,
+      estado: 'pendiente',
+      fecha_generacion: 'f1',
+      // 3 has no stock and 4 is descontinuado: nothing left to buy.
+      respuesta_IA: '{"sugerencias":[{"id_producto":3,"motivo":"a"},{"id_producto":4,"motivo":"b"}]}',
+    },
+  ]);
+  const controller = loadController({
+    '../models/sugerencia_ia.model': sugerencias,
+    '../models/producto.model': createProductoModel(PRODUCTS),
+  });
+
+  const acceptResponse = fakeResponse();
+  await controller.updateSuggestionStatus(
+    { user: CLIENT_REQUEST, params: { id: '1' }, body: { estado: 'aceptada' } },
+    acceptResponse
+  );
+  assert.equal(acceptResponse.statusCode, 409);
+  assert.equal(acceptResponse.body.error, 'Ningún producto de esta sugerencia tiene stock disponible.');
+  assert.equal(sugerencias.records[0].estado, 'pendiente');
+
+  // Rejecting never checks stock: it is always allowed.
+  const rejectResponse = fakeResponse();
+  await controller.updateSuggestionStatus(
+    { user: CLIENT_REQUEST, params: { id: '1' }, body: { estado: 'rechazada' } },
+    rejectResponse
+  );
+  assert.equal(rejectResponse.statusCode, 200);
+  assert.equal(rejectResponse.body.estado, 'rechazada');
+});
+
+test('createOrder marks a pending suggestion as aceptada when the order includes a suggested product', async () => {
+  const sugerencias = createSugerenciaModel([
+    {
+      id_sugerencia: 1,
+      usuario_id: 20,
+      estado: 'pendiente',
+      fecha_generacion: 'f1',
+      respuesta_IA: '{"sugerencias":[{"id_producto":1,"motivo":"a"},{"id_producto":5,"motivo":"b"}]}',
+    },
+    {
+      id_sugerencia: 2,
+      usuario_id: 20,
+      estado: 'pendiente',
+      fecha_generacion: 'f2',
+      respuesta_IA: '{"sugerencias":[{"id_producto":5,"motivo":"c"}]}',
+    },
+    {
+      id_sugerencia: 3,
+      usuario_id: 20,
+      estado: 'rechazada',
+      fecha_generacion: 'f3',
+      respuesta_IA: '{"sugerencias":[{"id_producto":1,"motivo":"d"}]}',
+    },
+    {
+      id_sugerencia: 4,
+      usuario_id: 30,
+      estado: 'pendiente',
+      fecha_generacion: 'f4',
+      respuesta_IA: '{"sugerencias":[{"id_producto":1,"motivo":"e"}]}',
+    },
+  ]);
+  const { controller } = loadOrderController({ products: PRODUCTS, sugerencias });
+  const response = fakeResponse();
+
+  await controller.createOrder(
+    { user: CLIENT_REQUEST, body: { ...ORDER_BODY, productos: [{ id_producto: 1, cantidad: 2 }] } },
+    response
+  );
+
+  assert.equal(response.statusCode, 201);
+  assert.equal(response.body.total, 50000);
+  // Product 1 is in this suggestion: it counts as accepted.
+  assert.equal(sugerencias.records[0].estado, 'aceptada');
+  // Only product 5 was suggested here and it was not ordered.
+  assert.equal(sugerencias.records[1].estado, 'pendiente');
+  // Already answered or another client's: createOrder never touches them.
+  assert.equal(sugerencias.records[2].estado, 'rechazada');
+  assert.equal(sugerencias.records[3].estado, 'pendiente');
+});
+
+test('createOrder leaves every suggestion untouched when no ordered product was suggested', async () => {
+  const sugerencias = createSugerenciaModel([
+    {
+      id_sugerencia: 1,
+      usuario_id: 20,
+      estado: 'pendiente',
+      fecha_generacion: 'f1',
+      respuesta_IA: '{"sugerencias":[{"id_producto":1,"motivo":"a"}]}',
+    },
+  ]);
+  const { controller } = loadOrderController({ products: PRODUCTS, sugerencias });
+  const response = fakeResponse();
+
+  await controller.createOrder(
+    { user: CLIENT_REQUEST, body: { ...ORDER_BODY, productos: [{ id_producto: 2, cantidad: 1 }] } },
+    response
+  );
+
+  assert.equal(response.statusCode, 201);
+  assert.equal(sugerencias.records[0].estado, 'pendiente');
 });
 
 test('DELETE: the owner gets 204, another client gets 403, admin can delete', async () => {
