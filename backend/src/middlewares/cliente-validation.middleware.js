@@ -1,10 +1,34 @@
 // Validaciones de los datos de cliente (registro y datos personales del perfil).
 // El controlador llama a estas funciones y solo se encarga de responder según el resultado.
+const EMAIL_ERROR = 'El email es obligatorio y debe ser válido.';
+const MIN_PASSWORD_LENGTH = 8;
+
+// Algo@algo.algo, sin espacios. No pretende cubrir todo el estándar, solo
+// descartar valores como "@" o "a@b". Se valida el email ya recortado,
+// que es como se guarda.
+function isValidEmail(value) {
+  return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+// Devuelve un mensaje (o null). La contraseña no se recorta al guardarla,
+// pero una hecha solo de espacios no se acepta.
+function getPasswordError(password) {
+  if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+    return `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`;
+  }
+
+  if (password.trim() === '') {
+    return 'La contraseña no puede tener solo espacios.';
+  }
+
+  return null;
+}
+
 function validateRegistration(data) {
   const errors = [];
 
-  if (typeof data.email !== 'string' || !data.email.includes('@')) {
-    errors.push('El email es obligatorio y debe ser válido.');
+  if (!isValidEmail(data.email)) {
+    errors.push(EMAIL_ERROR);
   }
 
   if (typeof data.nombre !== 'string' || data.nombre.trim() === '') {
@@ -15,9 +39,8 @@ function validateRegistration(data) {
     errors.push('El apellido es obligatorio.');
   }
 
-  if (typeof data.password !== 'string' || data.password.length < 8) {
-    errors.push('La contraseña debe tener al menos 8 caracteres.');
-  }
+  const passwordError = getPasswordError(data.password);
+  if (passwordError) errors.push(passwordError);
 
   return errors;
 }
@@ -27,8 +50,8 @@ function validateRegistration(data) {
 function validateUserUpdate(data) {
   const errors = [];
 
-  if (data.email !== undefined && (typeof data.email !== 'string' || !data.email.includes('@'))) {
-    errors.push('El email es obligatorio y debe ser válido.');
+  if (data.email !== undefined && !isValidEmail(data.email)) {
+    errors.push(EMAIL_ERROR);
   }
 
   if (data.nombre !== undefined && (typeof data.nombre !== 'string' || data.nombre.trim() === '')) {
@@ -202,5 +225,6 @@ module.exports = {
   validateUserUpdate,
   validateClientData,
   validateRequiredProfileData,
+  getPasswordError,
   GOAL_OPTIONS,
 };
