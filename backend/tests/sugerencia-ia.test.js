@@ -135,6 +135,7 @@ function loadController(overrides = {}) {
     sequelize: { Op },
     '../models/usuario.model': {},
     '../models/cliente.model': {},
+    '../models/cliente_objetivo.model': {},
     '../models/producto.model': createProductoModel([]),
     '../models/sugerencia_ia.model': createSugerenciaModel(),
     '../services/gemini.service': { generateProductSuggestions: async () => ({ sugerencias: [] }) },
@@ -191,8 +192,10 @@ const COMPLETE_CLIENT = fakeRecord({
   ocupacion: 'Estudiante',
   deporte: 'Crossfit',
   dias_entrenamiento: 4,
-  objetivo: 'ganar_masa_muscular',
 });
+
+// Goals live in their own table (cliente_objetivo), one row per goal.
+const COMPLETE_GOALS = ['ganar_masa_muscular', 'recuperacion'];
 
 // Candidates for the IA: only products 1, 2, 5 and 6 (estado disponible
 // + stock > 0). 3 has no stock and 4 is descontinuado.
@@ -205,7 +208,7 @@ const PRODUCTS = [
   { id_producto: 6, nombre: 'Pre-entreno', descripcion: 'x', precio: '15000', stock: 2, estado: 'disponible', info_nutricional: null, imagen_url: null },
 ];
 
-function loadPostController({ client = COMPLETE_CLIENT, products = PRODUCTS, geminiResult, geminiError, sugerencias } = {}) {
+function loadPostController({ client = COMPLETE_CLIENT, goals = COMPLETE_GOALS, products = PRODUCTS, geminiResult, geminiError, sugerencias } = {}) {
   let capturedArgs;
   const geminiService = {
     async generateProductSuggestions(args) {
@@ -218,6 +221,9 @@ function loadPostController({ client = COMPLETE_CLIENT, products = PRODUCTS, gem
   const controller = loadController({
     '../models/usuario.model': { findByPk: async () => USER },
     '../models/cliente.model': { findByPk: async () => client },
+    '../models/cliente_objetivo.model': {
+      findAll: async () => goals.map((objetivo) => ({ objetivo })),
+    },
     '../models/producto.model': createProductoModel(products),
     '../models/sugerencia_ia.model': sugerencias ?? createSugerenciaModel(),
     '../services/gemini.service': geminiService,
@@ -390,7 +396,7 @@ test('POST rejects a user without client profile with 403', async () => {
 });
 
 test('POST rejects an incomplete client profile with 400', async () => {
-  const { controller } = loadPostController({ client: fakeRecord({ id_cliente: 20 }) });
+  const { controller } = loadPostController({ client: fakeRecord({ id_cliente: 20 }), goals: [] });
   const response = fakeResponse();
 
   await controller.createSuggestion({ user: CLIENT_REQUEST, body: {} }, response);

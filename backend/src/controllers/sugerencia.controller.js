@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const Usuario = require('../models/usuario.model');
 const Cliente = require('../models/cliente.model');
+const ClienteObjetivo = require('../models/cliente_objetivo.model');
 const Producto = require('../models/producto.model');
 const SugerenciaIA = require('../models/sugerencia_ia.model');
 const { generateProductSuggestions } = require('../services/gemini.service');
@@ -67,7 +68,7 @@ function calculateAge(fechaNacimiento) {
 // Arma el texto que se manda a Gemini. Deliberadamente NO incluye
 // nombre, apellido, email ni dirección: la IA solo necesita el perfil
 // físico y el objetivo, no la identidad del cliente.
-function buildPrompt(client, cartProductNames, candidates) {
+function buildPrompt(client, goals, cartProductNames, candidates) {
   const cartText = cartProductNames.length
     ? cartProductNames.map((name) => `- ${name}`).join('\n')
     : '- (carrito vacío)';
@@ -89,7 +90,7 @@ function buildPrompt(client, cartProductNames, candidates) {
     `- Ocupación: ${client.ocupacion}`,
     `- Deporte: ${client.deporte}`,
     `- Días de entrenamiento por semana: ${client.dias_entrenamiento}`,
-    `- Objetivo: ${client.objetivo}`,
+    `- Objetivos: ${goals.join(', ')}`,
     '',
     'Productos que ya tiene en el carrito (no los repitas):',
     cartText,
@@ -179,7 +180,14 @@ async function createSuggestion(req, res) {
     // La sugerencia se basa en el perfil: sin perfil completo no tendría
     // sentido llamar a la IA (ver CUU4 y CUU6).
     const user = await Usuario.findByPk(req.user.id_usuario);
-    const profileData = { ...(user ? user.toJSON() : {}), ...client.toJSON() };
+    // Los objetivos (de 1 a 3) viven en su propia tabla, no en cliente.
+    const goalRows = await ClienteObjetivo.findAll({
+      where: { id_cliente: client.id_cliente },
+      order: [['objetivo', 'ASC']],
+    });
+    const goals = goalRows.map((row) => row.objetivo);
+
+    const profileData = { ...(user ? user.toJSON() : {}), ...client.toJSON(), objetivos: goals };
     const profileErrors = validateRequiredProfileData(profileData);
     if (profileErrors.length) {
       return res.status(400).json({
@@ -211,7 +219,7 @@ async function createSuggestion(req, res) {
       : [];
     const cartProductNames = cartProducts.map((product) => product.nombre);
 
-    const userPrompt = buildPrompt(client, cartProductNames, candidates);
+    const userPrompt = buildPrompt(client, goals, cartProductNames, candidates);
 
     let aiResult;
     try {
