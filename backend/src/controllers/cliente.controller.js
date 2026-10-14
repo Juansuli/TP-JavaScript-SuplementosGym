@@ -72,6 +72,16 @@ function buildClientResponse(client, user) {
   };
 }
 
+async function addDiscountPercentage(clientResponse) {
+  if (!clientResponse.descuento_categoria) return clientResponse;
+
+  const discount = await Descuento.findByPk(clientResponse.descuento_categoria);
+  return {
+    ...clientResponse,
+    descuento_porcentaje: discount ? Number(discount.porcentaje) : null,
+  };
+}
+
 async function getClientWithUser(id) {
   const client = await Cliente.findByPk(id);
   if (!client) return null;
@@ -79,7 +89,7 @@ async function getClientWithUser(id) {
   const user = await Usuario.findByPk(id);
   if (!user) return null;
 
-  return buildClientResponse(client, user);
+  return addDiscountPercentage(buildClientResponse(client, user));
 }
 
 async function listClients(req, res) {
@@ -93,9 +103,11 @@ async function listClients(req, res) {
       where: { id_usuario: { [Op.in]: clientIds } },
     });
     const usersById = new Map(users.map((user) => [user.id_usuario, user]));
-    const response = clients
-      .filter((client) => usersById.has(client.id_cliente))
-      .map((client) => buildClientResponse(client, usersById.get(client.id_cliente)));
+    const response = await Promise.all(
+      clients
+        .filter((client) => usersById.has(client.id_cliente))
+        .map((client) => addDiscountPercentage(buildClientResponse(client, usersById.get(client.id_cliente))))
+    );
 
     return res.json(response);
   } catch (error) {
@@ -149,7 +161,8 @@ async function login(req, res) {
     // datos para que el frontend sepa que puede hacer pedidos.
     const clientProfile = await Cliente.findByPk(user.id_usuario);
     if (clientProfile) {
-      return res.json({ ...buildClientResponse(clientProfile, user), token });
+      const clientResponse = await addDiscountPercentage(buildClientResponse(clientProfile, user));
+      return res.json({ ...clientResponse, token });
     }
 
     const userData = user.toJSON();

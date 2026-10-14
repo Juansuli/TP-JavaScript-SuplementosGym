@@ -37,6 +37,7 @@ test('order lists enforce administrative and personal scopes', async (t) => {
     '../models/pedido_producto.model': {},
     // Admin 10 also has a client profile; admin 30 does not.
     '../models/cliente.model': { findByPk: async id => id === 30 ? null : { id_cliente: id } },
+    '../models/descuento.model': {},
     '../models/producto.model': {},
     '../utils/product-status': {},
     '../middlewares/pedido-validation.middleware': require('../src/middlewares/pedido-validation.middleware'),

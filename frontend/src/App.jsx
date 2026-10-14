@@ -3,6 +3,7 @@ import ProductCatalog from './components/ProductCatalog'
 import AdminProducts from './components/AdminProducts'
 import AdminOrders from './components/AdminOrders'
 import AdminClients from './components/AdminClients'
+import AdminDiscounts from './components/AdminDiscounts'
 import MyOrders from './components/MyOrders'
 import ClientProfile from './components/ClientProfile'
 import AuthModal from './components/AuthModal'
@@ -236,6 +237,13 @@ function App() {
                 >
                   Administrar clientes
                 </button>
+                <button
+                  type="button"
+                  className={view === 'admin-discounts' ? 'is-active' : ''}
+                  onClick={() => changeView('admin-discounts')}
+                >
+                  Administrar descuentos
+                </button>
               </>
             )}
           </nav>
@@ -335,6 +343,7 @@ function App() {
               <button type="button" onClick={() => changeView('admin')}>Administrar productos</button>
               <button type="button" onClick={() => changeView('admin-orders')}>Administrar pedidos</button>
               <button type="button" onClick={() => changeView('admin-clients')}>Administrar clientes</button>
+              <button type="button" onClick={() => changeView('admin-discounts')}>Administrar descuentos</button>
             </>
           )}
           {canOrder && (
@@ -354,6 +363,8 @@ function App() {
           <AdminOrders token={currentUser.token} showToast={showToast} />
         ) : view === 'admin-clients' && isAdmin ? (
           <AdminClients token={currentUser.token} showToast={showToast} />
+        ) : view === 'admin-discounts' && isAdmin ? (
+          <AdminDiscounts token={currentUser.token} showToast={showToast} />
         ) : view === 'admin' && isAdmin ? (
           <AdminProducts token={currentUser.token} showToast={showToast} />
         ) : view === 'mis-compras' && canOrder ? (
@@ -406,7 +417,10 @@ function App() {
         <Cart
           cart={cart}
           token={currentUser?.token}
+          userId={currentUser?.id_usuario}
           deliveryAddress={currentUser?.direccion_entrega ?? ''}
+          discountCategory={currentUser?.descuento_categoria ?? null}
+          discountPercentage={currentUser?.descuento_porcentaje ?? null}
           onUpdateQuantity={updateCartQuantity}
           onRemoveItem={removeFromCart}
           onOrderPlaced={clearCart}
