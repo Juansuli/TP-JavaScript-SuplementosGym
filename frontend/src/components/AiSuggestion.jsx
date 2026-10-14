@@ -64,13 +64,13 @@ function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToPr
     setIsAnswering(true)
     setError(null)
     try {
-      const { addedCount, skippedCount } = await acceptSuggestionIntoCart(
+      const { addedCount, outOfStockCount, alreadyInCartCount } = await acceptSuggestionIntoCart(
         suggestion.id_sugerencia,
         cartQuantities,
         addProductsToCart,
         token
       )
-      showToast(buildAcceptedToast(addedCount, skippedCount))
+      showToast(buildAcceptedToast(addedCount, outOfStockCount, alreadyInCartCount))
       setSuggestion(null)
       setAlreadySuggestedIds([])
       onSuggestionsChanged?.()

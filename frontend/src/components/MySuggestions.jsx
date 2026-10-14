@@ -97,14 +97,14 @@ function MySuggestions({ cart, cartQuantities, token, addProductsToCart, onGoToP
     isBusyRef.current = true
     setIsAnswering(true)
     try {
-      const { addedCount, skippedCount } = await acceptSuggestionIntoCart(
+      const { addedCount, outOfStockCount, alreadyInCartCount } = await acceptSuggestionIntoCart(
         suggestion.id_sugerencia,
         cartQuantities,
         addProductsToCart,
         token
       )
       updateRowEstado(suggestion.id_sugerencia, 'aceptada')
-      showToast(buildAcceptedToast(addedCount, skippedCount))
+      showToast(buildAcceptedToast(addedCount, outOfStockCount, alreadyInCartCount))
     } catch (err) {
       showToast(err.message, 'error')
       reloadSuggestions()
