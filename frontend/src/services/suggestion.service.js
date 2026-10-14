@@ -59,6 +59,23 @@ async function getSuggestions(token) {
   return body
 }
 
+// GET /api/sugerencias/:id — one suggestion with the CURRENT stock and
+// estado of each product, resolved by the backend at request time.
+async function getSuggestion(id, token) {
+  let response
+  try {
+    response = await fetch(`${API_BASE_URL}/${id}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+  } catch {
+    throw new Error('No se pudo conectar con el servidor.')
+  }
+
+  const body = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(parseErrorMessage(body))
+  return body
+}
+
 async function updateSuggestionStatus(id, estado, token) {
   let response
   try {
@@ -96,4 +113,4 @@ async function deleteSuggestion(id, token) {
   }
 }
 
-export { requestSuggestion, getSuggestions, updateSuggestionStatus, deleteSuggestion }
+export { requestSuggestion, getSuggestions, getSuggestion, updateSuggestionStatus, deleteSuggestion }

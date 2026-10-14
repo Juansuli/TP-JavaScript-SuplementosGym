@@ -16,7 +16,7 @@ const paymentLabels = {
   efectivo: 'Efectivo al retirar en el local',
 }
 
-function Cart({ cart, token, deliveryAddress, onAddToCart, onGoToProfile, onUpdateQuantity, onRemoveItem, onOrderPlaced, onRevalidateStock, showToast, onClose }) {
+function Cart({ cart, cartQuantities, token, deliveryAddress, addProductsToCart, onGoToProfile, onUpdateQuantity, onRemoveItem, onOrderPlaced, onRevalidateStock, showToast, onClose }) {
   const [values, setValues] = useState({
     nombre_receptor: '',
     direccion_entrega: deliveryAddress ?? '',
@@ -107,6 +107,19 @@ function Cart({ cart, token, deliveryAddress, onAddToCart, onGoToProfile, onUpda
           </button>
         </div>
 
+        {/* The AI trigger renders once, above the cart content, for both
+            the empty cart and the cart with items. */}
+        {!confirmedOrder && token && (
+          <AiSuggestion
+            cart={cart}
+            cartQuantities={cartQuantities}
+            token={token}
+            addProductsToCart={addProductsToCart}
+            onGoToProfile={onGoToProfile}
+            showToast={showToast}
+          />
+        )}
+
         {confirmedOrder ? (
           <div className="cart-confirmation">
             <span className="confirmation-mark" aria-hidden="true">✓</span>
@@ -124,15 +137,6 @@ function Cart({ cart, token, deliveryAddress, onAddToCart, onGoToProfile, onUpda
             <p className="eyebrow">Carrito</p>
             <h2 id="cart-title">Tu pedido está vacío.</h2>
             <p>Agregá productos desde el catálogo para continuar.</p>
-            {token && (
-              <AiSuggestion
-                cart={cart}
-                token={token}
-                onAddToCart={onAddToCart}
-                onGoToProfile={onGoToProfile}
-                showToast={showToast}
-              />
-            )}
             <button type="button" className="btn btn-accent" onClick={onClose}>Volver al catálogo</button>
           </div>
         ) : (
@@ -166,16 +170,6 @@ function Cart({ cart, token, deliveryAddress, onAddToCart, onGoToProfile, onUpda
                   </li>
                 ))}
               </ul>
-
-              {token && (
-                <AiSuggestion
-                  cart={cart}
-                  token={token}
-                  onAddToCart={onAddToCart}
-                  onGoToProfile={onGoToProfile}
-                  showToast={showToast}
-                />
-              )}
             </section>
 
             <aside className="order-summary">

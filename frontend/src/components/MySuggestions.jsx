@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import AiSuggestion from './AiSuggestion'
 import ConfirmModal from './ConfirmModal'
-import { deleteSuggestion, getSuggestions } from '../services/suggestion.service'
+import { deleteSuggestion, getSuggestions, updateSuggestionStatus } from '../services/suggestion.service'
+import { acceptSuggestionIntoCart, buildAcceptedToast } from '../utils/acceptSuggestion'
+import { isProductAvailable } from '../utils/stock'
 
 const SUGGESTION_STATE_LABELS = {
   pendiente: 'Pendiente',
@@ -22,11 +25,16 @@ function getStatusBadgeModifier(estado) {
   return 'pendiente'
 }
 
-function MySuggestions({ token, showToast }) {
+function MySuggestions({ cart, cartQuantities, token, addProductsToCart, onGoToProfile, showToast }) {
   const [suggestions, setSuggestions] = useState([])
   const [suggestionPendingDelete, setSuggestionPendingDelete] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [isAnswering, setIsAnswering] = useState(false)
+  // A ref changes immediately, while disabled buttons only update after
+  // the next render: it stops a very fast double click from sending two
+  // requests.
+  const isBusyRef = useRef(false)
 
   useEffect(() => {
     let isStale = false
@@ -51,6 +59,17 @@ function MySuggestions({ token, showToast }) {
     }
   }, [token])
 
+  // Reloads the list without touching the "Cargando..." state: used after
+  // row actions and after the header box creates or answers a suggestion,
+  // so the table stays fresh without flashing the loading message.
+  async function reloadSuggestions() {
+    try {
+      setSuggestions(await getSuggestions(token))
+    } catch (err) {
+      showToast(err.message, 'error')
+    }
+  }
+
   async function confirmDelete() {
     const suggestion = suggestionPendingDelete
     if (!suggestion) return
@@ -65,16 +84,71 @@ function MySuggestions({ token, showToast }) {
     }
   }
 
+  function updateRowEstado(suggestionId, estado) {
+    setSuggestions((prev) =>
+      prev.map((item) =>
+        item.id_sugerencia === suggestionId ? { ...item, estado } : item
+      )
+    )
+  }
+
+  async function handleAcceptSuggestion(suggestion) {
+    if (isBusyRef.current) return
+    isBusyRef.current = true
+    setIsAnswering(true)
+    try {
+      const { addedCount, skippedCount } = await acceptSuggestionIntoCart(
+        suggestion.id_sugerencia,
+        cartQuantities,
+        addProductsToCart,
+        token
+      )
+      updateRowEstado(suggestion.id_sugerencia, 'aceptada')
+      showToast(buildAcceptedToast(addedCount, skippedCount))
+    } catch (err) {
+      showToast(err.message, 'error')
+      reloadSuggestions()
+    } finally {
+      setIsAnswering(false)
+      isBusyRef.current = false
+    }
+  }
+
+  async function handleDiscardSuggestion(suggestion) {
+    if (isBusyRef.current) return
+    isBusyRef.current = true
+    setIsAnswering(true)
+    try {
+      await updateSuggestionStatus(suggestion.id_sugerencia, 'rechazada', token)
+      updateRowEstado(suggestion.id_sugerencia, 'rechazada')
+    } catch (err) {
+      showToast(err.message, 'error')
+      reloadSuggestions()
+    } finally {
+      setIsAnswering(false)
+      isBusyRef.current = false
+    }
+  }
+
   return (
     <div className="admin-orders my-suggestions">
       <div className="admin-products-header my-suggestions-header">
         <h1>Mis sugerencias</h1>
+        <AiSuggestion
+          cart={cart}
+          cartQuantities={cartQuantities}
+          token={token}
+          addProductsToCart={addProductsToCart}
+          onGoToProfile={onGoToProfile}
+          showToast={showToast}
+          onSuggestionsChanged={reloadSuggestions}
+        />
       </div>
 
       {isLoading && <p className="catalog-message">Cargando tus sugerencias...</p>}
       {!isLoading && error && <p className="catalog-message catalog-error">{error}</p>}
       {!isLoading && !error && suggestions.length === 0 && (
-        <p className="catalog-message">Todavía no pediste sugerencias. Podés pedir una desde el carrito.</p>
+        <p className="catalog-message">Todavía no pediste sugerencias. Pedí una con el botón “Sugerime un producto”.</p>
       )}
 
       {!isLoading && !error && suggestions.length > 0 && (
@@ -102,6 +176,9 @@ function MySuggestions({ token, showToast }) {
                         {suggestion.productos.map((product) => (
                           <li key={product.id_producto}>
                             <strong>{product.nombre}</strong>
+                            {!isProductAvailable(product) && (
+                              <span className="status-tag status-agotado">Sin stock</span>
+                            )}
                             <span>{product.motivo}</span>
                           </li>
                         ))}
@@ -114,13 +191,36 @@ function MySuggestions({ token, showToast }) {
                     </span>
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      className="admin-order-delete"
-                      onClick={() => setSuggestionPendingDelete(suggestion)}
-                    >
-                      Borrar
-                    </button>
+                    <div className="suggestion-actions">
+                      {suggestion.estado === 'pendiente' && (
+                        <>
+                          <button
+                            type="button"
+                            className="admin-order-detail-button"
+                            onClick={() => handleAcceptSuggestion(suggestion)}
+                            disabled={isAnswering}
+                          >
+                            Agregar al carrito
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-order-detail-button"
+                            onClick={() => handleDiscardSuggestion(suggestion)}
+                            disabled={isAnswering}
+                          >
+                            Descartar
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        className="admin-order-delete"
+                        onClick={() => setSuggestionPendingDelete(suggestion)}
+                        disabled={isAnswering}
+                      >
+                        Borrar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

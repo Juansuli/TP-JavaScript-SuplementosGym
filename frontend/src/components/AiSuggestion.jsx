@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import ProductImage from './ProductImage'
 import { requestSuggestion, updateSuggestionStatus } from '../services/suggestion.service'
+import { acceptSuggestionIntoCart, buildAcceptedToast } from '../utils/acceptSuggestion'
+import { isProductAvailable } from '../utils/stock'
 
 const priceFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
@@ -8,14 +10,11 @@ const priceFormatter = new Intl.NumberFormat('es-AR', {
   maximumFractionDigits: 0,
 })
 
-// La respuesta del backend trae el stock y el estado actuales de cada
-// producto: uno sugerido pudo agotarse o discontinuarse desde que la IA
-// lo eligió, así que solo se puede agregar al carrito si sigue disponible.
-function isProductAvailable(product) {
-  return product.estado === 'disponible' && product.stock > 0
-}
-
-function AiSuggestion({ cart, token, onAddToCart, onGoToProfile, showToast }) {
+// Compact trigger + expandable suggestion panel. It renders in the cart
+// and in the header of "Mis sugerencias"; onSuggestionsChanged (optional)
+// lets that page reload its table after the component creates, accepts
+// or rejects a suggestion.
+function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToProfile, showToast, onSuggestionsChanged }) {
   const [suggestion, setSuggestion] = useState(null)
   // Ids of every product suggested while this block stayed open, so
   // "Solicitar otra sugerencia" never repeats one.
@@ -49,6 +48,7 @@ function AiSuggestion({ cart, token, onAddToCart, onGoToProfile, showToast }) {
     setMissingFields([])
     try {
       await fetchSuggestion(alreadySuggestedIds)
+      onSuggestionsChanged?.()
     } catch (err) {
       setError(err.message)
       setMissingFields(err.missingFields ?? [])
@@ -64,13 +64,16 @@ function AiSuggestion({ cart, token, onAddToCart, onGoToProfile, showToast }) {
     setIsAnswering(true)
     setError(null)
     try {
-      // First tell the backend, then touch the cart: if the request fails
-      // nothing was added, so trying again cannot duplicate the products.
-      await updateSuggestionStatus(suggestion.id_sugerencia, 'aceptada', token)
-      availableProducts.forEach((product) => onAddToCart(product))
-      showToast('Se agregaron las sugerencias al carrito')
+      const { addedCount, skippedCount } = await acceptSuggestionIntoCart(
+        suggestion.id_sugerencia,
+        cartQuantities,
+        addProductsToCart,
+        token
+      )
+      showToast(buildAcceptedToast(addedCount, skippedCount))
       setSuggestion(null)
       setAlreadySuggestedIds([])
+      onSuggestionsChanged?.()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -104,21 +107,30 @@ function AiSuggestion({ cart, token, onAddToCart, onGoToProfile, showToast }) {
       setIsAnswering(false)
       isBusyRef.current = false
     }
+    // One notification covers both changes: the rejected suggestion and,
+    // if the request succeeded, the new pending one.
+    onSuggestionsChanged?.()
+  }
+
+  // "Cerrar" only collapses the panel: the suggestion stays "pendiente"
+  // and can still be answered later from "Mis sugerencias".
+  function handleClose() {
+    setSuggestion(null)
+    setError(null)
+    setMissingFields([])
   }
 
   return (
     <section className="ai-suggestion" aria-label="Sugerencias de IA">
-      <p className="eyebrow">Sugerencias de IA</p>
-
       {!suggestion ? (
-        <>
-          <p className="ai-suggestion-intro">
-            La IA puede recomendarte productos según tu perfil y lo que ya elegiste.
-          </p>
-          <button type="button" className="btn btn-outline" onClick={handleRequest} disabled={isLoading || isAnswering}>
-            {isLoading || isAnswering ? 'Pensando tu sugerencia…' : 'Sugerime un producto según mis datos'}
-          </button>
-        </>
+        <button
+          type="button"
+          className="ai-suggestion-trigger"
+          onClick={handleRequest}
+          disabled={isLoading || isAnswering}
+        >
+          {isLoading || isAnswering ? 'Pensando tu sugerencia…' : '✦ Sugerime un producto'}
+        </button>
       ) : (
         <>
           <ul className="ai-suggestion-products">
@@ -158,6 +170,14 @@ function AiSuggestion({ cart, token, onAddToCart, onGoToProfile, showToast }) {
               Solicitar otra sugerencia
             </button>
           </div>
+          <button
+            type="button"
+            className="ai-suggestion-close"
+            onClick={handleClose}
+            disabled={isAnswering}
+          >
+            Cerrar
+          </button>
         </>
       )}
 

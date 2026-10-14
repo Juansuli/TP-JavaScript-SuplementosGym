@@ -875,6 +875,7 @@
 
 .admin-products-checkbox input:disabled,
 .admin-products-actions button:disabled,
+.admin-order-detail-button:disabled,
 .admin-order-delete:disabled {
   opacity: .4;
   cursor: not-allowed;
@@ -2200,13 +2201,6 @@
   width: min(320px, 100%);
 }
 
-/* El bloque de IA también aparece con el carrito vacío */
-.cart-empty .ai-suggestion {
-  width: min(520px, 100%);
-  margin-top: 0;
-  text-align: left;
-}
-
 .confirmation-mark {
   width: 54px;
   height: 54px;
@@ -2540,43 +2534,60 @@
   cursor: not-allowed;
 }
 
-/* Sugerencias de IA: bloque dentro del carrito (CUU2) y lista de productos
-   en "Mis sugerencias". Reusa .eyebrow, .status-tag, .cart-field-error,
-   .cart-errors y .admin-order-delete ya definidas más arriba. */
+/* AI suggestions (CUU2): a low-key trigger that expands the suggestion
+   below it — above the cart content and in the "Mis sugerencias" header —
+   plus the per-row product list and actions. Reuses .status-tag,
+   .cart-field-error, .btn, .admin-order-detail-button and
+   .admin-order-delete already defined above. */
 .ai-suggestion {
-  margin-top: 1.5rem;
-  padding: 1.25rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
+  text-align: left;
 }
 
-.ai-suggestion-intro {
-  margin-top: .55rem;
-  color: var(--ink-soft);
-  font-size: .84rem;
+.ai-suggestion-trigger {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: .8rem;
+  letter-spacing: .02em;
 }
 
-.ai-suggestion .btn {
-  width: 100%;
-  margin-top: 1rem;
+.ai-suggestion-trigger:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.ai-suggestion-trigger:disabled {
+  cursor: default;
+}
+
+/* The trigger sits above the cart content; only .cart-page/.cart-empty
+   carry their own padding, so the block needs one here. */
+.cart .ai-suggestion {
+  padding: .9rem clamp(1.5rem, 4vw, 2.5rem) 0;
+}
+
+/* In the "Mis sugerencias" header the expanded panel should not stretch
+   across the whole header width. */
+.my-suggestions .ai-suggestion {
+  width: min(24rem, 100%);
+  margin-top: .25rem;
 }
 
 .ai-suggestion-products {
   display: grid;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: .75rem;
+  margin-top: .75rem;
 }
 
 .ai-suggestion-products li {
   display: flex;
   align-items: flex-start;
-  gap: .85rem;
+  gap: .75rem;
 }
 
 .ai-suggestion-products .cart-item-thumb {
-  width: 3.25rem;
-  height: 3.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
   flex: 0 0 auto;
 }
 
@@ -2586,9 +2597,9 @@
 }
 
 .ai-suggestion-motivo {
-  margin-top: .3rem;
+  margin-top: .2rem;
   color: var(--ink-faint);
-  font-size: .78rem;
+  font-size: .75rem;
   line-height: 1.45;
 }
 
@@ -2599,11 +2610,35 @@
 .ai-suggestion-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .75rem;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+
+.ai-suggestion-actions .btn {
+  padding: .55rem .9rem;
+  font-size: .8rem;
+}
+
+.ai-suggestion-close {
+  margin-top: .5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: .75rem;
+}
+
+.ai-suggestion-close:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+/* The "Completar mi perfil" button, the only direct-child .btn. */
+.ai-suggestion > .btn {
+  margin-top: .5rem;
 }
 
 .ai-suggestion-error {
-  margin-top: .75rem;
+  margin-top: .5rem;
 }
 
 .suggestion-products {
@@ -2617,7 +2652,22 @@
   gap: .15rem;
 }
 
+/* The "Sin stock" tag inside a row is a grid item: without justify-self
+   it would stretch full-width, and this rule must also override the faint
+   color of .suggestion-products span. */
+.suggestion-products .status-tag {
+  justify-self: start;
+  margin-top: .15rem;
+  color: var(--danger);
+}
+
 .suggestion-products span {
   color: var(--ink-faint);
   font-size: .72rem;
+}
+
+.suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
 }
