@@ -30,7 +30,7 @@ const savedClient = {
   altura_cm: 165,
   deporte: 'Musculación',
   dias_entrenamiento: 4,
-  objetivo: 'ganar_masa_muscular',
+  objetivos: ['ganar_masa_muscular'],
   direccion_entrega: null,
 }
 
@@ -147,6 +147,49 @@ describe('ClientProfile', () => {
 
     expect(await screen.findByText('La altura debe ser un número válido.')).toBeInTheDocument()
     expect(heightInput).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  test('shows the saved goals as checked checkboxes', async () => {
+    await renderProfile()
+
+    expect(screen.getByRole('checkbox', { name: 'Ganar masa muscular' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Perder grasa' })).not.toBeChecked()
+  })
+
+  test('sends every checked goal to the backend as a list', async () => {
+    const user = userEvent.setup()
+    updateClient.mockResolvedValue(savedClient)
+    await renderProfile()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Recuperación' }))
+    await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+    const [, payload] = updateClient.mock.calls[0]
+    expect(payload.objetivos).toEqual(['ganar_masa_muscular', 'recuperacion'])
+  })
+
+  test('does not save when no goal is checked', async () => {
+    const user = userEvent.setup()
+    await renderProfile()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Ganar masa muscular' }))
+    await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+    expect(screen.getByText('Elegí al menos un objetivo.')).toBeInTheDocument()
+    expect(updateClient).not.toHaveBeenCalled()
+  })
+
+  test('does not save when more than three goals are checked', async () => {
+    const user = userEvent.setup()
+    await renderProfile()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Perder grasa' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Mejorar el rendimiento' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Salud general' }))
+    await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+    expect(screen.getByText('Podés elegir hasta 3 objetivos.')).toBeInTheDocument()
+    expect(updateClient).not.toHaveBeenCalled()
   })
 
   test('shows an error message when the profile cannot be loaded', async () => {
