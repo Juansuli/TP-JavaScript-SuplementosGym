@@ -16,13 +16,15 @@ const GOAL_OPTIONS = [
   { value: 'salud_general', label: 'Salud general' },
   { value: 'recuperacion', label: 'Recuperación' },
 ]
+// El cliente elige entre 1 y MAX_GOALS objetivos (tabla cliente_objetivo).
+const MAX_GOALS = 3
 const MIN_AGE = 14
 const MAX_AGE = 100
 
 // Campos del perfil agrupados por tipo para construir el payload.
 // Los valores vacíos se convierten en null; validateForm impide enviar vacíos
 // en los campos obligatorios.
-const PROFILE_TEXT_FIELDS = ['fecha_nacimiento', 'genero', 'ocupacion', 'deporte', 'objetivo', 'direccion_entrega']
+const PROFILE_TEXT_FIELDS = ['fecha_nacimiento', 'genero', 'ocupacion', 'deporte', 'direccion_entrega']
 const PROFILE_NUMBER_FIELDS = ['peso_kg', 'altura_cm', 'dias_entrenamiento']
 
 const EMPTY_VALUES = {
@@ -35,7 +37,7 @@ const EMPTY_VALUES = {
   altura_cm: '',
   deporte: '',
   dias_entrenamiento: '',
-  objetivo: '',
+  objetivos: [],
   direccion_entrega: '',
 }
 
@@ -56,11 +58,14 @@ function toFormValues(client) {
   const values = { ...EMPTY_VALUES }
 
   Object.keys(EMPTY_VALUES).forEach((field) => {
+    if (field === 'objetivos') return
     if (client[field] !== null && client[field] !== undefined) values[field] = String(client[field])
   })
 
   if (!GENDER_OPTIONS.some((option) => option.value === values.genero)) values.genero = ''
-  if (!GOAL_OPTIONS.some((option) => option.value === values.objetivo)) values.objetivo = ''
+  values.objetivos = Array.isArray(client.objetivos)
+    ? client.objetivos.filter((goal) => GOAL_OPTIONS.some((option) => option.value === goal))
+    : []
 
   return values
 }
@@ -161,23 +166,43 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
       nextErrors.dias_entrenamiento = 'Ingresá un número entero entre 0 y 7.'
     }
 
-    if (isMissing(values.objetivo)) {
-      nextErrors.objetivo = 'El objetivo es obligatorio.'
+    if (values.objetivos.length === 0) {
+      nextErrors.objetivos = 'Elegí al menos un objetivo.'
+    } else if (values.objetivos.length > MAX_GOALS) {
+      nextErrors.objetivos = `Podés elegir hasta ${MAX_GOALS} objetivos.`
     }
 
     return nextErrors
   }
 
+  function clearFieldError(field) {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev
+
+      const nextErrors = { ...prev }
+      delete nextErrors[field]
+      return nextErrors
+    })
+  }
+
   function handleChange(field) {
     return (event) => {
       setValues((prev) => ({ ...prev, [field]: event.target.value }))
-      setFieldErrors((prev) => {
-        if (!prev[field]) return prev
+      clearFieldError(field)
+    }
+  }
 
-        const nextErrors = { ...prev }
-        delete nextErrors[field]
-        return nextErrors
-      })
+  // Marca o desmarca un objetivo, manteniendo el orden de GOAL_OPTIONS.
+  function handleGoalChange(goal) {
+    return (event) => {
+      const { checked } = event.target
+      setValues((prev) => ({
+        ...prev,
+        objetivos: GOAL_OPTIONS
+          .map((option) => option.value)
+          .filter((value) => (value === goal ? checked : prev.objetivos.includes(value))),
+      }))
+      clearFieldError('objetivos')
     }
   }
 
@@ -208,7 +233,7 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
         normalizedMessage.includes('días') ||
         normalizedMessage.includes('dias_entrenamiento')
       ) nextFieldErrors.dias_entrenamiento = message
-      else if (normalizedMessage.includes('objetivo')) nextFieldErrors.objetivo = message
+      else if (normalizedMessage.includes('objetivo')) nextFieldErrors.objetivos = message
       else generalErrors.push(message)
     })
 
@@ -229,6 +254,8 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
     PROFILE_NUMBER_FIELDS.forEach((field) => {
       payload[field] = values[field] === '' ? null : Number(values[field])
     })
+
+    payload.objetivos = values.objetivos
 
     return payload
   }
@@ -384,16 +411,31 @@ function ClientProfile({ currentUser, onProfileUpdated, showToast }) {
               {renderFieldError('dias_entrenamiento')}
             </label>
 
-            <label>
-              Objetivo *
-              <select required value={values.objetivo} onChange={handleChange('objetivo')} {...errorProps('objetivo')}>
-                <option value="">Seleccioná una opción</option>
+            <div
+              className="client-profile-goals client-profile-wide"
+              role="group"
+              aria-labelledby="profile-objetivos-title"
+              aria-describedby={fieldErrors.objetivos ? 'profile-objetivos-error' : 'profile-objetivos-help'}
+            >
+              <span id="profile-objetivos-title" className="client-profile-goals-title">Objetivos *</span>
+              <span id="profile-objetivos-help" className="product-form-help">
+                Elegí entre 1 y {MAX_GOALS} ({values.objetivos.length} elegidos).
+              </span>
+              <div className="client-profile-goal-options">
                 {GOAL_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                  <label key={option.value} className="client-profile-goal">
+                    <input
+                      type="checkbox"
+                      checked={values.objetivos.includes(option.value)}
+                      onChange={handleGoalChange(option.value)}
+                      aria-invalid={Boolean(fieldErrors.objetivos)}
+                    />
+                    {option.label}
+                  </label>
                 ))}
-              </select>
-              {renderFieldError('objetivo')}
-            </label>
+              </div>
+              {renderFieldError('objetivos')}
+            </div>
           </fieldset>
 
           <fieldset className="client-profile-section">

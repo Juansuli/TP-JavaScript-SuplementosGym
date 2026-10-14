@@ -10,6 +10,7 @@
     "migrate:usuario-activo": "node scripts/add-usuario-activo-column.js",
     "migrate:pedido-confirmacion": "node scripts/add-pedido-confirmacion-column.js",
     "seed:e2e": "node scripts/seed-e2e.js",
+    "migrate:cliente-objetivos": "node scripts/migrate-cliente-objetivos.js",
     "test": "node --test"
   },
   "keywords": [],

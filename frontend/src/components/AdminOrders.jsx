@@ -127,7 +127,7 @@ function AdminOrders({ token, showToast }) {
   return (
     <div className="admin-orders">
       <div className="admin-products-header admin-orders-header">
-        <h1>Administrar pedidos</h1>
+        <h1>Pedidos</h1>
       </div>
 
       <div className="admin-orders-toolbar">
