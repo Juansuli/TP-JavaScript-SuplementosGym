@@ -2696,3 +2696,53 @@
   color: var(--ink-faint);
   cursor: not-allowed;
 }
+
+/* Objetivos: de 1 a 3 checkboxes (issue #49) */
+.client-profile-goals {
+  display: grid;
+  gap: .4rem;
+}
+
+.client-profile-goals-title {
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: .67rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.client-profile-goal-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.client-profile-section .client-profile-goal {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .6rem .8rem;
+  border: 1px solid var(--line);
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: .86rem;
+  letter-spacing: normal;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.client-profile-section .client-profile-goal:has(input:checked) {
+  border-color: var(--accent);
+}
+
+.client-profile-section .client-profile-goal input {
+  width: auto;
+  padding: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.client-profile-section .client-profile-goal:has(input[aria-invalid='true']) {
+  border-color: var(--danger);
+}

@@ -5,6 +5,7 @@ const sequelize = require('../config/db');
 const Usuario = require('../models/usuario.model');
 const Administrador = require('../models/administrador.model');
 const Cliente = require('../models/cliente.model');
+const ClienteObjetivo = require('../models/cliente_objetivo.model');
 const Pedido = require('../models/pedido.model');
 const { validateRegistration, validateUserUpdate, validateClientData, validateRequiredProfileData } = require('../middlewares/cliente-validation.middleware');
 const Descuento = require('../models/descuento.model');
@@ -18,7 +19,6 @@ const CLIENT_FIELDS = [
   'ocupacion',
   'deporte',
   'dias_entrenamiento',
-  'objetivo',
   'direccion_entrega',
   'descuento_categoria',
 ];
@@ -45,6 +45,38 @@ function getAllowedData(body, fields) {
   );
 }
 
+// Los objetivos llegan como lista en "objetivos" y se guardan en la tabla
+// cliente_objetivo, no en cliente, así que van aparte de CLIENT_FIELDS.
+function getGoalsData(body) {
+  return body.objetivos !== undefined ? { objetivos: body.objetivos } : {};
+}
+
+async function getClientGoals(id, transaction) {
+  const rows = await ClienteObjetivo.findAll({
+    where: { id_cliente: id },
+    order: [['objetivo', 'ASC']],
+    ...(transaction ? { transaction } : {}),
+  });
+
+  return rows.map((row) => row.objetivo);
+}
+
+// Reemplaza todos los objetivos del cliente por la lista nueva. Se llama
+// dentro de una transacción para no dejar al cliente con la mitad guardada.
+// Con null el cliente queda sin objetivos.
+async function replaceClientGoals(id, goals, transaction) {
+  await ClienteObjetivo.destroy({ where: { id_cliente: id }, transaction });
+
+  if (goals && goals.length > 0) {
+    await ClienteObjetivo.bulkCreate(
+      goals.map((objetivo) => ({ id_cliente: id, objetivo })),
+      { transaction }
+    );
+  }
+
+  return goals ? [...goals].sort() : [];
+}
+
 async function ensureDiscountCategoryExists(category, transaction) {
   if (category === undefined || category === null) return;
 
@@ -58,7 +90,7 @@ async function ensureDiscountCategoryExists(category, transaction) {
   }
 }
 
-function buildClientResponse(client, user) {
+function buildClientResponse(client, user, goals = []) {
   const clientData = client.toJSON();
   const userData = user.toJSON();
   delete userData.contraseña;
@@ -66,6 +98,7 @@ function buildClientResponse(client, user) {
   return {
     ...userData,
     ...clientData,
+    objetivos: goals,
     // Le dice al frontend si este usuario ya tiene perfil de cliente, sin
     // importar su rol -- es lo que le permite a un administrador comprar.
     es_cliente: true,
@@ -89,7 +122,9 @@ async function getClientWithUser(id) {
   const user = await Usuario.findByPk(id);
   if (!user) return null;
 
-  return addDiscountPercentage(buildClientResponse(client, user));
+return addDiscountPercentage(
+  buildClientResponse(client, user, await getClientGoals(id))
+);
 }
 
 async function listClients(req, res) {
@@ -103,11 +138,28 @@ async function listClients(req, res) {
       where: { id_usuario: { [Op.in]: clientIds } },
     });
     const usersById = new Map(users.map((user) => [user.id_usuario, user]));
-    const response = await Promise.all(
-      clients
-        .filter((client) => usersById.has(client.id_cliente))
-        .map((client) => addDiscountPercentage(buildClientResponse(client, usersById.get(client.id_cliente))))
-    );
+
+    const goalRows = await ClienteObjetivo.findAll({
+      where: { id_cliente: { [Op.in]: clientIds } },
+      order: [['objetivo', 'ASC']],
+    });
+    const goalsByClient = new Map();
+    goalRows.forEach((row) => {
+      if (!goalsByClient.has(row.id_cliente)) goalsByClient.set(row.id_cliente, []);
+      goalsByClient.get(row.id_cliente).push(row.objetivo);
+    });
+
+const response = await Promise.all(
+  clients
+    .filter((client) => usersById.has(client.id_cliente))
+    .map((client) => addDiscountPercentage(
+      buildClientResponse(
+        client,
+        usersById.get(client.id_cliente),
+        goalsByClient.get(client.id_cliente) || []
+      )
+    ))
+);
 
     return res.json(response);
   } catch (error) {
@@ -161,8 +213,11 @@ async function login(req, res) {
     // datos para que el frontend sepa que puede hacer pedidos.
     const clientProfile = await Cliente.findByPk(user.id_usuario);
     if (clientProfile) {
-      const clientResponse = await addDiscountPercentage(buildClientResponse(clientProfile, user));
-      return res.json({ ...clientResponse, token });
+const goals = await getClientGoals(user.id_usuario);
+const clientResponse = await addDiscountPercentage(
+  buildClientResponse(clientProfile, user, goals)
+);
+return res.json({ ...clientResponse, token });
     }
 
     const userData = user.toJSON();
@@ -181,7 +236,8 @@ async function createClient(req, res) {
 
   const registrationErrors = validateRegistration(req.body);
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
-  const clientErrors = validateClientData(clientData);
+  const goalsData = getGoalsData(req.body);
+  const clientErrors = validateClientData({ ...clientData, ...goalsData });
   const errors = [...registrationErrors, ...clientErrors];
 
   if (errors.length) return res.status(400).json({ error: errors });
@@ -209,7 +265,11 @@ async function createClient(req, res) {
         { transaction }
       );
 
-      return { ...buildClientResponse(newClient, user), token: signToken(user) };
+      const goals = goalsData.objetivos !== undefined
+        ? await replaceClientGoals(user.id_usuario, goalsData.objetivos, transaction)
+        : [];
+
+      return { ...buildClientResponse(newClient, user, goals), token: signToken(user) };
     });
 
     return res.status(201).json(client);
@@ -237,18 +297,19 @@ async function updateClient(req, res) {
 
   const userData = getAllowedData(req.body, USER_FIELDS);
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
-  const profileData = { ...userData, ...clientData };
-  const isAdminDiscountOnlyUpdate = req.user.rol === 'administrador'
-    && Object.keys(userData).length === 0
-    && Object.keys(clientData).length === 1
-    && clientData.descuento_categoria !== undefined;
+const goalsData = getGoalsData(req.body);
+const profileData = { ...userData, ...clientData, ...goalsData };
+const isAdminDiscountOnlyUpdate = req.user.rol === 'administrador'
+  && Object.keys(userData).length === 0
+  && Object.keys(clientData).length === 1
+  && clientData.descuento_categoria !== undefined;
 
   const errors = req.user.id_usuario === id && !isAdminDiscountOnlyUpdate
     ? validateRequiredProfileData(profileData)
-    : [...validateUserUpdate(userData), ...validateClientData(clientData)];
+    : [...validateUserUpdate(userData), ...validateClientData({ ...clientData, ...goalsData })];
   if (errors.length) return res.status(400).json({ error: errors });
 
-  if (Object.keys(userData).length === 0 && Object.keys(clientData).length === 0) {
+  if (Object.keys(profileData).length === 0) {
     return res.status(400).json({ error: 'Enviá al menos un campo editable.' });
   }
 
@@ -272,7 +333,11 @@ async function updateClient(req, res) {
         await existingClient.update(clientData, { transaction });
       }
 
-      return buildClientResponse(existingClient, existingUser);
+      const goals = goalsData.objetivos !== undefined
+        ? await replaceClientGoals(id, goalsData.objetivos, transaction)
+        : await getClientGoals(id, transaction);
+
+      return buildClientResponse(existingClient, existingUser, goals);
     });
 
     if (!client) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -300,7 +365,8 @@ async function enableClientProfile(req, res) {
   const id = req.user.id_usuario;
 
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
-  const clientErrors = validateClientData(clientData);
+  const goalsData = getGoalsData(req.body);
+  const clientErrors = validateClientData({ ...clientData, ...goalsData });
   if (clientErrors.length) return res.status(400).json({ error: clientErrors });
 
   try {
@@ -312,9 +378,16 @@ async function enableClientProfile(req, res) {
     await ensureDiscountCategoryExists(clientData.descuento_categoria);
 
     const user = await Usuario.findByPk(id);
-    const newClient = await Cliente.create({ id_cliente: id, ...clientData });
+    const response = await sequelize.transaction(async (transaction) => {
+      const newClient = await Cliente.create({ id_cliente: id, ...clientData }, { transaction });
+      const goals = goalsData.objetivos !== undefined
+        ? await replaceClientGoals(id, goalsData.objetivos, transaction)
+        : [];
 
-    return res.status(201).json(buildClientResponse(newClient, user));
+      return buildClientResponse(newClient, user, goals);
+    });
+
+    return res.status(201).json(response);
   } catch (error) {
     if (error.message === 'DISCOUNT_CATEGORY_NOT_FOUND') {
       return res.status(400).json({
@@ -344,6 +417,8 @@ async function deleteClient(req, res) {
       const client = await Cliente.findByPk(id, { transaction });
       if (!client) return false;
 
+      // Primero los objetivos, que tienen FK a cliente.
+      await ClienteObjetivo.destroy({ where: { id_cliente: id }, transaction });
       await client.destroy({ transaction });
 
       // Si el usuario también es administrador (perfil de cliente
@@ -381,7 +456,7 @@ async function setClientStatus(req, res) {
 
     await user.update({ activo: req.body.activo });
 
-    return res.json(buildClientResponse(client, user));
+    return res.json(buildClientResponse(client, user, await getClientGoals(id)));
   } catch (error) {
     return res.status(500).json({ error: 'No se pudo actualizar el estado del cliente.' });
   }

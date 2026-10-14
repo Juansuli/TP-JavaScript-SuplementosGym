@@ -54,6 +54,32 @@ function fakeRecord(initialData) {
   };
 }
 
+// Los objetos creados dentro del vm tienen otro prototipo; para compararlos
+// con deepEqual se pasan a JSON.
+function plain(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+// Fake de la tabla cliente_objetivo que guarda las filas en memoria.
+function fakeGoalsModel(initialRows = []) {
+  let rows = [...initialRows];
+
+  return {
+    get rows() {
+      return rows;
+    },
+    async findAll({ where }) {
+      return rows.filter((row) => row.id_cliente === where.id_cliente);
+    },
+    async destroy({ where }) {
+      rows = rows.filter((row) => row.id_cliente !== where.id_cliente);
+    },
+    async bulkCreate(newRows) {
+      rows.push(...newRows);
+    },
+  };
+}
+
 function loadClientController(overrides = {}) {
   return loadModule('controllers/cliente.controller.js', {
     sequelize: { Op: {} },
@@ -63,6 +89,7 @@ function loadClientController(overrides = {}) {
     '../models/usuario.model': {},
     '../models/administrador.model': {},
     '../models/cliente.model': {},
+    '../models/cliente_objetivo.model': fakeGoalsModel(),
     '../models/pedido.model': {},
     '../models/descuento.model': {},
     '../middlewares/cliente-validation.middleware': validators,
@@ -82,7 +109,7 @@ const COMPLETE_REQUIRED_PROFILE = {
   altura_cm: 170,
   deporte: 'Crossfit',
   dias_entrenamiento: 0,
-  objetivo: 'salud_general',
+  objetivos: ['salud_general'],
 };
 
 test('required profile validation accepts complete data and an optional address', () => {
@@ -104,7 +131,7 @@ test('required profile validation rejects each missing field once', () => {
     'altura_cm',
     'deporte',
     'dias_entrenamiento',
-    'objetivo',
+    'objetivos',
   ];
   const missingValues = [undefined, null, '', '   '];
 
@@ -122,6 +149,11 @@ test('required profile validation rejects each missing field once', () => {
       );
     });
   });
+
+  assert.deepEqual(
+    validateRequiredProfileData({ ...COMPLETE_REQUIRED_PROFILE, objetivos: [] }),
+    ['El campo objetivos es obligatorio.']
+  );
 });
 
 test('a client cannot update their own profile with incomplete data', async () => {
@@ -161,10 +193,10 @@ test('a client can update their own profile with complete required data', async 
     altura_cm: null,
     deporte: null,
     dias_entrenamiento: null,
-    objetivo: null,
     direccion_entrega: null,
     descuento_categoria: null,
   });
+  const goals = fakeGoalsModel([{ id_cliente: 7, objetivo: 'perder_grasa' }]);
 
   const controller = loadClientController({
     '../models/usuario.model': {
@@ -173,6 +205,7 @@ test('a client can update their own profile with complete required data', async 
     '../models/cliente.model': {
       findByPk: async () => client,
     },
+    '../models/cliente_objetivo.model': goals,
   });
 
   const response = fakeResponse();
@@ -189,7 +222,7 @@ test('a client can update their own profile with complete required data', async 
   assert.equal(response.statusCode, 200);
 
   Object.entries(COMPLETE_REQUIRED_PROFILE).forEach(([field, value]) => {
-    assert.equal(response.body[field], value);
+    assert.deepEqual(plain(response.body[field]), value);
   });
 
   assert.equal(response.body.direccion_entrega, null);
@@ -205,10 +238,70 @@ test('a client can update their own profile with complete required data', async 
     'altura_cm',
     'deporte',
     'dias_entrenamiento',
-    'objetivo',
   ].forEach((field) => {
     assert.equal(client.toJSON()[field], COMPLETE_REQUIRED_PROFILE[field]);
   });
+
+  // El objetivo anterior se reemplaza por los nuevos en cliente_objetivo.
+  assert.deepEqual(plain(goals.rows), [{ id_cliente: 7, objetivo: 'salud_general' }]);
+});
+
+test('a client can save up to three goals, which replace the previous ones', async () => {
+  const user = fakeRecord({ id_usuario: 7, rol: 'cliente', email: 'ana@example.com', activo: true });
+  const client = fakeRecord({ id_cliente: 7 });
+  const goals = fakeGoalsModel([
+    { id_cliente: 7, objetivo: 'recuperacion' },
+    { id_cliente: 8, objetivo: 'recuperacion' },
+  ]);
+  const controller = loadClientController({
+    '../models/usuario.model': { findByPk: async () => user },
+    '../models/cliente.model': { findByPk: async () => client },
+    '../models/cliente_objetivo.model': goals,
+  });
+  const response = fakeResponse();
+
+  await controller.updateClient(
+    {
+      params: { id: '7' },
+      user: { id_usuario: 7, rol: 'cliente' },
+      body: {
+        ...COMPLETE_REQUIRED_PROFILE,
+        objetivos: ['perder_grasa', 'ganar_masa_muscular', 'mejorar_rendimiento'],
+      },
+    },
+    response
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(plain(response.body.objetivos), ['ganar_masa_muscular', 'mejorar_rendimiento', 'perder_grasa']);
+  assert.deepEqual(plain(goals.rows), [
+    { id_cliente: 8, objetivo: 'recuperacion' },
+    { id_cliente: 7, objetivo: 'perder_grasa' },
+    { id_cliente: 7, objetivo: 'ganar_masa_muscular' },
+    { id_cliente: 7, objetivo: 'mejorar_rendimiento' },
+  ]);
+});
+
+test('a client cannot save more than three goals', async () => {
+  const goals = fakeGoalsModel([{ id_cliente: 7, objetivo: 'recuperacion' }]);
+  const controller = loadClientController({ '../models/cliente_objetivo.model': goals });
+  const response = fakeResponse();
+
+  await controller.updateClient(
+    {
+      params: { id: '7' },
+      user: { id_usuario: 7, rol: 'cliente' },
+      body: {
+        ...COMPLETE_REQUIRED_PROFILE,
+        objetivos: ['perder_grasa', 'ganar_masa_muscular', 'mejorar_rendimiento', 'salud_general'],
+      },
+    },
+    response
+  );
+
+  assert.equal(response.statusCode, 400);
+  assert.deepEqual(plain(response.body.error), ['Elegí entre 1 y 3 objetivos.']);
+  assert.deepEqual(plain(goals.rows), [{ id_cliente: 7, objetivo: 'recuperacion' }]);
 });
 
 test('an administrator can partially update another client', async () => {
@@ -325,7 +418,7 @@ test('profile validation accepts a complete, realistic profile', () => {
     ocupacion: 'Estudiante',
     deporte: 'Crossfit',
     dias_entrenamiento: 4,
-    objetivo: 'ganar_masa_muscular',
+    objetivos: ['ganar_masa_muscular', 'mejorar_rendimiento'],
     direccion_entrega: 'Zeballos 1341, Rosario',
   });
 
@@ -339,7 +432,7 @@ test('profile validation lets the client clear optional fields with null', () =>
     peso_kg: null,
     altura_cm: null,
     dias_entrenamiento: null,
-    objetivo: null,
+    objetivos: null,
   });
 
   assert.deepEqual(errors, []);
@@ -362,7 +455,11 @@ test('profile validation rejects the values a user could realistically mistype',
     { fecha_nacimiento: '2000-02-31' },
     { fecha_nacimiento: 'ayer' },
     { genero: 'hombre' },
-    { objetivo: 'ponerme fuerte' },
+    { objetivos: ['ponerme fuerte'] },
+    { objetivos: 'salud_general' },
+    { objetivos: [] },
+    { objetivos: ['perder_grasa', 'salud_general', 'recuperacion', 'mejorar_rendimiento'] },
+    { objetivos: ['perder_grasa', 'perder_grasa'] },
     { deporte: 42 },
   ];
 
@@ -389,6 +486,7 @@ test('a cliente cannot assign themselves a discount category', async () => {
     '../models/usuario.model': {},
     '../models/administrador.model': {},
     '../models/cliente.model': {},
+    '../models/cliente_objetivo.model': {},
     '../models/pedido.model': {},
     '../models/descuento.model': {},
     '../middlewares/cliente-validation.middleware': validators,
