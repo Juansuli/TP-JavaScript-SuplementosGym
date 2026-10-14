@@ -32,6 +32,7 @@ require('./models/usuario.model');
 require('./models/administrador.model');
 require('./models/descuento.model');
 require('./models/cliente.model');
+require('./models/cliente_objetivo.model');
 require('./models/producto.model');
 require('./models/pedido.model');
 require('./models/pedido_producto.model');

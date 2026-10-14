@@ -43,7 +43,7 @@ function validateUserUpdate(data) {
 }
 
 // Listas cerradas para que la sugerencia de IA reciba siempre los mismos
-// valores (el frontend muestra estas mismas opciones en un <select>).
+// valores (el frontend muestra estas mismas opciones en ClientProfile.jsx).
 const GENDER_OPTIONS = ['femenino', 'masculino', 'otro', 'prefiero_no_decir'];
 const GOAL_OPTIONS = [
   'ganar_masa_muscular',
@@ -52,6 +52,8 @@ const GOAL_OPTIONS = [
   'salud_general',
   'recuperacion',
 ];
+// Un cliente elige entre 1 y 3 objetivos; se guardan en "cliente_objetivo".
+const MAX_GOALS = 3;
 const MIN_AGE = 14;
 const MAX_AGE = 100;
 
@@ -91,6 +93,23 @@ function isValidBirthDate(value) {
   return age >= MIN_AGE && age <= MAX_AGE;
 }
 
+// Devuelve un solo mensaje (o null) para mostrar un error por campo.
+function getGoalsError(goals) {
+  if (!Array.isArray(goals) || goals.length < 1 || goals.length > MAX_GOALS) {
+    return `Elegí entre 1 y ${MAX_GOALS} objetivos.`;
+  }
+
+  if (!goals.every((goal) => GOAL_OPTIONS.includes(goal))) {
+    return 'Algún objetivo no es válido.';
+  }
+
+  if (new Set(goals).size !== goals.length) {
+    return 'No se puede repetir un objetivo.';
+  }
+
+  return null;
+}
+
 function validateClientData(data) {
   const errors = [];
 
@@ -115,8 +134,9 @@ function validateClientData(data) {
     errors.push('Los días de entrenamiento deben ser un número entero entre 0 y 7.');
   }
 
-  if (isProvided(data.objetivo) && !GOAL_OPTIONS.includes(data.objetivo)) {
-    errors.push('El objetivo no es válido.');
+  if (isProvided(data.objetivos)) {
+    const goalsError = getGoalsError(data.objetivos);
+    if (goalsError) errors.push(goalsError);
   }
 
   ['ocupacion', 'deporte', 'direccion_entrega'].forEach((field) => {
@@ -150,7 +170,7 @@ function validateRequiredProfileData(data) {
     'altura_cm',
     'deporte',
     'dias_entrenamiento',
-    'objetivo',
+    'objetivos',
   ];
 
   requiredFields.forEach((field) => {
@@ -159,7 +179,8 @@ function validateRequiredProfileData(data) {
     if (
       value === undefined ||
       value === null ||
-      (typeof value === 'string' && value.trim() === '')
+      (typeof value === 'string' && value.trim() === '') ||
+      (Array.isArray(value) && value.length === 0)
     ) {
       errors.push(`El campo ${field} es obligatorio.`);
       missingFields.add(field);
@@ -181,4 +202,5 @@ module.exports = {
   validateUserUpdate,
   validateClientData,
   validateRequiredProfileData,
+  GOAL_OPTIONS,
 };

@@ -2,7 +2,7 @@
 // Like "administrador", it's a subtype of "usuario": its "id_cliente" is
 // both its primary key and a foreign key to usuario.id_usuario. On top of
 // that it carries the profile fields the AI suggestion engine needs
-// (physical data, training habits, goals) plus an optional link to a
+// (physical data, training habits; goals live in "cliente_objetivo") plus an optional link to a
 // discount category (see "descuento_cliente" in the diagram).
 //
 // An administrador can also have a row here (overlapping specialization,
@@ -48,9 +48,8 @@ const Cliente = sequelize.define(
     dias_entrenamiento: {
       type: DataTypes.INTEGER,
     },
-    objetivo: {
-      type: DataTypes.STRING,
-    },
+    // Los objetivos del cliente (de 1 a 3) están en la tabla aparte
+    // "cliente_objetivo" (ver cliente_objetivo.model.js, issue #49).
     direccion_entrega: {
       type: DataTypes.STRING,
     },

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import ProductCatalog from './components/ProductCatalog'
 import AdminProducts from './components/AdminProducts'
 import AdminOrders from './components/AdminOrders'
@@ -32,10 +32,8 @@ function App() {
   const [cart, setCart] = useState([])
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [toasts, setToasts] = useState([])
   const nextToastId = useRef(0)
-  const userMenuRef = useRef(null)
 
   const isAdmin = currentUser?.rol === 'administrador'
   // Un administrador también puede comprar si activó su perfil de cliente
@@ -45,19 +43,6 @@ function App() {
   const cartQuantities = Object.fromEntries(
     cart.map((item) => [item.id_producto, item.cantidad])
   )
-
-  useEffect(() => {
-    if (!isUserMenuOpen) return
-
-    function handleClickOutside(event) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
-        setIsUserMenuOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isUserMenuOpen])
 
   const dismissToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id))
@@ -76,7 +61,6 @@ function App() {
     setCurrentUser(user)
     localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(user))
     setIsAuthOpen(false)
-    setIsUserMenuOpen(false)
   }
 
   function handleLogout() {
@@ -234,6 +218,31 @@ function App() {
             >
               Catálogo
             </button>
+            {canOrder && (
+              <>
+                <button
+                  type="button"
+                  className={view === 'mis-compras' ? 'is-active' : ''}
+                  onClick={() => changeView('mis-compras')}
+                >
+                  Mis compras
+                </button>
+                <button
+                  type="button"
+                  className={view === 'mis-sugerencias' ? 'is-active' : ''}
+                  onClick={() => changeView('mis-sugerencias')}
+                >
+                  Mis sugerencias
+                </button>
+                <button
+                  type="button"
+                  className={view === 'mi-perfil' ? 'is-active' : ''}
+                  onClick={() => changeView('mi-perfil')}
+                >
+                  Mi perfil
+                </button>
+              </>
+            )}
             {isAdmin && (
               <>
                 <button
@@ -241,21 +250,21 @@ function App() {
                   className={view === 'admin' ? 'is-active' : ''}
                   onClick={() => changeView('admin')}
                 >
-                  Administrar productos
+                  Productos
                 </button>
                 <button
                   type="button"
                   className={view === 'admin-orders' ? 'is-active' : ''}
                   onClick={() => changeView('admin-orders')}
                 >
-                  Administrar pedidos
+                  Pedidos
                 </button>
                 <button
                   type="button"
                   className={view === 'admin-clients' ? 'is-active' : ''}
                   onClick={() => changeView('admin-clients')}
                 >
-                  Administrar clientes
+                  Clientes
                 </button>
               </>
             )}
@@ -278,59 +287,7 @@ function App() {
 
             {currentUser ? (
               <div className="user-menu">
-                {/* Las opciones del menú necesitan un perfil de cliente: a un
-                    administrador que no habilitó compras solo se lo saluda,
-                    sin un botón que no abriría nada. */}
-                {canOrder ? (
-                  <div className="user-menu-toggle" ref={userMenuRef}>
-                    <button
-                      type="button"
-                      className="user-menu-trigger"
-                      aria-haspopup="true"
-                      aria-expanded={isUserMenuOpen}
-                      onClick={() => setIsUserMenuOpen((isOpen) => !isOpen)}
-                    >
-                      <span>Hola, {currentUser.nombre}</span>
-                    </button>
-
-                    {isUserMenuOpen && (
-                      <div className="user-menu-dropdown" role="menu">
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            changeView('mis-compras')
-                            setIsUserMenuOpen(false)
-                          }}
-                        >
-                          Mis compras
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            changeView('mis-sugerencias')
-                            setIsUserMenuOpen(false)
-                          }}
-                        >
-                          Mis sugerencias
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            changeView('mi-perfil')
-                            setIsUserMenuOpen(false)
-                          }}
-                        >
-                          Mi perfil
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <span>Hola, {currentUser.nombre}</span>
-                )}
+                <span>Hola, {currentUser.nombre}</span>
                 {isAdmin && !canOrder && (
                   <button type="button" onClick={handleEnableClientProfile}>Habilitar compras</button>
                 )}
@@ -363,9 +320,9 @@ function App() {
           <button type="button" onClick={() => changeView('catalogo')}>Catálogo</button>
           {isAdmin && (
             <>
-              <button type="button" onClick={() => changeView('admin')}>Administrar productos</button>
-              <button type="button" onClick={() => changeView('admin-orders')}>Administrar pedidos</button>
-              <button type="button" onClick={() => changeView('admin-clients')}>Administrar clientes</button>
+              <button type="button" onClick={() => changeView('admin')}>Productos</button>
+              <button type="button" onClick={() => changeView('admin-orders')}>Pedidos</button>
+              <button type="button" onClick={() => changeView('admin-clients')}>Clientes</button>
             </>
           )}
           {canOrder && (
@@ -405,6 +362,7 @@ function App() {
           <ProductCatalog
             cartQuantities={cartQuantities}
             onAddToCart={canOrder ? addToCart : undefined}
+            showDiscountInfo={canOrder && !isAdmin}
             showToast={showToast}
           />
         )}
