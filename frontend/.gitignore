@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright reports created after end-to-end test runs
+playwright-report/
+test-results/

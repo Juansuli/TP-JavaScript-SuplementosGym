@@ -165,10 +165,13 @@ async function buildSuggestionResponse(suggestion) {
 // Cualquier usuario con perfil de cliente puede pedirla (igual que con
 // los pedidos: un administrador que activó su perfil también puede).
 async function createSuggestion(req, res) {
-  const cartErrors = validateCart(req.body.carrito);
+  // En Express 5 req.body es undefined si la request llega sin body.
+  const body = req.body ?? {};
+
+  const cartErrors = validateCart(body.carrito);
   if (cartErrors.length) return res.status(400).json({ error: cartErrors });
 
-  const excludedErrors = validateExcludedProducts(req.body.excluir_productos);
+  const excludedErrors = validateExcludedProducts(body.excluir_productos);
   if (excludedErrors.length) return res.status(400).json({ error: excludedErrors });
 
   try {
@@ -196,12 +199,12 @@ async function createSuggestion(req, res) {
       });
     }
 
-    const cartItems = Array.isArray(req.body.carrito) ? req.body.carrito : [];
+    const cartItems = Array.isArray(body.carrito) ? body.carrito : [];
     const cartProductIds = cartItems.map((item) => Number(item.id_producto));
 
     // Los productos del carrito y los que el cliente ya rechazó
     // ("Solicitar otra sugerencia") no pueden volver a ser candidatos.
-    const excludedProductIds = (req.body.excluir_productos ?? []).map(Number);
+    const excludedProductIds = (body.excluir_productos ?? []).map(Number);
     const idsToLeaveOut = [...new Set([...cartProductIds, ...excludedProductIds])];
 
     const where = { estado: 'disponible', stock: { [Op.gt]: 0 } };
@@ -317,7 +320,10 @@ async function updateSuggestionStatus(req, res) {
   const suggestionId = getPositiveInteger(req.params.id);
   if (!suggestionId) return res.status(400).json({ error: 'El id de sugerencia no es válido.' });
 
-  const statusErrors = validateSuggestionStatus(req.body.estado);
+  // En Express 5 req.body es undefined si la request llega sin body.
+  const body = req.body ?? {};
+
+  const statusErrors = validateSuggestionStatus(body.estado);
   if (statusErrors.length) return res.status(400).json({ error: statusErrors });
 
   try {
@@ -336,7 +342,7 @@ async function updateSuggestionStatus(req, res) {
     // chequeo de sanidad, no una reserva: el carrito vive en el navegador
     // y la garantía real de stock la sigue dando createOrder (bloqueo de
     // fila + 409 cuando el stock no alcanza). Rechazar no lo necesita.
-    if (req.body.estado === 'aceptada') {
+    if (body.estado === 'aceptada') {
       const productIds = getSuggestedProductIds(suggestion);
       const availableProducts = productIds.length
         ? await Producto.findAll({
@@ -356,7 +362,7 @@ async function updateSuggestionStatus(req, res) {
     // pedidos llegan a la vez, la base deja pasar solo a uno y el otro
     // actualiza 0 filas. Con "leer y después actualizar" ambos pasaban.
     const [updatedRows] = await SugerenciaIA.update(
-      { estado: req.body.estado },
+      { estado: body.estado },
       { where: { id_sugerencia: suggestionId, estado: 'pendiente' } }
     );
     if (updatedRows === 0) {

@@ -585,6 +585,72 @@ test('POST validates the cart: it must be an array of positive integers', async 
   }
 });
 
+test('POST without a body (Express 5 leaves req.body undefined) behaves like an empty cart', async () => {
+  const { controller } = loadPostController({
+    geminiResult: { sugerencias: [{ id_producto: 1, motivo: 'Te ayuda a ganar masa muscular.' }] },
+  });
+  const response = fakeResponse();
+
+  await controller.createSuggestion({ user: CLIENT_REQUEST }, response);
+
+  assert.equal(response.statusCode, 201);
+  assert.deepEqual(toPlain(response.body.productos.map((p) => p.id_producto)), [1]);
+});
+
+test('PATCH estado without a body gets 400 instead of crashing', async () => {
+  const sugerencias = createSugerenciaModel([
+    { id_sugerencia: 1, usuario_id: 20, estado: 'pendiente', fecha_generacion: 'f1', respuesta_IA: '{"sugerencias":[]}' },
+  ]);
+  const controller = loadController({ '../models/sugerencia_ia.model': sugerencias });
+  const response = fakeResponse();
+
+  await controller.updateSuggestionStatus({ user: CLIENT_REQUEST, params: { id: '1' } }, response);
+
+  assert.equal(response.statusCode, 400);
+  assert.ok(Array.isArray(response.body.error));
+});
+
+test('parseSuggestedItems ignores items without a valid positive integer id', () => {
+  const { parseSuggestedItems } = require('../src/utils/suggested-products');
+  const respuesta_IA = JSON.stringify({
+    sugerencias: [
+      { motivo: 'sin id' },
+      { id_producto: 'abc', motivo: 'texto' },
+      { id_producto: -1, motivo: 'negativo' },
+      { id_producto: 0, motivo: 'cero' },
+      { id_producto: 1.5, motivo: 'decimal' },
+      { id_producto: null, motivo: 'nulo' },
+      { id_producto: '7', motivo: 'valido como texto' },
+      { id_producto: 2, motivo: 'valido' },
+    ],
+  });
+
+  const items = parseSuggestedItems({ respuesta_IA });
+
+  assert.deepEqual(toPlain(items), [
+    { id_producto: 7, motivo: 'valido como texto' },
+    { id_producto: 2, motivo: 'valido' },
+  ]);
+});
+
+test('parseSuggestedItems keeps only the first appearance of a repeated id', () => {
+  const { parseSuggestedItems } = require('../src/utils/suggested-products');
+  const respuesta_IA = JSON.stringify({
+    sugerencias: [
+      { id_producto: 1, motivo: 'primero' },
+      { id_producto: 2, motivo: 'otro' },
+      { id_producto: 1, motivo: 'repetido' },
+    ],
+  });
+
+  const items = parseSuggestedItems({ respuesta_IA });
+
+  assert.deepEqual(toPlain(items), [
+    { id_producto: 1, motivo: 'primero' },
+    { id_producto: 2, motivo: 'otro' },
+  ]);
+});
+
 test('GET list: a client only sees their own suggestions, admin sees all newest first', async () => {
   const sugerencias = createSugerenciaModel([
     { id_sugerencia: 1, usuario_id: 20, estado: 'pendiente', fecha_generacion: 'f1', respuesta_IA: '{"sugerencias":[]}' },
