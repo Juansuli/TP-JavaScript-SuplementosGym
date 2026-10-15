@@ -297,12 +297,13 @@ async function updateClient(req, res) {
 
   const userData = getAllowedData(req.body, USER_FIELDS);
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
-const goalsData = getGoalsData(req.body);
-const profileData = { ...userData, ...clientData, ...goalsData };
-const isAdminDiscountOnlyUpdate = req.user.rol === 'administrador'
-  && Object.keys(userData).length === 0
-  && Object.keys(clientData).length === 1
-  && clientData.descuento_categoria !== undefined;
+  const goalsData = getGoalsData(req.body);
+  const profileData = { ...userData, ...clientData, ...goalsData };
+  const isAdminDiscountOnlyUpdate = req.user.rol === 'administrador'
+    && Object.keys(userData).length === 0
+    && Object.keys(clientData).length === 1
+    && Object.keys(goalsData).length === 0
+    && clientData.descuento_categoria !== undefined;
 
   const errors = req.user.id_usuario === id && !isAdminDiscountOnlyUpdate
     ? validateRequiredProfileData(profileData)

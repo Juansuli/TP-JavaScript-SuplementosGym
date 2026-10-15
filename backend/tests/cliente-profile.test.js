@@ -535,3 +535,23 @@ test('an administrator can assign themselves a discount without a complete profi
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.descuento_categoria, 'VIP');
 });
+
+test('an administrator changing their discount and goals must provide a complete profile', async () => {
+  const controller = loadClientController();
+  const response = fakeResponse();
+
+  await controller.updateClient(
+    {
+      params: { id: '7' },
+      user: { id_usuario: 7, rol: 'administrador' },
+      body: {
+        descuento_categoria: 'VIP',
+        objetivos: ['salud_general'],
+      },
+    },
+    response
+  );
+
+  assert.equal(response.statusCode, 400);
+  assert.ok(response.body.error.includes('El campo nombre es obligatorio.'));
+});
