@@ -34,7 +34,7 @@ function Cart({
   showToast,
   onClose,
 }) {
-  
+
   const [values, setValues] = useState({
     nombre_receptor: '',
     direccion_entrega: deliveryAddress ?? '',
