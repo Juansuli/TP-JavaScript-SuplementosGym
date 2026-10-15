@@ -5,7 +5,9 @@ const PedidoProducto = require('../models/pedido_producto.model');
 const Cliente = require('../models/cliente.model');
 const Descuento = require('../models/descuento.model');
 const Producto = require('../models/producto.model');
+const SugerenciaIA = require('../models/sugerencia_ia.model');
 const { getProductStatus } = require('../utils/product-status');
+const { getSuggestedProductIds } = require('../utils/suggested-products');
 const {
   ORDER_STATUSES,
   validateOrderData,
@@ -145,6 +147,30 @@ async function restoreOrderStock(orderId, transaction) {
   }
 }
 
+// Una sugerencia pendiente se da por aceptada cuando el pedido incluye
+// alguno de sus productos: el cliente la respondió comprándola (CUU2 7.a,
+// CUU6). El "estado = pendiente" dentro del UPDATE evita pisar un PATCH
+// que llegue al mismo tiempo. Si el pedido después se cancela la
+// sugerencia queda "aceptada" igual: aceptar es una decisión del
+// cliente, no una garantía de compra.
+async function acceptPendingSuggestionsForOrder(clientId, productIds, transaction) {
+  const pendingSuggestions = await SugerenciaIA.findAll({
+    where: { usuario_id: clientId, estado: 'pendiente' },
+    transaction,
+  });
+
+  const orderedProductIds = new Set(productIds);
+  for (const suggestion of pendingSuggestions) {
+    const suggestedIds = getSuggestedProductIds(suggestion);
+    if (!suggestedIds.some((id) => orderedProductIds.has(id))) continue;
+
+    await SugerenciaIA.update(
+      { estado: 'aceptada' },
+      { where: { id_sugerencia: suggestion.id_sugerencia, estado: 'pendiente' }, transaction }
+    );
+  }
+}
+
 async function listOrders(req, res) {
   return listOrdersByScope(req, res, false);
 }
@@ -279,6 +305,12 @@ async function createOrder(req, res) {
           { transaction }
         );
       }
+
+      await acceptPendingSuggestionsForOrder(
+        clientId,
+        orderItems.map((item) => item.id_producto),
+        transaction
+      );
 
       return buildOrderResponse(order, transaction);
     });

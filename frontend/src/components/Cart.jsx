@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createOrder } from '../services/pedido.service'
 import { getClient } from '../services/client.service'
+import AiSuggestion from './AiSuggestion'
 import ProductImage from './ProductImage'
 
 const PAYMENT_METHODS = ['tarjeta', 'efectivo', 'transferencia']
@@ -16,7 +17,24 @@ const paymentLabels = {
   efectivo: 'Efectivo al retirar en el local',
 }
 
-function Cart({ cart, token, userId, deliveryAddress, discountCategory, discountPercentage, onUpdateQuantity, onRemoveItem, onOrderPlaced, onRevalidateStock, onClose }) {
+function Cart({
+  cart,
+  cartQuantities,
+  token,
+  userId,
+  deliveryAddress,
+  discountCategory,
+  discountPercentage,
+  addProductsToCart,
+  onGoToProfile,
+  onUpdateQuantity,
+  onRemoveItem,
+  onOrderPlaced,
+  onRevalidateStock,
+  showToast,
+  onClose,
+}) {
+  
   const [values, setValues] = useState({
     nombre_receptor: '',
     direccion_entrega: deliveryAddress ?? '',
@@ -144,6 +162,19 @@ function Cart({ cart, token, userId, deliveryAddress, discountCategory, discount
             </svg>
           </button>
         </div>
+
+        {/* The AI trigger renders once, above the cart content, for both
+            the empty cart and the cart with items. */}
+        {!confirmedOrder && token && (
+          <AiSuggestion
+            cart={cart}
+            cartQuantities={cartQuantities}
+            token={token}
+            addProductsToCart={addProductsToCart}
+            onGoToProfile={onGoToProfile}
+            showToast={showToast}
+          />
+        )}
 
         {confirmedOrder ? (
           <div className="cart-confirmation">

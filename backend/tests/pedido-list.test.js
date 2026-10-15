@@ -39,7 +39,9 @@ test('order lists enforce administrative and personal scopes', async (t) => {
     '../models/cliente.model': { findByPk: async id => id === 30 ? null : { id_cliente: id } },
     '../models/descuento.model': {},
     '../models/producto.model': {},
+    '../models/sugerencia_ia.model': {},
     '../utils/product-status': {},
+    '../utils/suggested-products': require('../src/utils/suggested-products'),
     '../middlewares/pedido-validation.middleware': require('../src/middlewares/pedido-validation.middleware'),
   });
   const secret = 'order-list-tests-only-secret-at-least-32-characters';
