@@ -45,6 +45,23 @@ const Pedido = sequelize.define(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
+    subtotal: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+    },
+    descuento_categoria: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    descuento_porcentaje: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
+    },
+    descuento_monto: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
     nombre_receptor: {
       type: DataTypes.STRING,
       allowNull: false,

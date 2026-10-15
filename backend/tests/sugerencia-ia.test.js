@@ -284,6 +284,7 @@ function loadOrderController({ products = [], sugerencias } = {}) {
         return fakeRecord({ id_cliente: id });
       },
     },
+    '../models/descuento.model': { findByPk: async () => null },
     '../models/producto.model': {
       async findByPk(id, options) {
         assert.equal(options.transaction, transaction);
@@ -879,7 +880,7 @@ test('createOrder marks a pending suggestion as aceptada when the order includes
   );
 
   assert.equal(response.statusCode, 201);
-  assert.equal(response.body.total, 50000);
+  assert.equal(response.body.total, '50000.00');
   // Product 1 is in this suggestion: it counts as accepted.
   assert.equal(sugerencias.records[0].estado, 'aceptada');
   // Only product 5 was suggested here and it was not ordered.

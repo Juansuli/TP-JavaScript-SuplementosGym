@@ -512,6 +512,35 @@ test('a cliente cannot assign themselves a discount category', async () => {
   assert.equal(registerResponse.statusCode, 403);
 });
 
+test('an administrator can assign themselves a discount without a complete profile', async () => {
+  const user = fakeRecord({
+    id_usuario: 7,
+    email: 'admin@dosis.com',
+    nombre: 'Admin',
+    apellido: 'DOSIS',
+    rol: 'administrador',
+  });
+  const client = fakeRecord({ id_cliente: 7, descuento_categoria: null });
+  const controller = loadClientController({
+    '../models/usuario.model': { findByPk: async () => user },
+    '../models/cliente.model': { findByPk: async () => client },
+    '../models/descuento.model': { findByPk: async () => ({}) },
+  });
+  const response = fakeResponse();
+
+  await controller.updateClient(
+    {
+      params: { id: '7' },
+      user: { id_usuario: 7, rol: 'administrador' },
+      body: { descuento_categoria: 'VIP' },
+    },
+    response
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.descuento_categoria, 'VIP');
+});
+
 // Un administrador con perfil de cliente también aparece en
 // /api/clientes, y esa ruta cambia el mismo usuario.activo: tiene que
 // respetar las reglas de /api/administradores/:id/estado.
@@ -574,6 +603,26 @@ test('disabling a regular client does not need the administrator check', async (
   assert.equal(response.statusCode, 200);
   assert.equal(user.activo, false);
   assert.deepEqual(guardCalls, []);
+});
+
+test('an administrator changing their discount and goals must provide a complete profile', async () => {
+  const controller = loadClientController();
+  const response = fakeResponse();
+
+  await controller.updateClient(
+    {
+      params: { id: '7' },
+      user: { id_usuario: 7, rol: 'administrador' },
+      body: {
+        descuento_categoria: 'VIP',
+        objetivos: ['salud_general'],
+      },
+    },
+    response
+  );
+
+  assert.equal(response.statusCode, 400);
+  assert.ok(response.body.error.includes('El campo nombre es obligatorio.'));
 });
 
 test('the client status route answers 400 when the request has no body', async () => {

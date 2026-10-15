@@ -106,6 +106,16 @@ function buildClientResponse(client, user, goals = []) {
   };
 }
 
+async function addDiscountPercentage(clientResponse) {
+  if (!clientResponse.descuento_categoria) return clientResponse;
+
+  const discount = await Descuento.findByPk(clientResponse.descuento_categoria);
+  return {
+    ...clientResponse,
+    descuento_porcentaje: discount ? Number(discount.porcentaje) : null,
+  };
+}
+
 async function getClientWithUser(id) {
   const client = await Cliente.findByPk(id);
   if (!client) return null;
@@ -113,7 +123,9 @@ async function getClientWithUser(id) {
   const user = await Usuario.findByPk(id);
   if (!user) return null;
 
-  return buildClientResponse(client, user, await getClientGoals(id));
+return addDiscountPercentage(
+  buildClientResponse(client, user, await getClientGoals(id))
+);
 }
 
 async function listClients(req, res) {
@@ -138,13 +150,17 @@ async function listClients(req, res) {
       goalsByClient.get(row.id_cliente).push(row.objetivo);
     });
 
-    const response = clients
-      .filter((client) => usersById.has(client.id_cliente))
-      .map((client) => buildClientResponse(
+const response = await Promise.all(
+  clients
+    .filter((client) => usersById.has(client.id_cliente))
+    .map((client) => addDiscountPercentage(
+      buildClientResponse(
         client,
         usersById.get(client.id_cliente),
         goalsByClient.get(client.id_cliente) || []
-      ));
+      )
+    ))
+);
 
     return res.json(response);
   } catch (error) {
@@ -198,8 +214,11 @@ async function login(req, res) {
     // datos para que el frontend sepa que puede hacer pedidos.
     const clientProfile = await Cliente.findByPk(user.id_usuario);
     if (clientProfile) {
-      const goals = await getClientGoals(user.id_usuario);
-      return res.json({ ...buildClientResponse(clientProfile, user, goals), token });
+const goals = await getClientGoals(user.id_usuario);
+const clientResponse = await addDiscountPercentage(
+  buildClientResponse(clientProfile, user, goals)
+);
+return res.json({ ...clientResponse, token });
     }
 
     const userData = user.toJSON();
@@ -281,8 +300,13 @@ async function updateClient(req, res) {
   const clientData = getAllowedData(req.body, CLIENT_FIELDS);
   const goalsData = getGoalsData(req.body);
   const profileData = { ...userData, ...clientData, ...goalsData };
+  const isAdminDiscountOnlyUpdate = req.user.rol === 'administrador'
+    && Object.keys(userData).length === 0
+    && Object.keys(clientData).length === 1
+    && Object.keys(goalsData).length === 0
+    && clientData.descuento_categoria !== undefined;
 
-  const errors = req.user.id_usuario === id
+  const errors = req.user.id_usuario === id && !isAdminDiscountOnlyUpdate
     ? validateRequiredProfileData(profileData)
     : [...validateUserUpdate(userData), ...validateClientData({ ...clientData, ...goalsData })];
   if (errors.length) return res.status(400).json({ error: errors });

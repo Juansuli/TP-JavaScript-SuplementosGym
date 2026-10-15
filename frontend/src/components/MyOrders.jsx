@@ -153,6 +153,14 @@ function MyOrders({ token, showToast }) {
                               <span>Pago</span>
                               <strong>{detail.metodo_pago}</strong>
                             </div>
+                            {Number(detail.descuento_monto) > 0 && (
+                              <div>
+                                <span>Descuento {detail.descuento_categoria}</span>
+                                <strong className="tabnum">
+                                  {detail.descuento_porcentaje}% (-{priceFormatter.format(detail.descuento_monto)})
+                                </strong>
+                              </div>
+                            )}
                             <ul>
                               {detail.productos.map((item) => (
                                 <li key={item.id_producto}>

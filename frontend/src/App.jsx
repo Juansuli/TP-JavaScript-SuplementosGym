@@ -3,6 +3,7 @@ import ProductCatalog from './components/ProductCatalog'
 import AdminProducts from './components/AdminProducts'
 import AdminOrders from './components/AdminOrders'
 import AdminClients from './components/AdminClients'
+import AdminDiscounts from './components/AdminDiscounts'
 import AdminAdministrators from './components/AdminAdministrators'
 import MyOrders from './components/MyOrders'
 import MySuggestions from './components/MySuggestions'
@@ -261,21 +262,30 @@ function App() {
                   Pedidos
                 </button>
                 <button
-                  type="button"
-                  className={view === 'admin-clients' ? 'is-active' : ''}
-                  onClick={() => changeView('admin-clients')}
-                >
-                  Clientes
-                </button>
-                <button
-                  type="button"
-                  className={view === 'admin-admins' ? 'is-active' : ''}
-                  onClick={() => changeView('admin-admins')}
-                >
-                  Administradores
-                </button>
-              </>
-            )}
+  type="button"
+  className={view === 'admin-clients' ? 'is-active' : ''}
+  onClick={() => changeView('admin-clients')}
+>
+  Clientes
+</button>
+
+<button
+  type="button"
+  className={view === 'admin-discounts' ? 'is-active' : ''}
+  onClick={() => changeView('admin-discounts')}
+>
+  Descuentos
+</button>
+
+<button
+  type="button"
+  className={view === 'admin-admins' ? 'is-active' : ''}
+  onClick={() => changeView('admin-admins')}
+>
+  Administradores
+</button>
+</>
+)}
           </nav>
 
           <div className="nav-actions">
@@ -331,6 +341,7 @@ function App() {
               <button type="button" onClick={() => changeView('admin')}>Productos</button>
               <button type="button" onClick={() => changeView('admin-orders')}>Pedidos</button>
               <button type="button" onClick={() => changeView('admin-clients')}>Clientes</button>
+              <button type="button" onClick={() => changeView('admin-discounts')}>Descuentos</button>
               <button type="button" onClick={() => changeView('admin-admins')}>Administradores</button>
             </>
           )}
@@ -352,6 +363,8 @@ function App() {
           <AdminOrders token={currentUser.token} showToast={showToast} />
         ) : view === 'admin-clients' && isAdmin ? (
           <AdminClients token={currentUser.token} showToast={showToast} />
+        ) : view === 'admin-discounts' && isAdmin ? (
+          <AdminDiscounts token={currentUser.token} showToast={showToast} />
         ) : view === 'admin-admins' && isAdmin ? (
           <AdminAdministrators currentUser={currentUser} showToast={showToast} onSelfUpdated={handleProfileUpdated} />
         ) : view === 'admin' && isAdmin ? (
@@ -417,7 +430,10 @@ function App() {
           cart={cart}
           cartQuantities={cartQuantities}
           token={currentUser?.token}
+          userId={currentUser?.id_usuario}
           deliveryAddress={currentUser?.direccion_entrega ?? ''}
+          discountCategory={currentUser?.descuento_categoria ?? null}
+          discountPercentage={currentUser?.descuento_porcentaje ?? null}
           addProductsToCart={addProductsToCart}
           onGoToProfile={() => {
             setIsCartOpen(false)

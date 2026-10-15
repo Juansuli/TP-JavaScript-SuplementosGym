@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createOrder } from '../services/pedido.service'
+import { getClient } from '../services/client.service'
 import AiSuggestion from './AiSuggestion'
 import ProductImage from './ProductImage'
 
@@ -16,7 +17,24 @@ const paymentLabels = {
   efectivo: 'Efectivo al retirar en el local',
 }
 
-function Cart({ cart, cartQuantities, token, deliveryAddress, addProductsToCart, onGoToProfile, onUpdateQuantity, onRemoveItem, onOrderPlaced, onRevalidateStock, showToast, onClose }) {
+function Cart({
+  cart,
+  cartQuantities,
+  token,
+  userId,
+  deliveryAddress,
+  discountCategory,
+  discountPercentage,
+  addProductsToCart,
+  onGoToProfile,
+  onUpdateQuantity,
+  onRemoveItem,
+  onOrderPlaced,
+  onRevalidateStock,
+  showToast,
+  onClose,
+}) {
+
   const [values, setValues] = useState({
     nombre_receptor: '',
     direccion_entrega: deliveryAddress ?? '',
@@ -26,8 +44,46 @@ function Cart({ cart, cartQuantities, token, deliveryAddress, addProductsToCart,
   const [submitErrors, setSubmitErrors] = useState([])
   const [isSaving, setIsSaving] = useState(false)
   const [confirmedOrder, setConfirmedOrder] = useState(null)
+  const [discount, setDiscount] = useState({
+    category: discountCategory,
+    percentage: discountPercentage,
+    isLoading: Boolean(userId && token),
+    hasError: false,
+  })
 
   const total = cart.reduce((sum, item) => sum + item.precio * item.cantidad, 0)
+  const parsedDiscountPercentage = Number(discount.percentage)
+  const hasDiscount = discount.category && Number.isFinite(parsedDiscountPercentage) && parsedDiscountPercentage > 0
+  const discountAmount = hasDiscount ? total * (parsedDiscountPercentage / 100) : 0
+  const totalWithDiscount = total - discountAmount
+
+  useEffect(() => {
+    let isActive = true
+    if (!userId || !token) return undefined
+
+    getClient(userId, token)
+      .then((client) => {
+        if (!isActive) return
+        setDiscount({
+          category: client.descuento_categoria ?? null,
+          percentage: client.descuento_porcentaje ?? null,
+          isLoading: false,
+          hasError: false,
+        })
+      })
+      .catch(() => {
+        if (isActive) {
+          setDiscount({
+            category: null,
+            percentage: null,
+            isLoading: false,
+            hasError: true,
+          })
+        }
+      })
+
+    return () => { isActive = false }
+  }, [token, userId])
 
   function validateForm() {
     const nextErrors = {}
@@ -129,6 +185,13 @@ function Cart({ cart, cartQuantities, token, deliveryAddress, addProductsToCart,
               Pedido <strong className="tabnum">#{confirmedOrder.id_pedido}</strong>
               {' · '}Total <strong className="tabnum">{priceFormatter.format(confirmedOrder.total)}</strong>
             </p>
+            {Number(confirmedOrder.descuento_monto) > 0 && (
+              <p>
+                Subtotal {priceFormatter.format(confirmedOrder.subtotal)}
+                {' · '}Descuento {confirmedOrder.descuento_categoria} ({confirmedOrder.descuento_porcentaje}%):
+                {' '}{priceFormatter.format(confirmedOrder.descuento_monto)}
+              </p>
+            )}
             <p>Un administrador tiene que confirmarlo. Vas a poder ver cuándo se confirme desde “Mis compras”.</p>
             <button type="button" className="btn btn-accent" onClick={onClose}>Listo</button>
           </div>
@@ -182,10 +245,27 @@ function Cart({ cart, cartQuantities, token, deliveryAddress, addProductsToCart,
                 <span>Subtotal</span>
                 <span className="amount tabnum">{priceFormatter.format(total)}</span>
               </div>
+              {hasDiscount && (
+                <div className="summary-row">
+                  <span>Descuento {discount.category} ({parsedDiscountPercentage}%)</span>
+                  <span className="amount tabnum">-{priceFormatter.format(discountAmount)}</span>
+                </div>
+              )}
+              {discount.hasError && (
+                <div className="summary-row">
+                  <span>Descuento</span>
+                  <span className="amount">No disponible</span>
+                </div>
+              )}
               <div className="summary-total">
                 <span>Total</span>
-                <span className="amount tabnum">{priceFormatter.format(total)}</span>
+                <span className="amount tabnum">
+                  {discount.isLoading || discount.hasError ? 'No disponible' : priceFormatter.format(totalWithDiscount)}
+                </span>
               </div>
+              {discount.hasError && (
+                <p className="cart-field-error">No se pudo obtener tu descuento actual. Se calculará al confirmar el pedido.</p>
+              )}
 
               <form className="cart-checkout-form" noValidate onSubmit={handleSubmit}>
                 <label>

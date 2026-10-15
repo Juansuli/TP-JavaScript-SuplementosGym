@@ -3,6 +3,7 @@ const sequelize = require('../config/db');
 const Pedido = require('../models/pedido.model');
 const PedidoProducto = require('../models/pedido_producto.model');
 const Cliente = require('../models/cliente.model');
+const Descuento = require('../models/descuento.model');
 const Producto = require('../models/producto.model');
 const SugerenciaIA = require('../models/sugerencia_ia.model');
 const { getProductStatus } = require('../utils/product-status');
@@ -38,13 +39,59 @@ function getAllowedData(body, fields) {
   );
 }
 
-function calculateTotal(items) {
-  const total = items.reduce(
-    (currentTotal, item) => currentTotal + Number(item.precio_unitario) * item.cantidad,
+function decimalToScaledInteger(value, decimalPlaces) {
+  const match = String(value).trim().match(/^(\d+)(?:\.(\d+))?$/);
+  if (!match) throw new Error('INVALID_DECIMAL_VALUE');
+
+  const scale = 10 ** decimalPlaces;
+  const whole = Number(match[1]);
+  const fraction = (match[2] || '').padEnd(decimalPlaces, '0').slice(0, decimalPlaces);
+  return whole * scale + Number(fraction);
+}
+
+function centsToDecimal(cents) {
+  const whole = Math.floor(cents / 100);
+  const fraction = String(cents % 100).padStart(2, '0');
+  return `${whole}.${fraction}`;
+}
+
+function calculateSubtotalInCents(items) {
+  return items.reduce(
+    (currentTotal, item) => currentTotal + decimalToScaledInteger(item.precio_unitario, 2) * item.cantidad,
     0
   );
+}
 
-  return Math.round(total * 100) / 100;
+async function calculateOrderAmounts(client, items, transaction) {
+  const subtotalInCents = calculateSubtotalInCents(items);
+  const subtotal = centsToDecimal(subtotalInCents);
+  if (!client.descuento_categoria) {
+    return {
+      subtotal,
+      descuento_categoria: null,
+      descuento_porcentaje: null,
+      descuento_monto: '0.00',
+      total: subtotal,
+    };
+  }
+
+  const discount = await Descuento.findByPk(client.descuento_categoria, { transaction });
+  if (!discount) throw new Error('DISCOUNT_CATEGORY_NOT_FOUND');
+
+  const percentageInBasisPoints = decimalToScaledInteger(discount.porcentaje, 2);
+  const discountInCents = Math.floor(
+    (subtotalInCents * percentageInBasisPoints + 5000) / 10000
+  );
+  const percentage = centsToDecimal(percentageInBasisPoints);
+  const discountAmount = centsToDecimal(discountInCents);
+
+  return {
+    subtotal,
+    descuento_categoria: client.descuento_categoria,
+    descuento_porcentaje: percentage,
+    descuento_monto: discountAmount,
+    total: centsToDecimal(subtotalInCents - discountInCents),
+  };
 }
 
 async function buildOrderResponse(order, transaction) {
@@ -228,11 +275,12 @@ async function createOrder(req, res) {
         });
       }
 
+      const amounts = await calculateOrderAmounts(client, orderItems, transaction);
       const order = await Pedido.create(
         {
           usuario_id: clientId,
           ...orderData,
-          total: calculateTotal(orderItems),
+          ...amounts,
         },
         { transaction }
       );
@@ -279,6 +327,10 @@ async function createOrder(req, res) {
 
     if (error.message === 'INSUFFICIENT_STOCK') {
       return res.status(409).json({ error: `El producto ${error.productId} no tiene stock suficiente.` });
+    }
+
+    if (error.message === 'DISCOUNT_CATEGORY_NOT_FOUND') {
+      return res.status(409).json({ error: 'La categoría de descuento del cliente no existe.' });
     }
 
     return res.status(500).json({ error: 'No se pudo crear el pedido.' });

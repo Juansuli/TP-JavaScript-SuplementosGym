@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
-import { getClients, setClientStatus } from '../services/client.service'
+import { getClients, setClientStatus, updateClient } from '../services/client.service'
+import { getDiscounts } from '../services/descuento.service'
 
 function AdminClients({ token, showToast }) {
   const [clients, setClients] = useState([])
+  const [discounts, setDiscounts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [updatingId, setUpdatingId] = useState(null)
+  const [updatingDiscountId, setUpdatingDiscountId] = useState(null)
 
   useEffect(() => {
     let isStale = false
@@ -15,8 +18,14 @@ function AdminClients({ token, showToast }) {
       setError(null)
 
       try {
-        const data = await getClients(token)
-        if (!isStale) setClients(data)
+        const [clientData, discountData] = await Promise.all([
+          getClients(token),
+          getDiscounts(token),
+        ])
+        if (!isStale) {
+          setClients(clientData)
+          setDiscounts(discountData)
+        }
       } catch (err) {
         if (!isStale) setError(err.message)
       } finally {
@@ -50,6 +59,30 @@ function AdminClients({ token, showToast }) {
     }
   }
 
+  async function handleDiscountChange(client, category) {
+    setUpdatingDiscountId(client.id_cliente)
+
+    try {
+      const updated = await updateClient(
+        client.id_cliente,
+        { descuento_categoria: category || null },
+        token,
+      )
+      setClients((prev) => (
+        prev.map((item) => (item.id_cliente === updated.id_cliente ? updated : item))
+      ))
+      showToast(
+        category
+          ? `Se asignó la categoría ${category} a ${updated.nombre} ${updated.apellido}.`
+          : `Se quitó el descuento de ${updated.nombre} ${updated.apellido}.`,
+      )
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setUpdatingDiscountId(null)
+    }
+  }
+
   return (
     <div className="admin-clients">
       <div className="admin-products-header admin-clients-header">
@@ -69,6 +102,7 @@ function AdminClients({ token, showToast }) {
               <tr>
                 <th>Cliente</th>
                 <th>Estado</th>
+                <th>Descuento</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -86,6 +120,21 @@ function AdminClients({ token, showToast }) {
                     <span className="admin-client-status">
                       {client.activo ? 'Activo' : 'Inhabilitado'}
                     </span>
+                  </td>
+                  <td>
+                    <select
+                      value={client.descuento_categoria ?? ''}
+                      disabled={updatingDiscountId === client.id_cliente}
+                      aria-label={`Descuento de ${client.nombre} ${client.apellido}`}
+                      onChange={(event) => handleDiscountChange(client, event.target.value)}
+                    >
+                      <option value="">Sin descuento</option>
+                      {discounts.map((discount) => (
+                        <option key={discount.categoria} value={discount.categoria}>
+                          {discount.categoria} ({discount.porcentaje}%)
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td>
                     <button
