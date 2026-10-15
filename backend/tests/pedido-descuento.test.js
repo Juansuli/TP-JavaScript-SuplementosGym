@@ -66,7 +66,9 @@ test('creating an order stores the client discount and final total', async () =>
       findByPk: async () => product,
       findAll: async () => [],
     },
+    '../models/sugerencia_ia.model': { findAll: async () => [], update: async () => [0] },
     '../utils/product-status': { getProductStatus: () => 'disponible' },
+    '../utils/suggested-products': require('../src/utils/suggested-products'),
     '../middlewares/pedido-validation.middleware': require('../src/middlewares/pedido-validation.middleware'),
   });
   const response = fakeResponse();
@@ -112,7 +114,9 @@ test('rounds a discount with decimal prices using integer cents', async () => {
     '../models/cliente.model': { findByPk: async () => ({ descuento_categoria: 'VIP' }) },
     '../models/descuento.model': { findByPk: async () => ({ porcentaje: '5.00' }) },
     '../models/producto.model': { findByPk: async () => product, findAll: async () => [] },
+    '../models/sugerencia_ia.model': { findAll: async () => [], update: async () => [0] },
     '../utils/product-status': { getProductStatus: () => 'disponible' },
+    '../utils/suggested-products': require('../src/utils/suggested-products'),
     '../middlewares/pedido-validation.middleware': require('../src/middlewares/pedido-validation.middleware'),
   });
 

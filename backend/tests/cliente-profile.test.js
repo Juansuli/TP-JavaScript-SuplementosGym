@@ -261,7 +261,28 @@ test('a client can save up to three goals, which replace the previous ones', asy
     '../models/usuario.model': { findByPk: async () => user },
     '../models/cliente.model': { findByPk: async () => client },
     '../models/cliente_objetivo.model': goals,
+  });
+  const response = fakeResponse();
 
+  await controller.updateClient(
+    {
+      params: { id: '7' },
+      user: { id_usuario: 7, rol: 'cliente' },
+      body: {
+        ...COMPLETE_REQUIRED_PROFILE,
+        objetivos: ['perder_grasa', 'ganar_masa_muscular', 'mejorar_rendimiento'],
+      },
+    },
+    response
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(plain(response.body.objetivos), ['ganar_masa_muscular', 'mejorar_rendimiento', 'perder_grasa']);
+  assert.deepEqual(plain(goals.rows), [
+    { id_cliente: 8, objetivo: 'recuperacion' },
+    { id_cliente: 7, objetivo: 'perder_grasa' },
+    { id_cliente: 7, objetivo: 'ganar_masa_muscular' },
+    { id_cliente: 7, objetivo: 'mejorar_rendimiento' },
   ]);
 });
 
