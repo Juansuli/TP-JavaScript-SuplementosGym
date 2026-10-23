@@ -1,9 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { getProductSlug } from '../utils/product-slug'
 import ProductCard from './ProductCard'
 import ProductDetail from './ProductDetail'
 import { getProducts, getProductById } from '../services/product.service'
 
-function ProductCatalog({ cartQuantities, onAddToCart, showDiscountInfo, showToast }) {
+function ProductCatalog({ cartQuantities, onAddToCart, showDiscountInfo }) {
+  const navigate = useNavigate()
+  const { productSlug } = useParams()
+  const [allProducts, setAllProducts] = useState(null)
+  const [detailError, setDetailError] = useState(null)
   const [products, setProducts] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [nameFilter, setNameFilter] = useState('')
@@ -12,7 +18,6 @@ function ProductCatalog({ cartQuantities, onAddToCart, showDiscountInfo, showToa
   const [filterErrors, setFilterErrors] = useState({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
-  const selectedProductIdRef = useRef(null)
   const normalizedName = nameFilter.trim().toLocaleLowerCase('es')
   const filteredProducts = products.filter((product) => (
     product.nombre.toLocaleLowerCase('es').includes(normalizedName)
@@ -25,6 +30,7 @@ function ProductCatalog({ cartQuantities, onAddToCart, showDiscountInfo, showToa
     try {
       const data = await getProducts(filters)
       setProducts(data)
+      if (!filters) setAllProducts(data)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -79,15 +85,29 @@ function ProductCatalog({ cartQuantities, onAddToCart, showDiscountInfo, showToa
     }
   }
 
-  async function handleSelectProduct(id) {
-    selectedProductIdRef.current = id
+  useEffect(() => {
+    let cancelled = false
+    setSelectedProduct(null)
+    setDetailError(null)
+    if (!productSlug || !allProducts) return
 
-    try {
-      const product = await getProductById(id)
-      if (selectedProductIdRef.current === id) setSelectedProduct(product)
-    } catch (err) {
-      if (selectedProductIdRef.current === id) showToast(err.message, 'error')
+    const product = allProducts.find((item) => getProductSlug(item, allProducts) === productSlug)
+    if (!product) {
+      setDetailError('No se encontró el producto.')
+      return
     }
+
+    getProductById(product.id_producto).then((detail) => {
+      if (!cancelled) setSelectedProduct(detail)
+    }).catch((err) => {
+      if (!cancelled) setDetailError(err.message)
+    })
+    return () => { cancelled = true }
+  }, [productSlug, allProducts])
+
+  function handleSelectProduct(id) {
+    const product = allProducts?.find((item) => item.id_producto === id)
+    if (product) navigate('/catalogo/' + getProductSlug(product, allProducts))
   }
 
   return (
@@ -180,14 +200,20 @@ function ProductCatalog({ cartQuantities, onAddToCart, showDiscountInfo, showToa
         </div>
       )}
 
-      {selectedProduct && (
+      {productSlug && !selectedProduct && !detailError && !error && (
+        <p className="catalog-message" role="status">Cargando detalle...</p>
+      )}
+      {productSlug && detailError && (
+        <div className="catalog-message catalog-error" role="alert">
+          <p>{detailError}</p>
+          <button type="button" onClick={() => navigate('/catalogo')}>Volver al catálogo</button>
+        </div>
+      )}
+      {productSlug && selectedProduct && (
         <ProductDetail
           product={selectedProduct}
           quantityInCart={cartQuantities[selectedProduct.id_producto] ?? 0}
-          onClose={() => {
-            selectedProductIdRef.current = null
-            setSelectedProduct(null)
-          }}
+          onClose={() => navigate('/catalogo')}
           onAddToCart={onAddToCart}
         />
       )}
