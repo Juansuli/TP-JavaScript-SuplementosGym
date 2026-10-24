@@ -255,7 +255,7 @@ async function createOrder(req, res) {
           lock: transaction.LOCK.UPDATE,
         });
 
-        if (!product || product.estado === 'descontinuado') {
+        if (!product || ['inhabilitado', 'descontinuado'].includes(product.estado)) {
           const error = new Error('PRODUCT_NOT_AVAILABLE');
           error.productId = item.id_producto;
           throw error;

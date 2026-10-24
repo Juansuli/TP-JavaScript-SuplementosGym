@@ -1,4 +1,5 @@
 function getProductStatus(stock, currentStatus) {
+  if (currentStatus === 'habilitado' || currentStatus === 'inhabilitado') return currentStatus;
   if (currentStatus === 'descontinuado') {
     return 'descontinuado';
   }

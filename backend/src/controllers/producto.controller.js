@@ -2,7 +2,6 @@ const fs = require('fs/promises');
 const path = require('path');
 const { Op } = require('sequelize');
 const Producto = require('../models/producto.model');
-const PedidoProducto = require('../models/pedido_producto.model');
 const { getProductStatus } = require('../utils/product-status');
 const { productImagesDirectory } = require('../middlewares/product-image.middleware');
 const { validateProduct } = require('../middlewares/product-validation.middleware');
@@ -49,7 +48,7 @@ function getEditableData(body) {
 async function listProducts(req, res) {
   try {
     const { precioMin, precioMax } = req.query;
-    const where = {};
+    const where = req.includeDiscontinued ? {} : { estado: { [Op.notIn]: ['inhabilitado', 'descontinuado'] } };
 
     if (precioMin !== undefined || precioMax !== undefined) {
       const minimo = precioMin === undefined ? undefined : Number(precioMin);
@@ -79,7 +78,7 @@ async function getProduct(req, res) {
 
   try {
     const product = await Producto.findByPk(id);
-    if (!product) return res.status(404).json({ error: 'Producto no encontrado.' });
+    if (!product || ['inhabilitado', 'descontinuado'].includes(product.estado)) return res.status(404).json({ error: 'Producto no encontrado.' });
     return res.json(product);
   } catch (error) {
     return res.status(500).json({ error: 'No se pudo obtener el producto.' });
@@ -95,7 +94,7 @@ async function createProduct(req, res) {
 
   try {
     const data = getEditableData(req.body);
-    data.estado = getProductStatus(data.stock);
+    data.estado = 'habilitado';
 
     const imageUrl = getProductImageUrl(req.file);
     if (imageUrl) data.imagen_url = imageUrl;
@@ -159,25 +158,34 @@ async function deleteProduct(req, res) {
     const product = await Producto.findByPk(id);
     if (!product) return res.status(404).json({ error: 'Producto no encontrado.' });
 
-    const orderCount = await PedidoProducto.count({ where: { id_producto: id } });
-    if (orderCount > 0) {
-      await product.update({ estado: 'descontinuado' });
-      return res.json(product);
-    }
-
-    const imageUrl = product.imagen_url;
-    await product.destroy();
-    await removeProductImage(imageUrl);
-    return res.status(204).send();
+    await product.update({ estado: 'inhabilitado' });
+    return res.json(product);
   } catch (error) {
-    if (error.name === 'SequelizeForeignKeyConstraintError') {
-      return res.status(409).json({ error: 'No se puede eliminar un producto con pedidos asociados.' });
-    }
     return res.status(500).json({ error: 'No se pudo eliminar el producto.' });
   }
 }
 
+async function restoreProduct(req, res) {
+  const id = getProductId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'El id de producto no es valido.' });
+  try {
+    const product = await Producto.findByPk(id);
+    if (!product) return res.status(404).json({ error: 'Producto no encontrado.' });
+    await product.update({ estado: 'habilitado' });
+    return res.json(product);
+  } catch (error) {
+    return res.status(500).json({ error: 'No se pudo restablecer el producto.' });
+  }
+}
+
+function listAdminProducts(req, res) {
+  req.includeDiscontinued = true;
+  return listProducts(req, res);
+}
+
 module.exports = {
+  restoreProduct,
+  listAdminProducts,
   listProducts,
   getProduct,
   createProduct,

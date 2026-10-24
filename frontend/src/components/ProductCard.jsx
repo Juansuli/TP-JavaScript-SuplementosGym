@@ -9,7 +9,7 @@ const priceFormatter = new Intl.NumberFormat('es-AR', {
 })
 
 function getStatus(product, remainingStock) {
-  if (product.estado === 'descontinuado') return 'Descontinuado'
+  if (['inhabilitado', 'descontinuado'].includes(product.estado)) return 'Descontinuado'
   if (product.estado === 'agotado' || remainingStock === 0) return 'Agotado'
   return 'Disponible'
 }
@@ -18,9 +18,9 @@ function ProductCard({ product, quantityInCart = 0, onSelect, onAddToCart }) {
   const [isAdded, setIsAdded] = useState(false)
   const remainingStock = getRemainingStock(product, quantityInCart)
   const status = getStatus(product, remainingStock)
-  const isCartLimitReached = product.estado === 'disponible' && Number(product.stock) > 0 && remainingStock === 0
+  const isCartLimitReached = ['habilitado', 'disponible'].includes(product.estado) && Number(product.stock) > 0 && remainingStock === 0
   const statusLabel = isCartLimitReached ? 'Máximo en pedido' : status
-  const isAvailable = product.estado === 'disponible' && remainingStock > 0
+  const isAvailable = ['habilitado', 'disponible'].includes(product.estado) && remainingStock > 0
 
   useEffect(() => {
     if (!isAdded) return undefined

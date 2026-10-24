@@ -207,7 +207,7 @@ async function createSuggestion(req, res) {
     const excludedProductIds = (body.excluir_productos ?? []).map(Number);
     const idsToLeaveOut = [...new Set([...cartProductIds, ...excludedProductIds])];
 
-    const where = { estado: 'disponible', stock: { [Op.gt]: 0 } };
+    const where = { estado: { [Op.in]: ['habilitado', 'disponible'] }, stock: { [Op.gt]: 0 } };
     if (idsToLeaveOut.length) where.id_producto = { [Op.notIn]: idsToLeaveOut };
 
     const candidates = await Producto.findAll({ where });
@@ -348,7 +348,7 @@ async function updateSuggestionStatus(req, res) {
         ? await Producto.findAll({
           where: {
             id_producto: { [Op.in]: productIds },
-            estado: 'disponible',
+            estado: { [Op.in]: ['habilitado', 'disponible'] },
             stock: { [Op.gt]: 0 },
           },
         })

@@ -113,7 +113,8 @@ function createProductoModel(products) {
       let result = products;
 
       if (where.estado !== undefined) {
-        result = result.filter((p) => p.estado === where.estado);
+        result = result.filter((p) => typeof where.estado === 'object'
+          ? where.estado[Op.in].includes(p.estado) : p.estado === where.estado);
       }
       if (where.stock?.[Op.gt] !== undefined) {
         result = result.filter((p) => p.stock > where.stock[Op.gt]);
