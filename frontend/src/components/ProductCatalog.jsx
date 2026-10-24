@@ -119,16 +119,16 @@ function ProductCatalog({ cartQuantities, onAddToCart, showDiscountInfo, showToa
             <label>
               Desde
               <span className="price-input">
-                <span>$</span>
-                <input type="number" min="0" aria-invalid={Boolean(filterErrors.minPrice)} aria-describedby={filterErrors.minPrice ? 'min-price-error' : undefined} placeholder="0" value={minPrice} onChange={handlePriceChange('minPrice', setMinPrice)} />
+                <span className="price-prefix" aria-hidden="true">$</span>
+                <input type="number" inputMode="decimal" min="0" aria-invalid={Boolean(filterErrors.minPrice)} aria-describedby={filterErrors.minPrice ? 'min-price-error' : undefined} placeholder="0" value={minPrice} onChange={handlePriceChange('minPrice', setMinPrice)} />
               </span>
               {filterErrors.minPrice && <span id="min-price-error" className="filter-field-error">{filterErrors.minPrice}</span>}
             </label>
             <label>
               Hasta
               <span className="price-input">
-                <span>$</span>
-                <input type="number" min="0" aria-invalid={Boolean(filterErrors.maxPrice)} aria-describedby={filterErrors.maxPrice ? 'max-price-error' : undefined} placeholder="Sin límite" value={maxPrice} onChange={handlePriceChange('maxPrice', setMaxPrice)} />
+                <span className="price-prefix" aria-hidden="true">$</span>
+                <input type="number" inputMode="decimal" min="0" aria-invalid={Boolean(filterErrors.maxPrice)} aria-describedby={filterErrors.maxPrice ? 'max-price-error' : undefined} placeholder="Sin límite" value={maxPrice} onChange={handlePriceChange('maxPrice', setMaxPrice)} />
               </span>
               {filterErrors.maxPrice && <span id="max-price-error" className="filter-field-error">{filterErrors.maxPrice}</span>}
             </label>
