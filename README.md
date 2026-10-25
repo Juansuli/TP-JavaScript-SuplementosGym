@@ -217,3 +217,7 @@ Para abrir la interfaz visual de Playwright durante el desarrollo:
 ```cmd
 npm run test:e2e:ui
 ```
+
+## Baja logica de productos
+
+Se utiliza el campo existente estado: Borrar lo cambia a inhabilitado, oculta el producto del catalogo y conserva sus datos e imagen. En administracion aparece Restablecer, con confirmacion, que lo cambia a habilitado. El stock determina si puede comprarse. No requiere columnas nuevas ni migraciones. Los estados antiguos siguen siendo compatibles.

@@ -43,7 +43,7 @@ const Producto = sequelize.define(
     estado: {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 'disponible',
+      defaultValue: 'habilitado',
     },
     info_nutricional: {
       type: DataTypes.TEXT,
