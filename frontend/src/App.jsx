@@ -1,4 +1,5 @@
-import { useCallback, useRef, useState } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import ProductCatalog from './components/ProductCatalog'
 import AdminProducts from './components/AdminProducts'
 import AdminOrders from './components/AdminOrders'
@@ -16,6 +17,18 @@ import { enableClientProfile } from './services/client.service'
 import { getProducts } from './services/product.service'
 import './App.css'
 
+const VIEW_PATHS = {
+  catalogo: '/catalogo',
+  'mis-compras': '/mis-compras',
+  'mis-sugerencias': '/mis-sugerencias',
+  'mi-perfil': '/mi-perfil',
+  admin: '/admin/productos',
+  'admin-orders': '/admin/pedidos',
+  'admin-clients': '/admin/clientes',
+  'admin-discounts': '/admin/descuentos',
+  'admin-admins': '/admin/administradores',
+}
+
 const CURRENT_USER_STORAGE_KEY = 'dosis_current_user'
 
 function loadStoredUser() {
@@ -28,7 +41,9 @@ function loadStoredUser() {
 }
 
 function App() {
-  const [view, setView] = useState('catalogo')
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const view = Object.keys(VIEW_PATHS).find((key) => VIEW_PATHS[key] === pathname || (key === 'catalogo' && pathname.startsWith('/catalogo/')))
   const [currentUser, setCurrentUser] = useState(loadStoredUser)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [cart, setCart] = useState([])
@@ -36,6 +51,10 @@ function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [toasts, setToasts] = useState([])
   const nextToastId = useRef(0)
+
+  useEffect(() => {
+    setIsMenuOpen(false)
+  }, [pathname])
 
   const isAdmin = currentUser?.rol === 'administrador'
   // Un administrador también puede comprar si activó su perfil de cliente
@@ -68,7 +87,7 @@ function App() {
   function handleLogout() {
     setCurrentUser(null)
     localStorage.removeItem(CURRENT_USER_STORAGE_KEY)
-    setView('catalogo')
+    navigate('/catalogo', { replace: true })
     setCart([])
     setIsCartOpen(false)
   }
@@ -199,7 +218,7 @@ function App() {
   }
 
   function changeView(nextView) {
-    setView(nextView)
+    navigate(VIEW_PATHS[nextView])
     setIsMenuOpen(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -359,20 +378,34 @@ function App() {
       </header>
 
       <main className="app-content">
-        {view === 'admin-orders' && isAdmin ? (
-          <AdminOrders token={currentUser.token} showToast={showToast} />
-        ) : view === 'admin-clients' && isAdmin ? (
-          <AdminClients token={currentUser.token} showToast={showToast} />
-        ) : view === 'admin-discounts' && isAdmin ? (
-          <AdminDiscounts token={currentUser.token} showToast={showToast} />
-        ) : view === 'admin-admins' && isAdmin ? (
-          <AdminAdministrators currentUser={currentUser} showToast={showToast} onSelfUpdated={handleProfileUpdated} />
-        ) : view === 'admin' && isAdmin ? (
-          <AdminProducts token={currentUser.token} showToast={showToast} />
-        ) : view === 'mis-compras' && canOrder ? (
-          <MyOrders token={currentUser.token} showToast={showToast} />
-        ) : view === 'mis-sugerencias' && canOrder ? (
-          <MySuggestions
+        <Routes>
+          <Route path="/" element={<Navigate to="/catalogo" replace />} />
+          <Route path="/catalogo/:productSlug?" element={<ProductCatalog
+            cartQuantities={cartQuantities}
+            onAddToCart={canOrder ? addToCart : undefined}
+            showDiscountInfo={canOrder && !isAdmin}
+            showToast={showToast}
+          />} />
+          <Route path="/admin/pedidos" element={isAdmin ? (
+            <AdminOrders token={currentUser.token} showToast={showToast} />
+          ) : <Navigate to="/catalogo" replace />} />
+          <Route path="/admin/clientes" element={isAdmin ? (
+            <AdminClients token={currentUser.token} showToast={showToast} />
+          ) : <Navigate to="/catalogo" replace />} />
+          <Route path="/admin/descuentos" element={isAdmin ? (
+            <AdminDiscounts token={currentUser.token} showToast={showToast} />
+          ) : <Navigate to="/catalogo" replace />} />
+          <Route path="/admin/administradores" element={isAdmin ? (
+            <AdminAdministrators currentUser={currentUser} showToast={showToast} onSelfUpdated={handleProfileUpdated} />
+          ) : <Navigate to="/catalogo" replace />} />
+          <Route path="/admin/productos" element={isAdmin ? (
+            <AdminProducts token={currentUser.token} showToast={showToast} />
+          ) : <Navigate to="/catalogo" replace />} />
+          <Route path="/mis-compras" element={canOrder ? (
+            <MyOrders token={currentUser.token} showToast={showToast} />
+          ) : <Navigate to="/catalogo" replace />} />
+          <Route path="/mis-sugerencias" element={canOrder ? (
+            <MySuggestions
             cart={cart}
             cartQuantities={cartQuantities}
             token={currentUser.token}
@@ -380,16 +413,12 @@ function App() {
             onGoToProfile={() => changeView('mi-perfil')}
             showToast={showToast}
           />
-        ) : view === 'mi-perfil' && canOrder ? (
-          <ClientProfile currentUser={currentUser} onProfileUpdated={handleProfileUpdated} showToast={showToast} />
-        ) : (
-          <ProductCatalog
-            cartQuantities={cartQuantities}
-            onAddToCart={canOrder ? addToCart : undefined}
-            showDiscountInfo={canOrder && !isAdmin}
-            showToast={showToast}
-          />
-        )}
+          ) : <Navigate to="/catalogo" replace />} />
+          <Route path="/mi-perfil" element={canOrder ? (
+            <ClientProfile currentUser={currentUser} onProfileUpdated={handleProfileUpdated} showToast={showToast} />
+          ) : <Navigate to="/catalogo" replace />} />
+          <Route path="*" element={<Navigate to="/catalogo" replace />} />
+        </Routes>
       </main>
 
       <footer className="site-footer wrap">
