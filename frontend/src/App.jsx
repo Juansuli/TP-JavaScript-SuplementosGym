@@ -10,6 +10,7 @@ import MySuggestions from './components/MySuggestions'
 import ClientProfile from './components/ClientProfile'
 import AuthModal from './components/AuthModal'
 import Cart from './components/Cart'
+import AccountMenu from './components/AccountMenu'
 import ToastStack from './components/ToastStack'
 import { getRemainingStock } from './utils/stock'
 import { enableClientProfile } from './services/client.service'
@@ -220,7 +221,7 @@ function App() {
             >
               Catálogo
             </button>
-            {canOrder && (
+            {canOrder && !isAdmin && (
               <>
                 <button
                   type="button"
@@ -284,6 +285,7 @@ function App() {
 >
   Administradores
 </button>
+{canOrder && <AccountMenu view={view} onNavigate={changeView} />}
 </>
 )}
           </nav>
@@ -350,9 +352,11 @@ function App() {
               <button type="button" onClick={() => { openCart(); setIsMenuOpen(false) }}>
                 Mi pedido ({cartCount})
               </button>
+              {isAdmin ? <AccountMenu view={view} onNavigate={changeView} /> : <>
               <button type="button" onClick={() => changeView('mis-compras')}>Mis compras</button>
               <button type="button" onClick={() => changeView('mis-sugerencias')}>Mis sugerencias</button>
               <button type="button" onClick={() => changeView('mi-perfil')}>Mi perfil</button>
+              </>}
             </>
           )}
         </nav>

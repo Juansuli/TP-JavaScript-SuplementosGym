@@ -3,6 +3,7 @@ import { createOrder } from '../services/pedido.service'
 import { getClient } from '../services/client.service'
 import AiSuggestion from './AiSuggestion'
 import ProductImage from './ProductImage'
+import QuantityControl from './QuantityControl'
 
 const PAYMENT_METHODS = ['tarjeta', 'efectivo', 'transferencia']
 const priceFormatter = new Intl.NumberFormat('es-AR', {
@@ -218,16 +219,12 @@ function Cart({
                     </div>
                     <span className="cart-item-subtotal tabnum">{priceFormatter.format(item.precio * item.cantidad)}</span>
                     <div className="cart-item-actions">
-                      <label className="cart-quantity">
-                        <span>Cantidad</span>
-                        <input
-                          type="number"
-                          min="1"
-                          max={item.stock}
-                          value={item.cantidad}
-                          onChange={(event) => onUpdateQuantity(item.id_producto, Number(event.target.value))}
-                        />
-                      </label>
+                      <QuantityControl
+                        quantity={item.cantidad}
+                        stock={item.stock}
+                        productName={item.nombre}
+                        onChange={(quantity) => onUpdateQuantity(item.id_producto, quantity)}
+                      />
                       <button type="button" className="remove-link" onClick={() => onRemoveItem(item.id_producto)}>Quitar</button>
                     </div>
                   </li>
