@@ -24,6 +24,14 @@ function QuantityControl({ quantity, stock, productName, onChange }) {
     if (/^\d+$/.test(value)) update(Number(value))
   }
 
+  if (stock <= 0) {
+    return (
+      <div className="cart-quantity">
+        <span>Sin stock</span>
+      </div>
+    )
+  }
+
   return (
     <div className="cart-quantity">
       <label htmlFor={id}>Cantidad</label>

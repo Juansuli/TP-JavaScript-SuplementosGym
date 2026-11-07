@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import ProductCatalog from './components/ProductCatalog'
 import AdminProducts from './components/AdminProducts'
 import AdminOrders from './components/AdminOrders'
@@ -12,7 +12,7 @@ import AuthModal from './components/AuthModal'
 import Cart from './components/Cart'
 import AccountMenu from './components/AccountMenu'
 import ToastStack from './components/ToastStack'
-import { getRemainingStock } from './utils/stock'
+import { getRemainingStock, revalidateCartStock } from './utils/stock'
 import { enableClientProfile } from './services/client.service'
 import { getProducts } from './services/product.service'
 import './App.css'
@@ -46,6 +46,13 @@ function App() {
   const cartQuantities = Object.fromEntries(
     cart.map((item) => [item.id_producto, item.cantidad])
   )
+  // Última versión del carrito, para las funciones asíncronas que siguen
+  // esperando al backend mientras el usuario lo modifica.
+  const cartRef = useRef(cart)
+
+  useEffect(() => {
+    cartRef.current = cart
+  }, [cart])
 
   const dismissToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id))
@@ -155,31 +162,17 @@ function App() {
   // ajusta las cantidades del carrito si hace falta, para no dejar que el
   // usuario confirme un pedido con una cantidad que ya no está disponible.
   async function refreshCartStock() {
-    if (cart.length === 0) return { cart, didClamp: false }
+    if (cartRef.current.length === 0) return { cart: cartRef.current, didClamp: false }
 
     try {
       const products = await getProducts()
-      let didClamp = false
 
-      const nextCart = cart
-        .map((item) => {
-          const product = products.find((p) => p.id_producto === item.id_producto)
-          if (!product) {
-            didClamp = true
-            return null
-          }
-
-          const nextQuantity = Math.min(item.cantidad, product.stock)
-          if (nextQuantity !== item.cantidad) didClamp = true
-
-          return { ...item, stock: product.stock, cantidad: nextQuantity }
-        })
-        .filter((item) => item !== null && item.cantidad > 0)
-
-      setCart(nextCart)
-      return { cart: nextCart, didClamp }
+      // El stock se aplica sobre el carrito actual y no sobre el de antes de
+      // la consulta: el usuario pudo cambiar cantidades mientras se esperaba.
+      setCart((prev) => revalidateCartStock(prev, products).cart)
+      return revalidateCartStock(cartRef.current, products)
     } catch {
-      return { cart, didClamp: false }
+      return { cart: cartRef.current, didClamp: false }
     }
   }
 

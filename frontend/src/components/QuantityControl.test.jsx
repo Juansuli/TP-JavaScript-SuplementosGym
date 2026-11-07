@@ -49,3 +49,20 @@ test('restores empty drafts, rejects fractions and supports keyboard arrows', ()
   fireEvent.keyDown(input, { key: 'ArrowDown' })
   expect(input).toHaveValue('2')
 })
+
+test('shows the product as out of stock instead of a quantity selector', () => {
+  render(<QuantityControl quantity={1} stock={0} productName="Whey" onChange={() => {}} />)
+  expect(screen.getByText('Sin stock')).toBeInTheDocument()
+  expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /Aumentar|Disminuir/ })).not.toBeInTheDocument()
+})
+
+test('follows the stock when it drops', () => {
+  const props = { productName: 'Whey', onChange: () => {} }
+  const { rerender } = render(<QuantityControl {...props} quantity={3} stock={5} />)
+  rerender(<QuantityControl {...props} quantity={2} stock={2} />)
+  const input = screen.getByRole('spinbutton')
+  expect(input).toHaveValue('2')
+  expect(input).toHaveAttribute('aria-valuemax', '2')
+  expect(screen.getByRole('button', { name: /Aumentar/ })).toBeDisabled()
+})
