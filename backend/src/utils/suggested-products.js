@@ -1,7 +1,7 @@
-const { getPositiveInteger } = require('../middlewares/sugerencia-validation.middleware');
+const { getPositiveInteger } = require('../middlewares/suggestion-validation.middleware');
 
 // respuesta_IA guarda como JSON los { id_producto, motivo } ya validados
-// (ver sugerencia.controller.js). Este es el único lugar que la parsea:
+// (ver suggestion.controller.js). Este es el único lugar que la parsea:
 // devuelve [] cuando el texto guardado falta o está mal formado.
 // Por las dudas, se descartan los items sin id entero positivo y los ids
 // repetidos (se queda con la primera aparición).

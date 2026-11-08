@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getClients, setClientStatus, updateClient } from '../services/client.service'
-import { getDiscounts } from '../services/descuento.service'
+import { getDiscounts } from '../services/discount.service'
 
 function AdminClients({ token, showToast }) {
   const [clients, setClients] = useState([])

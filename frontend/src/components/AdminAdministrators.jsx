@@ -75,11 +75,11 @@ function AdminAdministrators({ currentUser, showToast, onSelfUpdated }) {
     closeForm()
   }
 
-  async function changeStatus(admin, activo) {
+  async function changeStatus(admin, isActive) {
     setUpdatingId(admin.id_usuario)
 
     try {
-      const updated = await setAdminStatus(admin.id_usuario, activo, token)
+      const updated = await setAdminStatus(admin.id_usuario, isActive, token)
       replaceAdmin(updated)
       showToast(
         updated.activo

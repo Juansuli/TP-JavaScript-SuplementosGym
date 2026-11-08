@@ -19,10 +19,10 @@ import { getProducts } from './services/product.service'
 import './App.css'
 
 const VIEW_PATHS = {
-  catalogo: '/catalogo',
-  'mis-compras': '/mis-compras',
-  'mis-sugerencias': '/mis-sugerencias',
-  'mi-perfil': '/mi-perfil',
+  catalog: '/catalogo',
+  'my-orders': '/mis-compras',
+  'my-suggestions': '/mis-sugerencias',
+  'my-profile': '/mi-perfil',
   admin: '/admin/productos',
   'admin-orders': '/admin/pedidos',
   'admin-clients': '/admin/clientes',
@@ -78,7 +78,7 @@ function App() {
   const navigate = useNavigate()
   const location = useLocation()
   const { pathname } = location
-  const view = Object.keys(VIEW_PATHS).find((key) => VIEW_PATHS[key] === pathname || (key === 'catalogo' && pathname.startsWith('/catalogo/')))
+  const view = Object.keys(VIEW_PATHS).find((key) => VIEW_PATHS[key] === pathname || (key === 'catalog' && pathname.startsWith('/catalogo/')))
   const [currentUser, setCurrentUser] = useState(loadStoredUser)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [cart, setCart] = useState([])
@@ -227,12 +227,12 @@ function App() {
     return true
   }
 
-  function updateCartQuantity(id_producto, cantidad) {
+  function updateCartQuantity(productId, quantity) {
     if (isCartSavingRef.current) return
     updateCart((prev) =>
       prev.map((item) => {
-        if (item.id_producto !== id_producto) return item
-        const clamped = Math.max(1, Math.min(cantidad || 1, item.stock))
+        if (item.id_producto !== productId) return item
+        const clamped = Math.max(1, Math.min(quantity || 1, item.stock))
         return { ...item, cantidad: clamped }
       })
     )
@@ -315,9 +315,9 @@ function App() {
     setIsCartOpen(false)
   }
 
-  function removeFromCart(id_producto) {
+  function removeFromCart(productId) {
     if (isCartSavingRef.current) return
-    updateCart((prev) => prev.filter((item) => item.id_producto !== id_producto))
+    updateCart((prev) => prev.filter((item) => item.id_producto !== productId))
   }
 
   function handleCartSavingChange(isSaving) {
@@ -503,7 +503,7 @@ function App() {
                 cartQuantities={cartQuantities}
                 token={currentUser?.token}
                 addProductsToCart={addProductsToCart}
-                onGoToProfile={() => goToView('mi-perfil')}
+                onGoToProfile={() => goToView('my-profile')}
                 showToast={showToast}
               />
             </ProtectedRoute>
@@ -562,7 +562,7 @@ function App() {
           addProductsToCart={addProductsToCart}
           onGoToProfile={() => {
             closeCart()
-            goToView('mi-perfil')
+            goToView('my-profile')
           }}
           onUpdateQuantity={updateCartQuantity}
           onRemoveItem={removeFromCart}

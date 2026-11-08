@@ -5,7 +5,7 @@ import {
   createDiscount,
   updateDiscount,
   deleteDiscount,
-} from '../services/descuento.service'
+} from '../services/discount.service'
 
 const EMPTY_FORM = { categoria: '', porcentaje: '' }
 

@@ -30,10 +30,10 @@ function revalidateCartStock(cart, products) {
       return []
     }
 
-    const precio = Number(product.precio)
-    if (precio !== item.precio) didChangePrice = true
+    const price = Number(product.precio)
+    if (price !== item.precio) didChangePrice = true
 
-    return [{ ...item, stock: product.stock, precio, cantidad: nextQuantity }]
+    return [{ ...item, stock: product.stock, precio: price, cantidad: nextQuantity }]
   })
 
   return { cart: nextCart, didClamp, didChangePrice, removedItems }

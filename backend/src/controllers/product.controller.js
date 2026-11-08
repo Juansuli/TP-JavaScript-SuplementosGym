@@ -1,0 +1,194 @@
+const fs = require('fs/promises');
+const path = require('path');
+const { Op } = require('sequelize');
+const Product = require('../models/product.model');
+const { getProductStatus } = require('../utils/product-status');
+const { productImagesDirectory } = require('../middlewares/product-image.middleware');
+const { validateProduct } = require('../middlewares/product-validation.middleware');
+
+const EDITABLE_FIELDS = [
+  'nombre',
+  'descripcion',
+  'precio',
+  'stock',
+  'info_nutricional',
+];
+
+function getProductImageUrl(file) {
+  return file ? `/uploads/productos/${file.filename}` : undefined;
+}
+
+async function removeUploadedFile(file) {
+  if (!file) return;
+  await fs.unlink(file.path).catch(() => {});
+}
+
+async function removeProductImage(imageUrl) {
+  if (!imageUrl) return;
+
+  const filename = path.basename(imageUrl);
+  if (imageUrl !== `/uploads/productos/${filename}`) return;
+
+  await fs.unlink(path.join(productImagesDirectory, filename)).catch(() => {});
+}
+
+function getProductId(value) {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function getEditableData(body) {
+  return Object.fromEntries(
+    EDITABLE_FIELDS
+      .filter((field) => body[field] !== undefined)
+      .map((field) => [field, field === 'nombre' ? body[field].trim() : body[field]])
+  );
+}
+
+async function listProducts(req, res) {
+  try {
+    const { precioMin: minPrice, precioMax: maxPrice } = req.query;
+    const where = req.includeDiscontinued ? {} : { estado: { [Op.notIn]: ['inhabilitado', 'descontinuado'] } };
+
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      const minimum = minPrice === undefined ? undefined : Number(minPrice);
+      const maximum = maxPrice === undefined ? undefined : Number(maxPrice);
+
+      if ((minimum !== undefined && (Number.isNaN(minimum) || minimum < 0)) ||
+          (maximum !== undefined && (Number.isNaN(maximum) || maximum < 0)) ||
+          (minimum !== undefined && maximum !== undefined && minimum > maximum)) {
+        return res.status(400).json({ error: 'El rango de precio no es válido.' });
+      }
+
+      where.precio = {};
+      if (minimum !== undefined) where.precio[Op.gte] = minimum;
+      if (maximum !== undefined) where.precio[Op.lte] = maximum;
+    }
+
+    const products = await Product.findAll({ where, order: [['id_producto', 'ASC']] });
+    return res.json(products);
+  } catch (error) {
+    return res.status(500).json({ error: 'No se pudieron obtener los productos.' });
+  }
+}
+
+async function getProduct(req, res) {
+  const id = getProductId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'El id de producto no es válido.' });
+
+  try {
+    const product = await Product.findByPk(id);
+    if (!product || ['inhabilitado', 'descontinuado'].includes(product.estado)) return res.status(404).json({ error: 'Producto no encontrado.' });
+    return res.json(product);
+  } catch (error) {
+    return res.status(500).json({ error: 'No se pudo obtener el producto.' });
+  }
+}
+
+async function createProduct(req, res) {
+  const errors = validateProduct(req.body);
+  if (errors.length) {
+    await removeUploadedFile(req.file);
+    return res.status(400).json({ error: errors });
+  }
+
+  try {
+    const data = getEditableData(req.body);
+    data.estado = 'habilitado';
+
+    const imageUrl = getProductImageUrl(req.file);
+    if (imageUrl) data.imagen_url = imageUrl;
+
+    const product = await Product.create(data);
+    return res.status(201).json(product);
+  } catch (error) {
+    await removeUploadedFile(req.file);
+    return res.status(500).json({ error: 'No se pudo crear el producto.' });
+  }
+}
+
+async function updateProduct(req, res) {
+  const id = getProductId(req.params.id);
+  if (!id) {
+    await removeUploadedFile(req.file);
+    return res.status(400).json({ error: 'El id de producto no es válido.' });
+  }
+
+  const errors = validateProduct(req.body, true);
+  if (errors.length) {
+    await removeUploadedFile(req.file);
+    return res.status(400).json({ error: errors });
+  }
+
+  const data = getEditableData(req.body);
+  if (Object.keys(data).length === 0 && !req.file) {
+    return res.status(400).json({ error: 'Enviá al menos un campo editable.' });
+  }
+
+  try {
+    const product = await Product.findByPk(id);
+    if (!product) {
+      await removeUploadedFile(req.file);
+      return res.status(404).json({ error: 'Producto no encontrado.' });
+    }
+
+    if (data.stock !== undefined) {
+      data.estado = getProductStatus(data.stock, product.estado);
+    }
+
+    const previousImageUrl = product.imagen_url;
+    const imageUrl = getProductImageUrl(req.file);
+    if (imageUrl) data.imagen_url = imageUrl;
+
+    await product.update(data);
+    if (imageUrl) await removeProductImage(previousImageUrl);
+
+    return res.json(product);
+  } catch (error) {
+    await removeUploadedFile(req.file);
+    return res.status(500).json({ error: 'No se pudo actualizar el producto.' });
+  }
+}
+
+async function deleteProduct(req, res) {
+  const id = getProductId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'El id de producto no es válido.' });
+
+  try {
+    const product = await Product.findByPk(id);
+    if (!product) return res.status(404).json({ error: 'Producto no encontrado.' });
+
+    await product.update({ estado: 'inhabilitado' });
+    return res.json(product);
+  } catch (error) {
+    return res.status(500).json({ error: 'No se pudo eliminar el producto.' });
+  }
+}
+
+async function restoreProduct(req, res) {
+  const id = getProductId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'El id de producto no es valido.' });
+  try {
+    const product = await Product.findByPk(id);
+    if (!product) return res.status(404).json({ error: 'Producto no encontrado.' });
+    await product.update({ estado: 'habilitado' });
+    return res.json(product);
+  } catch (error) {
+    return res.status(500).json({ error: 'No se pudo restablecer el producto.' });
+  }
+}
+
+function listAdminProducts(req, res) {
+  req.includeDiscontinued = true;
+  return listProducts(req, res);
+}
+
+module.exports = {
+  restoreProduct,
+  listAdminProducts,
+  listProducts,
+  getProduct,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+};

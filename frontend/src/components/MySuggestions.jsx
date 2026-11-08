@@ -19,9 +19,9 @@ const dateFormatter = new Intl.DateTimeFormat('es-AR', {
 // Reusa los mismos colores de badge que los pedidos: pendiente y
 // rechazada ya tienen estilo propio; aceptada queda con el color base
 // de .status-tag, igual que un pedido confirmado.
-function getStatusBadgeModifier(estado) {
-  if (estado === 'rechazada') return 'cancelado'
-  if (estado === 'aceptada') return 'confirmado'
+function getStatusBadgeModifier(status) {
+  if (status === 'rechazada') return 'cancelado'
+  if (status === 'aceptada') return 'confirmado'
   return 'pendiente'
 }
 
@@ -84,10 +84,10 @@ function MySuggestions({ cart, cartQuantities, token, addProductsToCart, onGoToP
     }
   }
 
-  function updateRowEstado(suggestionId, estado) {
+  function updateRowStatus(suggestionId, status) {
     setSuggestions((prev) =>
       prev.map((item) =>
-        item.id_sugerencia === suggestionId ? { ...item, estado } : item
+        item.id_sugerencia === suggestionId ? { ...item, estado: status } : item
       )
     )
   }
@@ -103,7 +103,7 @@ function MySuggestions({ cart, cartQuantities, token, addProductsToCart, onGoToP
         addProductsToCart,
         token
       )
-      updateRowEstado(suggestion.id_sugerencia, 'aceptada')
+      updateRowStatus(suggestion.id_sugerencia, 'aceptada')
       showToast(buildAcceptedToast(addedCount, outOfStockCount, alreadyInCartCount))
     } catch (err) {
       showToast(err.message, 'error')

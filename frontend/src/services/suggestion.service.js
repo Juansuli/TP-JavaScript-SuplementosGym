@@ -1,11 +1,11 @@
 // Concentrates every call to the backend's sugerencias endpoints (the
 // AI product suggestions) so the components never talk to fetch()
-// directly. Same pattern as pedido.service.js.
+// directly. Same pattern as order.service.js.
 import { API_ORIGIN } from '../config/api'
 
 const API_BASE_URL = `${API_ORIGIN}/api/sugerencias`
 
-// Same inconsistent error shape as pedido.service.js: sometimes a single
+// Same inconsistent error shape as order.service.js: sometimes a single
 // string, sometimes an array of validation messages.
 function parseErrorMessage(body) {
   if (!body || !body.error) return 'Ocurrió un error inesperado.'
@@ -76,7 +76,7 @@ async function getSuggestion(id, token) {
   return body
 }
 
-async function updateSuggestionStatus(id, estado, token) {
+async function updateSuggestionStatus(id, status, token) {
   let response
   try {
     response = await fetch(`${API_BASE_URL}/${id}/estado`, {
@@ -85,7 +85,7 @@ async function updateSuggestionStatus(id, estado, token) {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ estado }),
+      body: JSON.stringify({ estado: status }),
     })
   } catch {
     throw new Error('No se pudo conectar con el servidor.')

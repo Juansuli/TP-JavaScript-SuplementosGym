@@ -1,0 +1,498 @@
+const { Op } = require('sequelize');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const sequelize = require('../config/db');
+const User = require('../models/user.model');
+const Admin = require('../models/admin.model');
+const Client = require('../models/client.model');
+const ClientGoal = require('../models/client_goal.model');
+const Order = require('../models/order.model');
+const { validateRegistration, validateUserUpdate, validateClientData, validateRequiredProfileData } = require('../middlewares/client-validation.middleware');
+const Discount = require('../models/discount.model');
+const { ensureAnotherActiveAdmin, LAST_ACTIVE_ADMIN_ERROR } = require('../utils/admin-guard');
+
+const USER_FIELDS = ['email', 'nombre', 'apellido'];
+const CLIENT_FIELDS = [
+  'fecha_nacimiento',
+  'genero',
+  'peso_kg',
+  'altura_cm',
+  'ocupacion',
+  'deporte',
+  'dias_entrenamiento',
+  'direccion_entrega',
+  'descuento_categoria',
+];
+const DISCOUNT_FORBIDDEN_MESSAGE = 'Solo un administrador puede asignar una categoría de descuento.';
+
+function signToken(user) {
+  return jwt.sign(
+    { id_usuario: user.id_usuario, rol: user.rol },
+    process.env.JWT_SECRET,
+    { algorithm: 'HS256', expiresIn: process.env.JWT_EXPIRES_IN || '30m' }
+  );
+}
+
+function getClientId(value) {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function getAllowedData(body, fields) {
+  return Object.fromEntries(
+    fields
+      .filter((field) => body[field] !== undefined)
+      .map((field) => [field, typeof body[field] === 'string' ? body[field].trim() : body[field]])
+  );
+}
+
+// Los objetivos llegan como lista en "objetivos" y se guardan en la tabla
+// cliente_objetivo, no en cliente, así que van aparte de CLIENT_FIELDS.
+function getGoalsData(body) {
+  return body.objetivos !== undefined ? { objetivos: body.objetivos } : {};
+}
+
+async function getClientGoals(id, transaction) {
+  const rows = await ClientGoal.findAll({
+    where: { id_cliente: id },
+    order: [['objetivo', 'ASC']],
+    ...(transaction ? { transaction } : {}),
+  });
+
+  return rows.map((row) => row.objetivo);
+}
+
+// Reemplaza todos los objetivos del cliente por la lista nueva. Se llama
+// dentro de una transacción para no dejar al cliente con la mitad guardada.
+// Con null el cliente queda sin objetivos.
+async function replaceClientGoals(id, goals, transaction) {
+  await ClientGoal.destroy({ where: { id_cliente: id }, transaction });
+
+  if (goals && goals.length > 0) {
+    await ClientGoal.bulkCreate(
+      goals.map((goal) => ({ id_cliente: id, objetivo: goal })),
+      { transaction }
+    );
+  }
+
+  return goals ? [...goals].sort() : [];
+}
+
+async function ensureDiscountCategoryExists(category, transaction) {
+  if (category === undefined || category === null) return;
+
+  const discount = await Discount.findByPk(
+    category,
+    transaction ? { transaction } : {}
+  );
+
+  if (!discount) {
+    throw new Error('DISCOUNT_CATEGORY_NOT_FOUND');
+  }
+}
+
+function buildClientResponse(client, user, goals = []) {
+  const clientData = client.toJSON();
+  const userData = user.toJSON();
+  delete userData.contraseña;
+
+  return {
+    ...userData,
+    ...clientData,
+    objetivos: goals,
+    // Le dice al frontend si este usuario ya tiene perfil de cliente, sin
+    // importar su rol -- es lo que le permite a un administrador comprar.
+    es_cliente: true,
+  };
+}
+
+async function addDiscountPercentage(clientResponse) {
+  if (!clientResponse.descuento_categoria) return clientResponse;
+
+  const discount = await Discount.findByPk(clientResponse.descuento_categoria);
+  return {
+    ...clientResponse,
+    descuento_porcentaje: discount ? Number(discount.porcentaje) : null,
+  };
+}
+
+async function getClientWithUser(id) {
+  const client = await Client.findByPk(id);
+  if (!client) return null;
+
+  const user = await User.findByPk(id);
+  if (!user) return null;
+
+return addDiscountPercentage(
+  buildClientResponse(client, user, await getClientGoals(id))
+);
+}
+
+async function listClients(req, res) {
+  try {
+    const clients = await Client.findAll({ order: [['id_cliente', 'ASC']] });
+    const clientIds = clients.map((client) => client.id_cliente);
+
+    if (clientIds.length === 0) return res.json([]);
+
+    const users = await User.findAll({
+      where: { id_usuario: { [Op.in]: clientIds } },
+    });
+    const usersById = new Map(users.map((user) => [user.id_usuario, user]));
+
+    const goalRows = await ClientGoal.findAll({
+      where: { id_cliente: { [Op.in]: clientIds } },
+      order: [['objetivo', 'ASC']],
+    });
+    const goalsByClient = new Map();
+    goalRows.forEach((row) => {
+      if (!goalsByClient.has(row.id_cliente)) goalsByClient.set(row.id_cliente, []);
+      goalsByClient.get(row.id_cliente).push(row.objetivo);
+    });
+
+const response = await Promise.all(
+  clients
+    .filter((client) => usersById.has(client.id_cliente))
+    .map((client) => addDiscountPercentage(
+      buildClientResponse(
+        client,
+        usersById.get(client.id_cliente),
+        goalsByClient.get(client.id_cliente) || []
+      )
+    ))
+);
+
+    return res.json(response);
+  } catch (error) {
+    return res.status(500).json({ error: 'No se pudieron obtener los clientes.' });
+  }
+}
+
+async function getClient(req, res) {
+  const id = getClientId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'El id de cliente no es válido.' });
+
+  if (req.user.rol !== 'administrador' && req.user.id_usuario !== id) {
+    return res.status(404).json({ error: 'Cliente no encontrado.' });
+  }
+
+  try {
+    const client = await getClientWithUser(id);
+    if (!client) return res.status(404).json({ error: 'Cliente no encontrado.' });
+    return res.json(client);
+  } catch (error) {
+    return res.status(500).json({ error: 'No se pudo obtener el cliente.' });
+  }
+}
+
+async function login(req, res) {
+  const { email, password } = req.body;
+
+  if (typeof email !== 'string' || typeof password !== 'string') {
+    return res.status(400).json({ error: 'El email y la contraseña son obligatorios.' });
+  }
+
+  try {
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(401).json({ error: 'Email o contraseña incorrectos.' });
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.contraseña);
+    if (!passwordMatches) {
+      return res.status(401).json({ error: 'Email o contraseña incorrectos.' });
+    }
+
+    if (!user.activo) {
+      return res.status(403).json({ error: 'Tu cuenta está inhabilitada. Contactá a un administrador.' });
+    }
+
+    const token = signToken(user);
+
+    // Un administrador puede además tener perfil de cliente (ver
+    // enableClientProfile) -- si lo tiene, se lo devolvemos junto con sus
+    // datos para que el frontend sepa que puede hacer pedidos.
+    const clientProfile = await Client.findByPk(user.id_usuario);
+    if (clientProfile) {
+const goals = await getClientGoals(user.id_usuario);
+const clientResponse = await addDiscountPercentage(
+  buildClientResponse(clientProfile, user, goals)
+);
+return res.json({ ...clientResponse, token });
+    }
+
+    const userData = user.toJSON();
+    delete userData.contraseña;
+    return res.json({ ...userData, es_cliente: false, token });
+  } catch (error) {
+    return res.status(500).json({ error: 'No se pudo iniciar sesión.' });
+  }
+}
+
+async function createClient(req, res) {
+  // El registro es público: nadie puede elegir su propio descuento.
+  if (req.body.descuento_categoria !== undefined) {
+    return res.status(403).json({ error: DISCOUNT_FORBIDDEN_MESSAGE });
+  }
+
+  const registrationErrors = validateRegistration(req.body);
+  const clientData = getAllowedData(req.body, CLIENT_FIELDS);
+  const goalsData = getGoalsData(req.body);
+  const clientErrors = validateClientData({ ...clientData, ...goalsData });
+  const errors = [...registrationErrors, ...clientErrors];
+
+  if (errors.length) return res.status(400).json({ error: errors });
+
+  const userData = getAllowedData(req.body, USER_FIELDS);
+
+  try {
+    const client = await sequelize.transaction(async (transaction) => {
+      const hashedPassword = await bcrypt.hash(req.body.password, 10);
+
+      const user = await User.create(
+        {
+          ...userData,
+          rol: 'cliente',
+          contraseña: hashedPassword,
+        },
+        { transaction }
+      );
+
+      const newClient = await Client.create(
+        {
+          id_cliente: user.id_usuario,
+          ...clientData,
+        },
+        { transaction }
+      );
+
+      const goals = goalsData.objetivos !== undefined
+        ? await replaceClientGoals(user.id_usuario, goalsData.objetivos, transaction)
+        : [];
+
+      return { ...buildClientResponse(newClient, user, goals), token: signToken(user) };
+    });
+
+    return res.status(201).json(client);
+  } catch (error) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ error: 'Ya existe un usuario con ese email.' });
+    }
+
+    return res.status(500).json({ error: 'No se pudo crear el cliente.' });
+  }
+}
+
+async function updateClient(req, res) {
+  const id = getClientId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'El id de cliente no es válido.' });
+
+  if (req.user.rol !== 'administrador' && req.user.id_usuario !== id) {
+    return res.status(404).json({ error: 'Cliente no encontrado.' });
+  }
+
+  // Un cliente puede editar su perfil, pero no asignarse un descuento.
+  if (req.user.rol !== 'administrador' && req.body.descuento_categoria !== undefined) {
+    return res.status(403).json({ error: DISCOUNT_FORBIDDEN_MESSAGE });
+  }
+
+  const userData = getAllowedData(req.body, USER_FIELDS);
+  const clientData = getAllowedData(req.body, CLIENT_FIELDS);
+  const goalsData = getGoalsData(req.body);
+  const profileData = { ...userData, ...clientData, ...goalsData };
+  const isAdminDiscountOnlyUpdate = req.user.rol === 'administrador'
+    && Object.keys(userData).length === 0
+    && Object.keys(clientData).length === 1
+    && Object.keys(goalsData).length === 0
+    && clientData.descuento_categoria !== undefined;
+
+  const errors = req.user.id_usuario === id && !isAdminDiscountOnlyUpdate
+    ? validateRequiredProfileData(profileData)
+    : [...validateUserUpdate(userData), ...validateClientData({ ...clientData, ...goalsData })];
+  if (errors.length) return res.status(400).json({ error: errors });
+
+  if (Object.keys(profileData).length === 0) {
+    return res.status(400).json({ error: 'Enviá al menos un campo editable.' });
+  }
+
+  try {
+    const client = await sequelize.transaction(async (transaction) => {
+      const existingClient = await Client.findByPk(id, { transaction });
+      const existingUser = await User.findByPk(id, { transaction });
+
+      if (!existingClient || !existingUser) return null;
+
+      await ensureDiscountCategoryExists(
+        clientData.descuento_categoria,
+        transaction
+      );
+
+      if (Object.keys(userData).length > 0) {
+        await existingUser.update(userData, { transaction });
+      }
+
+      if (Object.keys(clientData).length > 0) {
+        await existingClient.update(clientData, { transaction });
+      }
+
+      const goals = goalsData.objetivos !== undefined
+        ? await replaceClientGoals(id, goalsData.objetivos, transaction)
+        : await getClientGoals(id, transaction);
+
+      return buildClientResponse(existingClient, existingUser, goals);
+    });
+
+    if (!client) return res.status(404).json({ error: 'Cliente no encontrado.' });
+    return res.json(client);
+  } catch (error) {
+    if (error.message === 'DISCOUNT_CATEGORY_NOT_FOUND') {
+      return res.status(400).json({
+        error: 'La categoría de descuento no existe.',
+      });
+    }
+
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ error: 'Ya existe un usuario con ese email.' });
+    }
+
+    return res.status(500).json({ error: 'No se pudo actualizar el cliente.' });
+  }
+}
+
+// Le crea un perfil de cliente a un administrador ya logueado, para que
+// pueda hacer pedidos como cualquier cliente sin dejar de ser
+// administrador. En este flujo, los datos del perfil son opcionales.
+// Al guardar el perfil propio, se exigen todos salvo direccion_entrega.
+async function enableClientProfile(req, res) {
+  const id = req.user.id_usuario;
+
+  const clientData = getAllowedData(req.body, CLIENT_FIELDS);
+  const goalsData = getGoalsData(req.body);
+  const clientErrors = validateClientData({ ...clientData, ...goalsData });
+  if (clientErrors.length) return res.status(400).json({ error: clientErrors });
+
+  try {
+    const existingClient = await Client.findByPk(id);
+    if (existingClient) {
+      return res.status(409).json({ error: 'Ya tenés un perfil de cliente.' });
+    }
+
+    await ensureDiscountCategoryExists(clientData.descuento_categoria);
+
+    const user = await User.findByPk(id);
+    const response = await sequelize.transaction(async (transaction) => {
+      const newClient = await Client.create({ id_cliente: id, ...clientData }, { transaction });
+      const goals = goalsData.objetivos !== undefined
+        ? await replaceClientGoals(id, goalsData.objetivos, transaction)
+        : [];
+
+      return buildClientResponse(newClient, user, goals);
+    });
+
+    return res.status(201).json(response);
+  } catch (error) {
+    if (error.message === 'DISCOUNT_CATEGORY_NOT_FOUND') {
+      return res.status(400).json({
+        error: 'La categoría de descuento no existe.',
+      });
+    }
+
+    return res.status(500).json({ error: 'No se pudo habilitar el perfil de cliente.' });
+  }
+}
+
+async function deleteClient(req, res) {
+  const id = getClientId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'El id de cliente no es válido.' });
+
+  if (req.user.rol !== 'administrador' && req.user.id_usuario !== id) {
+    return res.status(404).json({ error: 'Cliente no encontrado.' });
+  }
+
+  try {
+    const orderCount = await Order.count({ where: { usuario_id: id } });
+    if (orderCount > 0) {
+      return res.status(409).json({ error: 'No se puede eliminar un cliente con pedidos asociados.' });
+    }
+
+    const deleted = await sequelize.transaction(async (transaction) => {
+      const client = await Client.findByPk(id, { transaction });
+      if (!client) return false;
+
+      // Primero los objetivos, que tienen FK a cliente.
+      await ClientGoal.destroy({ where: { id_cliente: id }, transaction });
+      await client.destroy({ transaction });
+
+      // Si el usuario también es administrador (perfil de cliente
+      // superpuesto), solo se borra el perfil de cliente -- la cuenta de
+      // administrador se mantiene intacta.
+      const alsoAdmin = await Admin.findByPk(id, { transaction });
+      if (!alsoAdmin) {
+        await User.destroy({ where: { id_usuario: id }, transaction });
+      }
+
+      return true;
+    });
+
+    if (!deleted) return res.status(404).json({ error: 'Cliente no encontrado.' });
+    return res.status(204).send();
+  } catch (error) {
+    return res.status(500).json({ error: 'No se pudo eliminar el cliente.' });
+  }
+}
+
+async function setClientStatus(req, res) {
+  const id = getClientId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'El id de cliente no es válido.' });
+
+  const isActive = req.body ? req.body.activo : undefined;
+  if (typeof isActive !== 'boolean') {
+    return res.status(400).json({ error: 'El campo activo es obligatorio y debe ser true o false.' });
+  }
+
+  // Esta ruta cambia usuario.activo, así que también alcanza a un
+  // administrador con perfil de cliente: aplica las mismas reglas que
+  // /api/administradores/:id/estado.
+  if (id === req.user.id_usuario && !isActive) {
+    return res.status(409).json({ error: 'No podés inhabilitar tu propia cuenta.' });
+  }
+
+  try {
+    const response = await sequelize.transaction(async (transaction) => {
+      const client = await Client.findByPk(id, { transaction });
+      if (!client) return null;
+
+      const user = await User.findByPk(id, { transaction });
+      if (!user) return null;
+
+      if (!isActive && await Admin.findByPk(id, { transaction })) {
+        await ensureAnotherActiveAdmin(id, transaction);
+      }
+
+      await user.update({ activo: isActive }, { transaction });
+
+      return buildClientResponse(client, user, await getClientGoals(id, transaction));
+    });
+
+    if (!response) return res.status(404).json({ error: 'Cliente no encontrado.' });
+    return res.json(response);
+  } catch (error) {
+    if (error.message === LAST_ACTIVE_ADMIN_ERROR) {
+      return res.status(409).json({ error: 'Tiene que quedar al menos un administrador activo.' });
+    }
+
+    return res.status(500).json({ error: 'No se pudo actualizar el estado del cliente.' });
+  }
+}
+
+module.exports = {
+  listClients,
+  getClient,
+  login,
+  createClient,
+  updateClient,
+  deleteClient,
+  setClientStatus,
+  enableClientProfile,
+  signToken,
+};

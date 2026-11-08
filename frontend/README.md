@@ -16,7 +16,7 @@ The React Compiler is not enabled on this template because of its impact on dev 
 Si la base de datos ya existía antes de incorporar descuentos, ejecutá una vez este comando desde la carpeta `backend`:
 
 ```bash
-npm run migrate:pedido-descuento
+npm run migrate:order-discount
 ```
 
 Agrega a la tabla `pedido` el subtotal y los datos del descuento aplicado. El comando es seguro de repetir: no elimina pedidos ni vuelve a crear columnas existentes.
