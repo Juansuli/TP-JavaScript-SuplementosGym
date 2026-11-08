@@ -42,6 +42,9 @@ desktop.ini
 *.bkp
 .$*
 
+# Local database dumps can contain personal data and password hashes
+database-backups/
+
 # Product images are uploaded locally and must not be committed
 backend/uploads/productos/*
 !backend/uploads/productos/.gitkeep

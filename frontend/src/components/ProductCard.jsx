@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getRemainingStock } from '../utils/stock'
 import ProductImage from './ProductImage'
 
@@ -14,7 +15,7 @@ function getStatus(product, remainingStock) {
   return 'Disponible'
 }
 
-function ProductCard({ product, quantityInCart = 0, onSelect, onAddToCart }) {
+function ProductCard({ product, detailPath, quantityInCart = 0, onAddToCart }) {
   const [isAdded, setIsAdded] = useState(false)
   const remainingStock = getRemainingStock(product, quantityInCart)
   const status = getStatus(product, remainingStock)
@@ -46,9 +47,9 @@ function ProductCard({ product, quantityInCart = 0, onSelect, onAddToCart }) {
           <span className={`status-tag status-${status.toLowerCase()}`}>{statusLabel}</span>
           <span className="card-price tabnum">{priceFormatter.format(product.precio)}</span>
         </div>
-        <button type="button" className="product-card-title" onClick={() => onSelect(product.id_producto)}>
+        <Link className="product-card-title" to={detailPath}>
           {product.nombre}
-        </button>
+        </Link>
         <p className="product-card-description">
           {product.descripcion || 'Producto deportivo con ficha técnica disponible.'}
         </p>
@@ -57,9 +58,9 @@ function ProductCard({ product, quantityInCart = 0, onSelect, onAddToCart }) {
           <div><dt>Estado</dt><dd>{statusLabel}</dd></div>
         </dl>
         <div className="product-card-actions">
-          <button type="button" className="btn btn-outline product-card-select" onClick={() => onSelect(product.id_producto)}>
+          <Link className="btn btn-outline product-card-select" to={detailPath}>
             Ver detalle
-          </button>
+          </Link>
           {onAddToCart && (
             <button
               type="button"

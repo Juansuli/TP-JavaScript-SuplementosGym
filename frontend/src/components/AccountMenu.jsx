@@ -1,12 +1,14 @@
 ﻿import { useEffect, useId, useRef, useState } from 'react'
 
+import { NavLink } from 'react-router-dom'
+
 const options = [
-  ['mis-compras', 'Mis compras'],
-  ['mi-perfil', 'Mi perfil'],
-  ['mis-sugerencias', 'Mis sugerencias'],
+  ['mis-compras', 'Mis compras', '/mis-compras'],
+  ['mi-perfil', 'Mi perfil', '/mi-perfil'],
+  ['mis-sugerencias', 'Mis sugerencias', '/mis-sugerencias'],
 ]
 
-function AccountMenu({ view, onNavigate }) {
+function AccountMenu({ view }) {
   const [isOpen, setIsOpen] = useState(false)
   const root = useRef(null)
   const trigger = useRef(null)
@@ -43,15 +45,11 @@ function AccountMenu({ view, onNavigate }) {
       </button>
       {isOpen && (
         <div className="account-dropdown-options" id={id}>
-          {options.map(([key, label]) => (
-            <button type="button" key={key} className={view === key ? 'is-active' : ''}
-              aria-current={view === key ? 'page' : undefined}
-              onClick={() => {
-                setIsOpen(false)
-                onNavigate(key)
-              }}>
+          {options.map(([key, label, path]) => (
+            <NavLink key={key} to={path} className={view === key ? 'is-active' : ''}
+              onClick={() => setIsOpen(false)}>
               {label}
-            </button>
+            </NavLink>
           ))}
         </div>
       )}
