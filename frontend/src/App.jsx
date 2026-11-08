@@ -49,6 +49,7 @@ function App() {
   // Última versión del carrito, para las funciones asíncronas que siguen
   // esperando al backend mientras el usuario lo modifica.
   const cartRef = useRef(cart)
+  const lastStockRefreshId = useRef(0)
 
   useEffect(() => {
     cartRef.current = cart
@@ -164,13 +165,24 @@ function App() {
   async function refreshCartStock() {
     if (cartRef.current.length === 0) return { cart: cartRef.current, didClamp: false }
 
+    lastStockRefreshId.current += 1
+    const refreshId = lastStockRefreshId.current
+
     try {
       const products = await getProducts()
+
+      // Si mientras se esperaba empezó otra consulta, esta respuesta es más
+      // vieja que la de esa consulta y no tiene que pisarla.
+      if (refreshId !== lastStockRefreshId.current) return { cart: cartRef.current, didClamp: false }
 
       // El stock se aplica sobre el carrito actual y no sobre el de antes de
       // la consulta: el usuario pudo cambiar cantidades mientras se esperaba.
       setCart((prev) => revalidateCartStock(prev, products).cart)
-      return revalidateCartStock(cartRef.current, products)
+      const result = revalidateCartStock(cartRef.current, products)
+      result.removedItems.forEach((item) => {
+        showToast(`Se quitó ${item.nombre} del pedido porque ya no está disponible.`, 'error')
+      })
+      return result
     } catch {
       return { cart: cartRef.current, didClamp: false }
     }

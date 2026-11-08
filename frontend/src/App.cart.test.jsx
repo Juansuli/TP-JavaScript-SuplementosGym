@@ -19,10 +19,15 @@ vi.mock('./components/ProductCatalog', () => ({
   ),
 }))
 
+function apiProduct(changes) {
+  return { id_producto: 1, nombre: 'Whey', precio: 100, stock: 5, estado: 'disponible', ...changes }
+}
+
+// Queues a getProducts() response that the test sends later, to simulate a slow backend.
 function deferredProducts() {
   let resolve
   getProducts.mockReturnValueOnce(new Promise((res) => { resolve = res }))
-  return (stock) => resolve([{ id_producto: 1, nombre: 'Whey', precio: 100, stock }])
+  return (changes) => act(async () => resolve([apiProduct(changes)]))
 }
 
 // Opens the cart with one unit, leaving its stock revalidation in flight.
@@ -32,6 +37,11 @@ function openCartWithPendingRevalidation() {
   fireEvent.click(screen.getByRole('button', { name: 'Agregar Whey' }))
   fireEvent.click(screen.getByRole('button', { name: /^Pedido/ }))
   return respond
+}
+
+function fillCheckoutForm() {
+  fireEvent.change(screen.getByPlaceholderText('Nombre y apellido'), { target: { value: 'Ana' } })
+  fireEvent.change(screen.getByPlaceholderText('Calle, número, ciudad'), { target: { value: 'Calle 1' } })
 }
 
 function subtotal() {
@@ -51,7 +61,7 @@ test('keeps a quantity edited while the stock revalidation is pending', async ()
   fireEvent.change(input, { target: { value: '3' } })
   expect(subtotal()).toBe('$300')
 
-  await act(async () => respond(5))
+  await respond()
 
   expect(input).toHaveValue('3')
   expect(subtotal()).toBe('$300')
@@ -62,33 +72,91 @@ test('clamps an edited quantity when the stock dropped below it', async () => {
   const input = screen.getByRole('spinbutton')
 
   fireEvent.change(input, { target: { value: '4' } })
-  respond(2)
+  await respond({ stock: 2 })
 
-  await waitFor(() => expect(input).toHaveValue('2'))
+  expect(input).toHaveValue('2')
   expect(input).toHaveAttribute('aria-valuemax', '2')
   expect(subtotal()).toBe('$200')
 })
 
-test('removes the product when the revalidation finds no stock', async () => {
+test('removes a product that ran out and tells the user', async () => {
   const respond = openCartWithPendingRevalidation()
 
-  respond(0)
+  await respond({ stock: 0 })
 
-  expect(await screen.findByText('Tu pedido está vacío.')).toBeInTheDocument()
+  expect(screen.getByText('Tu pedido está vacío.')).toBeInTheDocument()
+  expect(screen.getByText('Se quitó Whey del pedido porque ya no está disponible.')).toBeInTheDocument()
 })
 
-test('confirms the order with the quantity edited during the revalidation', async () => {
+test('removes a disabled product even if it still has stock', async () => {
+  const respond = openCartWithPendingRevalidation()
+
+  await respond({ estado: 'inhabilitado' })
+
+  expect(screen.getByText('Tu pedido está vacío.')).toBeInTheDocument()
+  expect(screen.getByText('Se quitó Whey del pedido porque ya no está disponible.')).toBeInTheDocument()
+})
+
+test('ignores an older revalidation that answers after a newer one', async () => {
+  const respondToFirstOpening = openCartWithPendingRevalidation()
+  fireEvent.click(screen.getByRole('button', { name: 'Cerrar pedido' }))
+  const respondToSecondOpening = deferredProducts()
+  fireEvent.click(screen.getByRole('button', { name: /^Pedido/ }))
+  const input = screen.getByRole('spinbutton')
+  fireEvent.change(input, { target: { value: '4' } })
+
+  await respondToSecondOpening({ stock: 5 })
+  await respondToFirstOpening({ stock: 1 })
+
+  expect(input).toHaveValue('4')
+  expect(input).toHaveAttribute('aria-valuemax', '5')
+})
+
+test('updates the price shown in the cart', async () => {
+  const respond = openCartWithPendingRevalidation()
+
+  await respond({ precio: 150 })
+
+  expect(subtotal()).toBe('$150')
+})
+
+test('asks to review the total when the price changed before confirming', async () => {
   const respondToOpening = openCartWithPendingRevalidation()
-  await act(async () => respondToOpening(5))
+  await respondToOpening()
+  fillCheckoutForm()
+  const respondToSubmit = deferredProducts()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Confirmar pedido' }))
+  await respondToSubmit({ precio: 150 })
+
+  expect(screen.getByText('El precio de algunos productos cambió. Revisá el total antes de confirmar el pedido.')).toBeInTheDocument()
+  expect(createOrder).not.toHaveBeenCalled()
+})
+
+test('confirms the order with the quantity edited during the opening revalidation', async () => {
+  const respondToOpening = openCartWithPendingRevalidation()
+  fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '3' } })
+  fillCheckoutForm()
+  getProducts.mockResolvedValueOnce([apiProduct()])
   createOrder.mockResolvedValue({ id_pedido: 7, total: 300 })
 
-  fireEvent.change(screen.getByPlaceholderText('Nombre y apellido'), { target: { value: 'Ana' } })
-  fireEvent.change(screen.getByPlaceholderText('Calle, número, ciudad'), { target: { value: 'Calle 1' } })
-  const respondToSubmit = deferredProducts()
   fireEvent.click(screen.getByRole('button', { name: 'Confirmar pedido' }))
-  fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '3' } })
-  respondToSubmit(5)
+  await waitFor(() => expect(createOrder).toHaveBeenCalled())
+  await respondToOpening({ stock: 1 })
+
+  expect(createOrder.mock.calls[0][0].productos).toEqual([{ id_producto: 1, cantidad: 3 }])
+})
+
+test('locks the cart controls while the order is being sent', async () => {
+  const respondToOpening = openCartWithPendingRevalidation()
+  await respondToOpening()
+  fillCheckoutForm()
+  getProducts.mockResolvedValueOnce([apiProduct()])
+  createOrder.mockReturnValue(new Promise(() => {}))
+
+  fireEvent.click(screen.getByRole('button', { name: 'Confirmar pedido' }))
 
   await waitFor(() => expect(createOrder).toHaveBeenCalled())
-  expect(createOrder.mock.calls[0][0].productos).toEqual([{ id_producto: 1, cantidad: 3 }])
+  expect(screen.getByRole('spinbutton')).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Quitar' })).toBeDisabled()
 })

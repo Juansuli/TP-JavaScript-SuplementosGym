@@ -57,6 +57,13 @@ test('shows the product as out of stock instead of a quantity selector', () => {
   expect(screen.queryByRole('button', { name: /Aumentar|Disminuir/ })).not.toBeInTheDocument()
 })
 
+test('locks every control while disabled', () => {
+  render(<QuantityControl quantity={2} stock={5} productName="Whey" disabled onChange={() => {}} />)
+  expect(screen.getByRole('spinbutton')).toBeDisabled()
+  expect(screen.getByRole('button', { name: /Aumentar/ })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /Disminuir/ })).toBeDisabled()
+})
+
 test('follows the stock when it drops', () => {
   const props = { productName: 'Whey', onChange: () => {} }
   const { rerender } = render(<QuantityControl {...props} quantity={3} stock={5} />)

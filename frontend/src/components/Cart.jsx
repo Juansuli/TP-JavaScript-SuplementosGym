@@ -124,7 +124,7 @@ function Cart({
     if (Object.keys(nextFieldErrors).length > 0) return
     setIsSaving(true)
     try {
-      const { cart: freshCart, didClamp } = await onRevalidateStock()
+      const { cart: freshCart, didClamp, didChangePrice } = await onRevalidateStock()
 
       if (freshCart.length === 0) {
         setSubmitErrors(['Los productos de tu pedido ya no tienen stock disponible.'])
@@ -133,6 +133,11 @@ function Cart({
 
       if (didClamp) {
         setSubmitErrors(['El stock disponible cambió. Revisá las cantidades antes de confirmar el pedido.'])
+        return
+      }
+
+      if (didChangePrice) {
+        setSubmitErrors(['El precio de algunos productos cambió. Revisá el total antes de confirmar el pedido.'])
         return
       }
 
@@ -223,9 +228,10 @@ function Cart({
                         quantity={item.cantidad}
                         stock={item.stock}
                         productName={item.nombre}
+                        disabled={isSaving}
                         onChange={(quantity) => onUpdateQuantity(item.id_producto, quantity)}
                       />
-                      <button type="button" className="remove-link" onClick={() => onRemoveItem(item.id_producto)}>Quitar</button>
+                      <button type="button" className="remove-link" disabled={isSaving} onClick={() => onRemoveItem(item.id_producto)}>Quitar</button>
                     </div>
                   </li>
                 ))}

@@ -1,6 +1,6 @@
 ﻿import { useEffect, useId, useState } from 'react'
 
-function QuantityControl({ quantity, stock, productName, onChange }) {
+function QuantityControl({ quantity, stock, productName, disabled = false, onChange }) {
   const id = useId()
   const [draft, setDraft] = useState(String(quantity))
 
@@ -48,6 +48,7 @@ function QuantityControl({ quantity, stock, productName, onChange }) {
           aria-valuemax={stock}
           aria-valuenow={quantity}
           value={draft}
+          disabled={disabled}
           onChange={handleChange}
           onBlur={() => setDraft(String(quantity))}
           onKeyDown={(event) => {
@@ -62,10 +63,10 @@ function QuantityControl({ quantity, stock, productName, onChange }) {
           }}
         />
         <div className="quantity-arrows">
-          <button type="button" aria-label={`Aumentar cantidad de ${productName}`} disabled={quantity >= stock} onClick={() => update(quantity + 1)}>
+          <button type="button" aria-label={`Aumentar cantidad de ${productName}`} disabled={disabled || quantity >= stock} onClick={() => update(quantity + 1)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6" /></svg>
           </button>
-          <button type="button" aria-label={`Disminuir cantidad de ${productName}`} disabled={quantity <= 1} onClick={() => update(quantity - 1)}>
+          <button type="button" aria-label={`Disminuir cantidad de ${productName}`} disabled={disabled || quantity <= 1} onClick={() => update(quantity - 1)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
           </button>
         </div>
