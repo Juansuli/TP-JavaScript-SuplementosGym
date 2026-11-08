@@ -175,6 +175,24 @@
   font-size: .82rem;
 }
 
+.price-input .price-prefix {
+  flex-shrink: 0;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  user-select: none;
+}
+
+.price-input input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.price-input input::-webkit-inner-spin-button,
+.price-input input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .filter-submit {
   grid-column: 1 / -1;
   min-height: 43px;
@@ -203,7 +221,9 @@
 .catalog-results-head h2,
 .admin-products h1,
 .admin-orders h1,
-.admin-clients h1 {
+.admin-clients h1,
+.admin-discounts h1,
+.client-profile h1 {
   font-family: var(--font-display);
   font-size: clamp(2rem, 4vw, 2.8rem);
   line-height: 1;
@@ -2263,15 +2283,83 @@
   text-transform: uppercase;
 }
 
+.quantity-control {
+  display: flex;
+  width: 112px;
+  height: 58px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+  background: var(--surface);
+}
+
+.quantity-control:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
 .cart .cart-quantity input {
   width: 72px;
-  padding: .38rem .5rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  min-width: 0;
+  padding: .4rem .5rem;
+  border: 0;
   outline: 0;
-  background: var(--surface);
+  background: transparent;
   color: var(--ink);
   font-family: var(--font-mono);
+  font-size: 1rem;
+  text-align: center;
+}
+
+.quantity-arrows {
+  display: grid;
+  flex: 1;
+  border-left: 1px solid var(--line);
+}
+
+.quantity-arrows button {
+  display: grid;
+  place-items: center;
+  min-width: 38px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+.quantity-arrows button + button {
+  border-top: 1px solid var(--line);
+}
+
+.quantity-arrows button:hover:not(:disabled),
+.quantity-arrows button:focus-visible {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.quantity-arrows button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -3px;
+}
+
+.quantity-arrows button:disabled {
+  color: var(--ink-faint);
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.quantity-arrows svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .cart .remove-link {
@@ -2727,20 +2815,45 @@
 }
 
 .ai-suggestion-trigger {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--ink-faint);
-  font-size: .8rem;
-  letter-spacing: .02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  max-width: 100%;
+  min-height: 44px;
+  padding: .7rem 1.1rem;
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: inherit;
+  font-size: .85rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: .01em;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
 }
 
 .ai-suggestion-trigger:hover:not(:disabled) {
-  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.ai-suggestion-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.ai-suggestion-trigger:active:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .ai-suggestion-trigger:disabled {
-  cursor: default;
+  opacity: .65;
+  cursor: wait;
 }
 
 /* The trigger sits above the cart content; only .cart-page/.cart-empty
@@ -2851,8 +2964,14 @@
 
 .suggestion-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: .4rem;
+}
+
+.suggestion-actions button {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Objetivos: de 1 a 3 checkboxes (issue #49) */
@@ -2903,4 +3022,78 @@
 
 .client-profile-section .client-profile-goal:has(input[aria-invalid='true']) {
   border-color: var(--danger);
+}
+
+.account-dropdown {
+  position: relative;
+}
+
+.account-dropdown .account-dropdown-trigger {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+}
+
+.account-dropdown-trigger svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  transition: transform .15s ease;
+}
+
+.account-dropdown-trigger[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.account-dropdown-options {
+  position: absolute;
+  top: calc(100% + .65rem);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  min-width: 190px;
+  padding: .4rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 10px 28px #0004;
+}
+
+.account-dropdown .account-dropdown-options button {
+  width: 100%;
+  padding: .7rem .85rem;
+  border: 0;
+  border-radius: 5px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.account-dropdown .account-dropdown-options button:hover,
+.account-dropdown .account-dropdown-options button.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.account-dropdown button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.mobile-nav .account-dropdown {
+  width: 100%;
+}
+
+.mobile-nav .account-dropdown-trigger {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.mobile-nav .account-dropdown-options {
+  position: static;
+  margin: .35rem 0;
+  box-shadow: none;
 }

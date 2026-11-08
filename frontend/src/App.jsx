@@ -10,8 +10,9 @@ import MySuggestions from './components/MySuggestions'
 import ClientProfile from './components/ClientProfile'
 import AuthModal from './components/AuthModal'
 import Cart from './components/Cart'
+import AccountMenu from './components/AccountMenu'
 import ToastStack from './components/ToastStack'
-import { getRemainingStock } from './utils/stock'
+import { getRemainingStock, revalidateCartStock } from './utils/stock'
 import { enableClientProfile } from './services/client.service'
 import { getProducts } from './services/product.service'
 import './App.css'
@@ -45,6 +46,22 @@ function App() {
   const cartQuantities = Object.fromEntries(
     cart.map((item) => [item.id_producto, item.cantidad])
   )
+  // Última versión del carrito, para las funciones asíncronas que siguen
+  // esperando al backend mientras el usuario lo modifica.
+  const cartRef = useRef(cart)
+  const lastStockRefreshId = useRef(0)
+  const isCartSavingRef = useRef(false)
+  const pendingSuggestedProductsRef = useRef([])
+
+  // Mantiene una sola versión canónica del carrito. La referencia se
+  // actualiza en el mismo momento que se encola el render, para que las
+  // operaciones asíncronas nunca trabajen con una versión anterior.
+  function updateCart(updater) {
+    const nextCart = typeof updater === 'function' ? updater(cartRef.current) : updater
+    cartRef.current = nextCart
+    setCart(nextCart)
+    return nextCart
+  }
 
   const dismissToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id))
@@ -66,10 +83,12 @@ function App() {
   }
 
   function handleLogout() {
+    if (isCartSavingRef.current) return
     setCurrentUser(null)
     localStorage.removeItem(CURRENT_USER_STORAGE_KEY)
     setView('catalogo')
-    setCart([])
+    lastStockRefreshId.current += 1
+    updateCart([])
     setIsCartOpen(false)
   }
 
@@ -97,7 +116,8 @@ function App() {
   // own toast) and addProductsToCart (several from an AI suggestion: the
   // caller shows a single summary toast).
   function addProductToCart(product) {
-    setCart((prev) => {
+    if (isCartSavingRef.current) return false
+    updateCart((prev) => {
       const existing = prev.find((item) => item.id_producto === product.id_producto)
       const quantityInCart = existing?.cantidad ?? 0
       if (getRemainingStock(product, quantityInCart) === 0) return prev
@@ -121,24 +141,34 @@ function App() {
         },
       ]
     })
+    return true
   }
 
   function addToCart(product) {
     const quantityInCart = cartQuantities[product.id_producto] ?? 0
     if (getRemainingStock(product, quantityInCart) === 0) return
 
-    addProductToCart(product)
+    if (!addProductToCart(product)) return
     showToast(`Se agregó ${product.nombre} al carrito`)
   }
 
   // Adds one unit of each product; shows no toast itself so the caller
   // can summarize the whole operation in a single message.
   function addProductsToCart(products) {
+    // Una sugerencia iniciada antes de confirmar puede terminar mientras el
+    // POST sigue pendiente. Se conserva, pero recién se aplica al terminar
+    // para que nunca cambie el pedido que ya confirmó el usuario.
+    if (isCartSavingRef.current) {
+      pendingSuggestedProductsRef.current.push(...products)
+      return true
+    }
     products.forEach(addProductToCart)
+    return true
   }
 
   function updateCartQuantity(id_producto, cantidad) {
-    setCart((prev) =>
+    if (isCartSavingRef.current) return
+    updateCart((prev) =>
       prev.map((item) => {
         if (item.id_producto !== id_producto) return item
         const clamped = Math.max(1, Math.min(cantidad || 1, item.stock))
@@ -153,32 +183,58 @@ function App() {
   // producto). Esta función vuelve a consultar el stock real al backend y
   // ajusta las cantidades del carrito si hace falta, para no dejar que el
   // usuario confirme un pedido con una cantidad que ya no está disponible.
-  async function refreshCartStock() {
-    if (cart.length === 0) return { cart, didClamp: false }
+  async function refreshCartStock(cartSnapshot) {
+    // Al confirmar, Cart entrega la foto exacta que el usuario aceptó. Al
+    // abrir el carrito no hay foto y se usa la versión más reciente para
+    // seguir respetando las ediciones hechas mientras responde el backend.
+    const cartToRevalidate = Array.isArray(cartSnapshot) ? cartSnapshot : cartRef.current
+
+    if (cartToRevalidate.length === 0) {
+      return {
+        cart: cartToRevalidate,
+        didClamp: false,
+        didChangePrice: false,
+        removedItems: [],
+        isStale: false,
+      }
+    }
+
+    lastStockRefreshId.current += 1
+    const refreshId = lastStockRefreshId.current
 
     try {
       const products = await getProducts()
-      let didClamp = false
 
-      const nextCart = cart
-        .map((item) => {
-          const product = products.find((p) => p.id_producto === item.id_producto)
-          if (!product) {
-            didClamp = true
-            return null
-          }
+      // Si mientras se esperaba empezó otra consulta, esta respuesta es más
+      // vieja que la de esa consulta y no tiene que pisarla.
+      if (refreshId !== lastStockRefreshId.current) {
+        return {
+          cart: cartRef.current,
+          didClamp: false,
+          didChangePrice: false,
+          removedItems: [],
+          isStale: true,
+        }
+      }
 
-          const nextQuantity = Math.min(item.cantidad, product.stock)
-          if (nextQuantity !== item.cantidad) didClamp = true
-
-          return { ...item, stock: product.stock, cantidad: nextQuantity }
-        })
-        .filter((item) => item !== null && item.cantidad > 0)
-
-      setCart(nextCart)
-      return { cart: nextCart, didClamp }
+      // Al abrir se aplica sobre el carrito actual, que pudo editarse durante
+      // la espera. Al confirmar se conserva la foto aceptada por el usuario.
+      const sourceCart = Array.isArray(cartSnapshot) ? cartToRevalidate : cartRef.current
+      const result = revalidateCartStock(sourceCart, products)
+      updateCart(result.cart)
+      result.removedItems.forEach((item) => {
+        showToast(`Se quitó ${item.nombre} del pedido porque ya no está disponible.`, 'error')
+      })
+      return { ...result, isStale: false }
     } catch {
-      return { cart, didClamp: false }
+      const isStale = refreshId !== lastStockRefreshId.current
+      return {
+        cart: Array.isArray(cartSnapshot) ? cartToRevalidate : cartRef.current,
+        didClamp: false,
+        didChangePrice: false,
+        removedItems: [],
+        isStale,
+      }
     }
   }
 
@@ -190,12 +246,30 @@ function App() {
     setIsCartOpen(true)
   }
 
+  function closeCart() {
+    if (isCartSavingRef.current) return
+    // Invalida también una revalidación iniciada por "Confirmar pedido".
+    // Si su respuesta llega después, Cart no puede usarla para crear el pedido.
+    lastStockRefreshId.current += 1
+    setIsCartOpen(false)
+  }
+
   function removeFromCart(id_producto) {
-    setCart((prev) => prev.filter((item) => item.id_producto !== id_producto))
+    if (isCartSavingRef.current) return
+    updateCart((prev) => prev.filter((item) => item.id_producto !== id_producto))
+  }
+
+  function handleCartSavingChange(isSaving) {
+    isCartSavingRef.current = isSaving
+    if (!isSaving && pendingSuggestedProductsRef.current.length > 0) {
+      const pendingProducts = pendingSuggestedProductsRef.current
+      pendingSuggestedProductsRef.current = []
+      pendingProducts.forEach(addProductToCart)
+    }
   }
 
   function clearCart() {
-    setCart([])
+    updateCart([])
   }
 
   function changeView(nextView) {
@@ -220,7 +294,7 @@ function App() {
             >
               Catálogo
             </button>
-            {canOrder && (
+            {canOrder && !isAdmin && (
               <>
                 <button
                   type="button"
@@ -284,6 +358,7 @@ function App() {
 >
   Administradores
 </button>
+{canOrder && <AccountMenu view={view} onNavigate={changeView} />}
 </>
 )}
           </nav>
@@ -350,9 +425,11 @@ function App() {
               <button type="button" onClick={() => { openCart(); setIsMenuOpen(false) }}>
                 Mi pedido ({cartCount})
               </button>
+              {isAdmin ? <AccountMenu view={view} onNavigate={changeView} /> : <>
               <button type="button" onClick={() => changeView('mis-compras')}>Mis compras</button>
               <button type="button" onClick={() => changeView('mis-sugerencias')}>Mis sugerencias</button>
               <button type="button" onClick={() => changeView('mi-perfil')}>Mi perfil</button>
+              </>}
             </>
           )}
         </nav>
@@ -436,15 +513,16 @@ function App() {
           discountPercentage={currentUser?.descuento_porcentaje ?? null}
           addProductsToCart={addProductsToCart}
           onGoToProfile={() => {
-            setIsCartOpen(false)
+            closeCart()
             changeView('mi-perfil')
           }}
           onUpdateQuantity={updateCartQuantity}
           onRemoveItem={removeFromCart}
           onOrderPlaced={clearCart}
           onRevalidateStock={refreshCartStock}
+          onSavingChange={handleCartSavingChange}
           showToast={showToast}
-          onClose={() => setIsCartOpen(false)}
+          onClose={closeCart}
         />
       )}
 
