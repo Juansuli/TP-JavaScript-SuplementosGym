@@ -2,11 +2,11 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
-import { createOrder } from './services/pedido.service'
+import { createOrder } from './services/order.service'
 import { getProducts } from './services/product.service'
 
 vi.mock('./services/product.service', () => ({ getProducts: vi.fn() }))
-vi.mock('./services/pedido.service', () => ({ createOrder: vi.fn() }))
+vi.mock('./services/order.service', () => ({ createOrder: vi.fn() }))
 vi.mock('./components/AiSuggestion', () => ({
   default: ({ addProductsToCart, disabled }) => (
     <button

@@ -5,7 +5,7 @@ import {
   getOrderById,
   getOrders,
   updateOrder,
-} from '../services/pedido.service'
+} from '../services/order.service'
 
 const ORDER_STATUSES = ['pendiente', 'procesando', 'enviado', 'entregado', 'cancelado']
 const CANCELLABLE_STATUSES = ['pendiente', 'procesando']
@@ -81,12 +81,12 @@ function AdminOrders({ token, showToast }) {
     }
   }
 
-  async function handleStatusChange(order, estado) {
-    if (estado === order.estado) return
+  async function handleStatusChange(order, status) {
+    if (status === order.estado) return
 
     setUpdatingOrderId(order.id_pedido)
     try {
-      const updated = await updateOrder(order.id_pedido, { estado }, token)
+      const updated = await updateOrder(order.id_pedido, { estado: status }, token)
       setOrders((prev) => (
         statusFilter && statusFilter !== updated.estado
           ? prev.filter((item) => item.id_pedido !== updated.id_pedido)

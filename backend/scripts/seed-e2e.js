@@ -2,9 +2,9 @@ require('dotenv').config();
 
 const bcrypt = require('bcryptjs');
 const sequelize = require('../src/config/db');
-const Usuario = require('../src/models/usuario.model');
-const Cliente = require('../src/models/cliente.model');
-const Producto = require('../src/models/producto.model');
+const User = require('../src/models/user.model');
+const Client = require('../src/models/client.model');
+const Product = require('../src/models/product.model');
 
 const TEST_CLIENT_EMAIL = process.env.E2E_CLIENT_EMAIL || 'cliente.e2e@dosis.com';
 const TEST_CLIENT_PASSWORD = process.env.E2E_CLIENT_PASSWORD || 'contraclientetest';
@@ -35,7 +35,7 @@ async function seedEndToEndData() {
 
   await sequelize.transaction(async (transaction) => {
     const hashedPassword = await bcrypt.hash(TEST_CLIENT_PASSWORD, 10);
-    const [user] = await Usuario.findOrCreate({
+    const [user] = await User.findOrCreate({
       where: { email: TEST_CLIENT_EMAIL },
       defaults: {
         rol: 'cliente',
@@ -58,7 +58,7 @@ async function seedEndToEndData() {
       { transaction }
     );
 
-    await Cliente.upsert(
+    await Client.upsert(
       {
         id_cliente: user.id_usuario,
         ...clientData,
@@ -66,7 +66,7 @@ async function seedEndToEndData() {
       { transaction }
     );
 
-    const product = await Producto.findOne({
+    const product = await Product.findOne({
       where: { nombre: TEST_PRODUCT_NAME },
       transaction,
     });
@@ -76,7 +76,7 @@ async function seedEndToEndData() {
       return;
     }
 
-    await Producto.create(
+    await Product.create(
       {
         nombre: TEST_PRODUCT_NAME,
         ...productData,

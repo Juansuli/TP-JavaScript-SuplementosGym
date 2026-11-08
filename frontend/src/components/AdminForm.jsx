@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 const MIN_PASSWORD_LENGTH = 8
-// Misma regla que el backend (cliente-validation.middleware.js).
+// Misma regla que el backend (client-validation.middleware.js).
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // Formulario para crear o editar un administrador (issue #58). Al editar,

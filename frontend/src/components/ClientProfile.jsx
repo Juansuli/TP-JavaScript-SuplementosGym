@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getClient, updateClient } from '../services/client.service'
 
-// Mismos valores que valida el backend (cliente-validation.middleware.js).
+// Mismos valores que valida el backend (client-validation.middleware.js).
 // El "value" es lo que se guarda en la base; el texto es lo que ve el cliente.
 const GENDER_OPTIONS = [
   { value: 'femenino', label: 'Femenino' },

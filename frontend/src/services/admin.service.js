@@ -42,8 +42,8 @@ function updateAdmin(id, data, token) {
   return sendRequest(`${API_BASE_URL}/${id}`, token, { method: 'PUT', data })
 }
 
-function setAdminStatus(id, activo, token) {
-  return sendRequest(`${API_BASE_URL}/${id}/estado`, token, { method: 'PATCH', data: { activo } })
+function setAdminStatus(id, isActive, token) {
+  return sendRequest(`${API_BASE_URL}/${id}/estado`, token, { method: 'PATCH', data: { activo: isActive } })
 }
 
 export { getAdmins, createAdmin, updateAdmin, setAdminStatus }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { createOrder } from '../services/pedido.service'
+import { createOrder } from '../services/order.service'
 import { getClient } from '../services/client.service'
 import AiSuggestion from './AiSuggestion'
 import ProductImage from './ProductImage'

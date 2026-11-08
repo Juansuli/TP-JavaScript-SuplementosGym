@@ -9,16 +9,16 @@
 // primera, ve el resultado y se rechaza.
 
 const { Op } = require('sequelize');
-const Usuario = require('../models/usuario.model');
-const Administrador = require('../models/administrador.model');
+const User = require('../models/user.model');
+const Admin = require('../models/admin.model');
 
 const LAST_ACTIVE_ADMIN_ERROR = 'LAST_ACTIVE_ADMIN';
 
 async function ensureAnotherActiveAdmin(id, transaction) {
-  const admins = await Administrador.findAll({ transaction });
+  const admins = await Admin.findAll({ transaction });
   const adminIds = admins.map((admin) => admin.id_administrador);
 
-  const activeAdmins = await Usuario.findAll({
+  const activeAdmins = await User.findAll({
     where: { id_usuario: { [Op.in]: adminIds }, activo: true },
     // Siempre en el mismo orden, para que dos transacciones no se bloqueen
     // entre sí (deadlock).

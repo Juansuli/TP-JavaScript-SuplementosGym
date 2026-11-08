@@ -3,9 +3,9 @@
 import { NavLink } from 'react-router-dom'
 
 const options = [
-  ['mis-compras', 'Mis compras', '/mis-compras'],
-  ['mi-perfil', 'Mi perfil', '/mi-perfil'],
-  ['mis-sugerencias', 'Mis sugerencias', '/mis-sugerencias'],
+  ['my-orders', 'Mis compras', '/mis-compras'],
+  ['my-profile', 'Mi perfil', '/mi-perfil'],
+  ['my-suggestions', 'Mis sugerencias', '/mis-sugerencias'],
 ]
 
 function AccountMenu({ view }) {

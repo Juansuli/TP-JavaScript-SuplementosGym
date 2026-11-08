@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { getOrderById, getMyOrders } from '../services/pedido.service'
+import { getOrderById, getMyOrders } from '../services/order.service'
 
 const ORDER_STATE_LABELS = {
   pendiente: 'Pendiente',
@@ -20,9 +20,9 @@ const dateFormatter = new Intl.DateTimeFormat('es-AR', {
   timeStyle: 'short',
 })
 
-function getStatusBadgeModifier(estado) {
-  if (estado === 'cancelado') return 'cancelado'
-  if (CONFIRMED_STATES.includes(estado)) return 'confirmado'
+function getStatusBadgeModifier(status) {
+  if (status === 'cancelado') return 'cancelado'
+  if (CONFIRMED_STATES.includes(status)) return 'confirmado'
   return 'pendiente'
 }
 

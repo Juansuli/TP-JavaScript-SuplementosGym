@@ -171,7 +171,7 @@ End-to-end (Playwright): ver la sección siguiente.
 Si ya tenes una base de datos creada, ejecuta las migraciones pendientes desde la raiz del proyecto. Para la columna `estado` de las sugerencias de IA:
 
 ```cmd
-npm --prefix backend run migrate:sugerencia-estado
+npm --prefix backend run migrate:suggestion-status
 ```
 
 ## Prueba end-to-end

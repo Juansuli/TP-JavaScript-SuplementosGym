@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const Usuario = require('../models/usuario.model');
+const User = require('../models/user.model');
 
 async function authenticate(req, res, next) {
   const header = req.headers.authorization;
@@ -18,7 +18,7 @@ async function authenticate(req, res, next) {
   }
 
   try {
-    const user = await Usuario.findByPk(payload.id_usuario);
+    const user = await User.findByPk(payload.id_usuario);
     if (!user || !user.activo) {
       return res.status(403).json({ error: 'Tu cuenta está inhabilitada.' });
     }
