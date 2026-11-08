@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import AiSuggestion from './AiSuggestion'
 import ConfirmModal from './ConfirmModal'
-import { deleteSuggestion, getSuggestions, updateSuggestionStatus } from '../services/suggestion.service'
+import { deleteSuggestion, getSuggestions } from '../services/suggestion.service'
 import { acceptSuggestionIntoCart, buildAcceptedToast } from '../utils/acceptSuggestion'
 import { isProductAvailable } from '../utils/stock'
 
@@ -114,22 +114,6 @@ function MySuggestions({ cart, cartQuantities, token, addProductsToCart, onGoToP
     }
   }
 
-  async function handleDiscardSuggestion(suggestion) {
-    if (isBusyRef.current) return
-    isBusyRef.current = true
-    setIsAnswering(true)
-    try {
-      await updateSuggestionStatus(suggestion.id_sugerencia, 'rechazada', token)
-      updateRowEstado(suggestion.id_sugerencia, 'rechazada')
-    } catch (err) {
-      showToast(err.message, 'error')
-      reloadSuggestions()
-    } finally {
-      setIsAnswering(false)
-      isBusyRef.current = false
-    }
-  }
-
   return (
     <div className="admin-orders my-suggestions">
       <div className="admin-products-header my-suggestions-header">
@@ -201,14 +185,6 @@ function MySuggestions({ cart, cartQuantities, token, addProductsToCart, onGoToP
                             disabled={isAnswering}
                           >
                             Agregar al carrito
-                          </button>
-                          <button
-                            type="button"
-                            className="admin-order-detail-button"
-                            onClick={() => handleDiscardSuggestion(suggestion)}
-                            disabled={isAnswering}
-                          >
-                            Descartar
                           </button>
                         </>
                       )}

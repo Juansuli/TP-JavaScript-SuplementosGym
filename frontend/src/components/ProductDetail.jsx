@@ -32,8 +32,8 @@ function ProductDetail({ product, quantityInCart = 0, onClose, onAddToCart }) {
   }, [isAdded])
 
   const remainingStock = getRemainingStock(product, quantityInCart)
-  const isAvailable = product.estado === 'disponible' && remainingStock > 0
-  const isCartLimitReached = product.estado === 'disponible' && Number(product.stock) > 0 && remainingStock === 0
+  const isAvailable = ['habilitado', 'disponible'].includes(product.estado) && remainingStock > 0
+  const isCartLimitReached = ['habilitado', 'disponible'].includes(product.estado) && Number(product.stock) > 0 && remainingStock === 0
 
   function handleAddToCart() {
     if (!isAvailable || isAdded) return

@@ -107,7 +107,38 @@ async function deleteProduct(id, token) {
   return response.json()
 }
 
+async function getAdminProducts(token) {
+  let response
+  try {
+    response = await fetch(API_BASE_URL + '/administracion', {
+      headers: { Authorization: 'Bearer ' + token },
+    })
+  } catch {
+    throw new Error('No se pudo conectar con el servidor. Revisa que el backend este en funcionamiento.')
+  }
+  const body = await response.json().catch(() => null)
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Tu sesion vencio o no es valida. Sali y volve a ingresar para cargar los productos.')
+    }
+    throw new Error(body?.error ? parseErrorMessage(body) : 'No se pudieron cargar los productos.')
+  }
+  return body
+}
+
+async function restoreProduct(id, token) {
+  const response = await fetch(API_BASE_URL + '/' + id + '/restablecer', {
+    method: 'PATCH',
+    headers: { Authorization: 'Bearer ' + token },
+  })
+  const body = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(parseErrorMessage(body))
+  return body
+}
+
 export {
+  getAdminProducts,
+  restoreProduct,
   getProducts,
   getProductById,
   createProduct,

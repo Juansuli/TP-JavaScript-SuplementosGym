@@ -14,7 +14,17 @@ const priceFormatter = new Intl.NumberFormat('es-AR', {
 // and in the header of "Mis sugerencias"; onSuggestionsChanged (optional)
 // lets that page reload its table after the component creates, accepts
 // or rejects a suggestion.
-function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToProfile, showToast, onSuggestionsChanged }) {
+function AiSuggestion({
+  cart,
+  cartQuantities,
+  token,
+  addProductsToCart,
+  onGoToProfile,
+  showToast,
+  onSuggestionsChanged,
+  disabled = false,
+  onBusyChange,
+}) {
   const [suggestion, setSuggestion] = useState(null)
   // Ids of every product suggested while this block stayed open, so
   // "Solicitar otra sugerencia" never repeats one.
@@ -29,6 +39,11 @@ function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToPr
 
   const availableProducts = suggestion ? suggestion.productos.filter(isProductAvailable) : []
 
+  function setBusy(isBusy) {
+    isBusyRef.current = isBusy
+    onBusyChange?.(isBusy)
+  }
+
   // Asks the backend for a suggestion that leaves out the given product ids.
   // It throws when the request fails; the caller decides what to show.
   async function fetchSuggestion(idsToExclude) {
@@ -41,8 +56,8 @@ function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToPr
   }
 
   async function handleRequest() {
-    if (isBusyRef.current) return
-    isBusyRef.current = true
+    if (disabled || isBusyRef.current) return
+    setBusy(true)
     setIsLoading(true)
     setError(null)
     setMissingFields([])
@@ -54,13 +69,13 @@ function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToPr
       setMissingFields(err.missingFields ?? [])
     } finally {
       setIsLoading(false)
-      isBusyRef.current = false
+      setBusy(false)
     }
   }
 
   async function handleAccept() {
-    if (isBusyRef.current) return
-    isBusyRef.current = true
+    if (disabled || isBusyRef.current) return
+    setBusy(true)
     setIsAnswering(true)
     setError(null)
     try {
@@ -78,13 +93,13 @@ function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToPr
       setError(err.message)
     } finally {
       setIsAnswering(false)
-      isBusyRef.current = false
+      setBusy(false)
     }
   }
 
   async function handleRequestAnother() {
-    if (isBusyRef.current) return
-    isBusyRef.current = true
+    if (disabled || isBusyRef.current) return
+    setBusy(true)
     setIsAnswering(true)
     setError(null)
     try {
@@ -92,7 +107,7 @@ function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToPr
     } catch (err) {
       setError(err.message)
       setIsAnswering(false)
-      isBusyRef.current = false
+      setBusy(false)
       return
     }
 
@@ -105,7 +120,7 @@ function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToPr
       setError(err.message)
     } finally {
       setIsAnswering(false)
-      isBusyRef.current = false
+      setBusy(false)
     }
     // One notification covers both changes: the rejected suggestion and,
     // if the request succeeded, the new pending one.
@@ -115,6 +130,7 @@ function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToPr
   // "Cerrar" only collapses the panel: the suggestion stays "pendiente"
   // and can still be answered later from "Mis sugerencias".
   function handleClose() {
+    if (disabled) return
     setSuggestion(null)
     setError(null)
     setMissingFields([])
@@ -127,7 +143,7 @@ function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToPr
           type="button"
           className="ai-suggestion-trigger"
           onClick={handleRequest}
-          disabled={isLoading || isAnswering}
+          disabled={disabled || isLoading || isAnswering}
         >
           {isLoading || isAnswering ? 'Pensando tu sugerencia…' : '✦ Sugerime un producto'}
         </button>
@@ -157,7 +173,7 @@ function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToPr
               type="button"
               className="btn btn-accent"
               onClick={handleAccept}
-              disabled={isAnswering || availableProducts.length === 0}
+              disabled={disabled || isAnswering || availableProducts.length === 0}
             >
               Agregar sugerencia al carrito
             </button>
@@ -165,7 +181,7 @@ function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToPr
               type="button"
               className="btn btn-ghost"
               onClick={handleRequestAnother}
-              disabled={isAnswering}
+              disabled={disabled || isAnswering}
             >
               Solicitar otra sugerencia
             </button>
@@ -174,7 +190,7 @@ function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToPr
             type="button"
             className="ai-suggestion-close"
             onClick={handleClose}
-            disabled={isAnswering}
+            disabled={disabled || isAnswering}
           >
             Cerrar
           </button>
@@ -184,7 +200,7 @@ function AiSuggestion({ cart, cartQuantities, token, addProductsToCart, onGoToPr
       {error && <p className="cart-field-error ai-suggestion-error" role="alert">{error}</p>}
 
       {missingFields.length > 0 && (
-        <button type="button" className="btn btn-ghost" onClick={onGoToProfile}>
+        <button type="button" className="btn btn-ghost" onClick={onGoToProfile} disabled={disabled}>
           Completar mi perfil
         </button>
       )}

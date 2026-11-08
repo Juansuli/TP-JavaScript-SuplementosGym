@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createOrder } from '../services/pedido.service'
 import { getClient } from '../services/client.service'
 import AiSuggestion from './AiSuggestion'
 import ProductImage from './ProductImage'
+import QuantityControl from './QuantityControl'
 
 const PAYMENT_METHODS = ['tarjeta', 'efectivo', 'transferencia']
 const priceFormatter = new Intl.NumberFormat('es-AR', {
@@ -31,6 +32,7 @@ function Cart({
   onRemoveItem,
   onOrderPlaced,
   onRevalidateStock,
+  onSavingChange,
   showToast,
   onClose,
 }) {
@@ -43,6 +45,9 @@ function Cart({
   const [fieldErrors, setFieldErrors] = useState({})
   const [submitErrors, setSubmitErrors] = useState([])
   const [isSaving, setIsSaving] = useState(false)
+  const isSavingRef = useRef(false)
+  const [isSuggestionBusy, setIsSuggestionBusy] = useState(false)
+  const isSuggestionBusyRef = useRef(false)
   const [confirmedOrder, setConfirmedOrder] = useState(null)
   const [discount, setDiscount] = useState({
     category: discountCategory,
@@ -115,15 +120,39 @@ function Cart({
     return { nextFieldErrors, generalErrors }
   }
 
+  function handleSuggestionBusyChange(isBusy) {
+    isSuggestionBusyRef.current = isBusy
+    setIsSuggestionBusy(isBusy)
+  }
+
+  function handleClose() {
+    if (isSavingRef.current) return
+    onClose()
+  }
+
+  function setSavingState(nextIsSaving) {
+    isSavingRef.current = nextIsSaving
+    setIsSaving(nextIsSaving)
+    onSavingChange?.(nextIsSaving)
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
+    if (isSavingRef.current || isSuggestionBusyRef.current) return
     const nextFieldErrors = validateForm()
     setFieldErrors(nextFieldErrors)
     setSubmitErrors([])
     if (Object.keys(nextFieldErrors).length > 0) return
-    setIsSaving(true)
+    // La ref bloquea inmediatamente un segundo submit, sin esperar al
+    // siguiente render que deshabilita los controles.
+    setSavingState(true)
+    const confirmedCart = cart.map((item) => ({ ...item }))
     try {
-      const { cart: freshCart, didClamp } = await onRevalidateStock()
+      const { cart: freshCart, didClamp, didChangePrice, isStale } = await onRevalidateStock(confirmedCart)
+
+      // Una respuesta invalidada por otra revalidación o por el cierre del
+      // carrito nunca puede continuar hasta createOrder.
+      if (isStale) return
 
       if (freshCart.length === 0) {
         setSubmitErrors(['Los productos de tu pedido ya no tienen stock disponible.'])
@@ -132,6 +161,11 @@ function Cart({
 
       if (didClamp) {
         setSubmitErrors(['El stock disponible cambió. Revisá las cantidades antes de confirmar el pedido.'])
+        return
+      }
+
+      if (didChangePrice) {
+        setSubmitErrors(['El precio de algunos productos cambió. Revisá el total antes de confirmar el pedido.'])
         return
       }
 
@@ -146,7 +180,7 @@ function Cart({
       setFieldErrors(backendFieldErrors)
       setSubmitErrors(generalErrors)
     } finally {
-      setIsSaving(false)
+      setSavingState(false)
     }
   }
 
@@ -155,7 +189,7 @@ function Cart({
       <div className="cart" role="dialog" aria-modal="true" aria-labelledby="cart-title">
         <div className="cart-toolbar">
           <span className="detail-kicker">Pedido DOSIS</span>
-          <button type="button" className="cart-close" onClick={onClose} aria-label="Cerrar pedido">
+          <button type="button" className="cart-close" onClick={handleClose} disabled={isSaving} aria-label="Cerrar pedido">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
@@ -173,6 +207,8 @@ function Cart({
             addProductsToCart={addProductsToCart}
             onGoToProfile={onGoToProfile}
             showToast={showToast}
+            disabled={isSaving}
+            onBusyChange={handleSuggestionBusyChange}
           />
         )}
 
@@ -193,14 +229,14 @@ function Cart({
               </p>
             )}
             <p>Un administrador tiene que confirmarlo. Vas a poder ver cuándo se confirme desde “Mis compras”.</p>
-            <button type="button" className="btn btn-accent" onClick={onClose}>Listo</button>
+            <button type="button" className="btn btn-accent" onClick={handleClose}>Listo</button>
           </div>
         ) : cart.length === 0 ? (
           <div className="cart-empty">
             <p className="eyebrow">Carrito</p>
             <h2 id="cart-title">Tu pedido está vacío.</h2>
             <p>Agregá productos desde el catálogo para continuar.</p>
-            <button type="button" className="btn btn-accent" onClick={onClose}>Volver al catálogo</button>
+            <button type="button" className="btn btn-accent" onClick={handleClose}>Volver al catálogo</button>
           </div>
         ) : (
           <div className="cart-page">
@@ -218,17 +254,14 @@ function Cart({
                     </div>
                     <span className="cart-item-subtotal tabnum">{priceFormatter.format(item.precio * item.cantidad)}</span>
                     <div className="cart-item-actions">
-                      <label className="cart-quantity">
-                        <span>Cantidad</span>
-                        <input
-                          type="number"
-                          min="1"
-                          max={item.stock}
-                          value={item.cantidad}
-                          onChange={(event) => onUpdateQuantity(item.id_producto, Number(event.target.value))}
-                        />
-                      </label>
-                      <button type="button" className="remove-link" onClick={() => onRemoveItem(item.id_producto)}>Quitar</button>
+                      <QuantityControl
+                        quantity={item.cantidad}
+                        stock={item.stock}
+                        productName={item.nombre}
+                        disabled={isSaving}
+                        onChange={(quantity) => onUpdateQuantity(item.id_producto, quantity)}
+                      />
+                      <button type="button" className="remove-link" disabled={isSaving} onClick={() => onRemoveItem(item.id_producto)}>Quitar</button>
                     </div>
                   </li>
                 ))}
@@ -302,7 +335,7 @@ function Cart({
                   </ul>
                 )}
 
-                <button className="btn btn-accent" type="submit" disabled={isSaving}>
+                <button className="btn btn-accent" type="submit" disabled={isSaving || isSuggestionBusy}>
                   {isSaving ? 'Confirmando...' : 'Confirmar pedido'}
                 </button>
               </form>
