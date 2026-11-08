@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { getProductSlug } from '../utils/product-slug'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { findProductBySlug, getProductSlug } from '../utils/product-slug'
 import ProductCard from './ProductCard'
 import ProductDetail from './ProductDetail'
 import { getProducts, getProductById } from '../services/product.service'
@@ -91,7 +91,7 @@ function ProductCatalog({ cartQuantities, onAddToCart, showDiscountInfo }) {
     setDetailError(null)
     if (!productSlug || !allProducts) return
 
-    const product = allProducts.find((item) => getProductSlug(item, allProducts) === productSlug)
+    const product = findProductBySlug(allProducts, productSlug)
     if (!product) {
       setDetailError('No se encontró el producto.')
       return
@@ -104,11 +104,6 @@ function ProductCatalog({ cartQuantities, onAddToCart, showDiscountInfo }) {
     })
     return () => { cancelled = true }
   }, [productSlug, allProducts])
-
-  function handleSelectProduct(id) {
-    const product = allProducts?.find((item) => item.id_producto === id)
-    if (product) navigate('/catalogo/' + getProductSlug(product, allProducts))
-  }
 
   return (
     <section className="catalog-page wrap" aria-labelledby="catalog-title">
@@ -192,8 +187,8 @@ function ProductCatalog({ cartQuantities, onAddToCart, showDiscountInfo }) {
             <ProductCard
               key={product.id_producto}
               product={product}
+              detailPath={`/catalogo/${getProductSlug(product)}`}
               quantityInCart={cartQuantities[product.id_producto] ?? 0}
-              onSelect={handleSelectProduct}
               onAddToCart={onAddToCart}
             />
           ))}
@@ -206,7 +201,7 @@ function ProductCatalog({ cartQuantities, onAddToCart, showDiscountInfo }) {
       {productSlug && detailError && (
         <div className="catalog-message catalog-error" role="alert">
           <p>{detailError}</p>
-          <button type="button" onClick={() => navigate('/catalogo')}>Volver al catálogo</button>
+          <Link to="/catalogo">Volver al catálogo</Link>
         </div>
       )}
       {productSlug && selectedProduct && (

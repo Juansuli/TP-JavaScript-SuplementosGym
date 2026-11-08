@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getRemainingStock } from '../utils/stock'
 import ProductImage from './ProductImage'
 
@@ -91,7 +92,7 @@ function ProductDetail({ product, quantityInCart = 0, onClose, onAddToCart }) {
                   {isAdded ? '✓ Agregado' : 'Agregar al pedido'}
                 </button>
               )}
-              <button type="button" className="btn btn-ghost detail-done" onClick={onClose}>Volver al catálogo</button>
+              <Link className="btn btn-ghost detail-done" to="/catalogo">Volver al catálogo</Link>
             </div>
           </div>
         </div>

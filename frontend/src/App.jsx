@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import ProductCatalog from './components/ProductCatalog'
 import AdminProducts from './components/AdminProducts'
@@ -31,6 +31,39 @@ const VIEW_PATHS = {
 }
 
 const CURRENT_USER_STORAGE_KEY = 'dosis_current_user'
+const CLIENT_PATHS = new Set(['/mis-compras', '/mis-sugerencias', '/mi-perfil'])
+const ADMIN_PATHS = new Set([
+  '/admin/productos',
+  '/admin/pedidos',
+  '/admin/clientes',
+  '/admin/descuentos',
+  '/admin/administradores',
+])
+
+function getDefaultPath(user) {
+  return user?.rol === 'administrador' ? '/admin/productos' : '/catalogo'
+}
+
+function canAccessPath(user, destination) {
+  if (!user || typeof destination !== 'string' || !destination.startsWith('/') || destination.startsWith('//')) {
+    return false
+  }
+
+  const pathname = destination.split(/[?#]/, 1)[0]
+  if (ADMIN_PATHS.has(pathname)) return user.rol === 'administrador'
+  if (CLIENT_PATHS.has(pathname)) return user.es_cliente === true && user.activo !== false
+  return pathname === '/catalogo' || pathname.startsWith('/catalogo/')
+}
+
+function ProtectedRoute({ currentUser, allowed, children }) {
+  const location = useLocation()
+  if (!currentUser) {
+    const pendingPath = `${location.pathname}${location.search}${location.hash}`
+    return <Navigate to="/catalogo" replace state={{ pendingPath }} />
+  }
+  if (!allowed) return <Navigate to={getDefaultPath(currentUser)} replace />
+  return children
+}
 
 function loadStoredUser() {
   try {
@@ -43,7 +76,8 @@ function loadStoredUser() {
 
 function App() {
   const navigate = useNavigate()
-  const { pathname } = useLocation()
+  const location = useLocation()
+  const { pathname } = location
   const view = Object.keys(VIEW_PATHS).find((key) => VIEW_PATHS[key] === pathname || (key === 'catalogo' && pathname.startsWith('/catalogo/')))
   const [currentUser, setCurrentUser] = useState(loadStoredUser)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
@@ -52,15 +86,20 @@ function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [toasts, setToasts] = useState([])
   const nextToastId = useRef(0)
+  const previousPathRef = useRef(pathname)
 
   useEffect(() => {
     setIsMenuOpen(false)
+    if (previousPathRef.current !== pathname) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      previousPathRef.current = pathname
+    }
   }, [pathname])
 
   const isAdmin = currentUser?.rol === 'administrador'
   // Un administrador también puede comprar si activó su perfil de cliente
   // (ver handleEnableClientProfile), por eso esto ya no depende solo del rol.
-  const canOrder = currentUser?.es_cliente === true
+  const canOrder = currentUser?.es_cliente === true && currentUser?.activo !== false
   const cartCount = cart.reduce((sum, item) => sum + item.cantidad, 0)
   const cartQuantities = Object.fromEntries(
     cart.map((item) => [item.id_producto, item.cantidad])
@@ -99,6 +138,9 @@ function App() {
     setCurrentUser(user)
     localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(user))
     setIsAuthOpen(false)
+    const pendingPath = location.state?.pendingPath
+    const destination = canAccessPath(user, pendingPath) ? pendingPath : getDefaultPath(user)
+    navigate(destination, { replace: true, state: null })
   }
 
   function handleLogout() {
@@ -291,95 +333,56 @@ function App() {
     updateCart([])
   }
 
-  function changeView(nextView) {
+  function goToView(nextView) {
     navigate(VIEW_PATHS[nextView])
     setIsMenuOpen(false)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   return (
     <div className="app-shell">
       <header className="site-header">
         <div className="wrap nav-inner">
-          <button className="brand" type="button" onClick={() => changeView('catalogo')}>
+          <Link className="brand" to="/catalogo">
             DO<span>SIS</span>
-          </button>
+          </Link>
 
           <nav className="nav-links" aria-label="Navegación principal">
-            <button
-              type="button"
-              className={view === 'catalogo' ? 'is-active' : ''}
-              onClick={() => changeView('catalogo')}
-            >
+            <NavLink to="/catalogo" className={({ isActive }) => isActive ? 'is-active' : ''}>
               Catálogo
-            </button>
+            </NavLink>
             {canOrder && !isAdmin && (
               <>
-                <button
-                  type="button"
-                  className={view === 'mis-compras' ? 'is-active' : ''}
-                  onClick={() => changeView('mis-compras')}
-                >
+                <NavLink to="/mis-compras" className={({ isActive }) => isActive ? 'is-active' : ''}>
                   Mis compras
-                </button>
-                <button
-                  type="button"
-                  className={view === 'mis-sugerencias' ? 'is-active' : ''}
-                  onClick={() => changeView('mis-sugerencias')}
-                >
+                </NavLink>
+                <NavLink to="/mis-sugerencias" className={({ isActive }) => isActive ? 'is-active' : ''}>
                   Mis sugerencias
-                </button>
-                <button
-                  type="button"
-                  className={view === 'mi-perfil' ? 'is-active' : ''}
-                  onClick={() => changeView('mi-perfil')}
-                >
+                </NavLink>
+                <NavLink to="/mi-perfil" className={({ isActive }) => isActive ? 'is-active' : ''}>
                   Mi perfil
-                </button>
+                </NavLink>
               </>
             )}
             {isAdmin && (
               <>
-                <button
-                  type="button"
-                  className={view === 'admin' ? 'is-active' : ''}
-                  onClick={() => changeView('admin')}
-                >
+                <NavLink to="/admin/productos" className={({ isActive }) => isActive ? 'is-active' : ''}>
                   Productos
-                </button>
-                <button
-                  type="button"
-                  className={view === 'admin-orders' ? 'is-active' : ''}
-                  onClick={() => changeView('admin-orders')}
-                >
+                </NavLink>
+                <NavLink to="/admin/pedidos" className={({ isActive }) => isActive ? 'is-active' : ''}>
                   Pedidos
-                </button>
-                <button
-  type="button"
-  className={view === 'admin-clients' ? 'is-active' : ''}
-  onClick={() => changeView('admin-clients')}
->
-  Clientes
-</button>
-
-<button
-  type="button"
-  className={view === 'admin-discounts' ? 'is-active' : ''}
-  onClick={() => changeView('admin-discounts')}
->
-  Descuentos
-</button>
-
-<button
-  type="button"
-  className={view === 'admin-admins' ? 'is-active' : ''}
-  onClick={() => changeView('admin-admins')}
->
-  Administradores
-</button>
-{canOrder && <AccountMenu view={view} onNavigate={changeView} />}
-</>
-)}
+                </NavLink>
+                <NavLink to="/admin/clientes" className={({ isActive }) => isActive ? 'is-active' : ''}>
+                  Clientes
+                </NavLink>
+                <NavLink to="/admin/descuentos" className={({ isActive }) => isActive ? 'is-active' : ''}>
+                  Descuentos
+                </NavLink>
+                <NavLink to="/admin/administradores" className={({ isActive }) => isActive ? 'is-active' : ''}>
+                  Administradores
+                </NavLink>
+                {canOrder && <AccountMenu view={view} />}
+              </>
+            )}
           </nav>
 
           <div className="nav-actions">
@@ -429,14 +432,14 @@ function App() {
         </div>
 
         <nav className={`mobile-nav wrap ${isMenuOpen ? 'is-open' : ''}`} id="mobileNav">
-          <button type="button" onClick={() => changeView('catalogo')}>Catálogo</button>
+          <NavLink to="/catalogo">Catálogo</NavLink>
           {isAdmin && (
             <>
-              <button type="button" onClick={() => changeView('admin')}>Productos</button>
-              <button type="button" onClick={() => changeView('admin-orders')}>Pedidos</button>
-              <button type="button" onClick={() => changeView('admin-clients')}>Clientes</button>
-              <button type="button" onClick={() => changeView('admin-discounts')}>Descuentos</button>
-              <button type="button" onClick={() => changeView('admin-admins')}>Administradores</button>
+              <NavLink to="/admin/productos">Productos</NavLink>
+              <NavLink to="/admin/pedidos">Pedidos</NavLink>
+              <NavLink to="/admin/clientes">Clientes</NavLink>
+              <NavLink to="/admin/descuentos">Descuentos</NavLink>
+              <NavLink to="/admin/administradores">Administradores</NavLink>
             </>
           )}
           {canOrder && (
@@ -444,10 +447,10 @@ function App() {
               <button type="button" onClick={() => { openCart(); setIsMenuOpen(false) }}>
                 Mi pedido ({cartCount})
               </button>
-              {isAdmin ? <AccountMenu view={view} onNavigate={changeView} /> : <>
-              <button type="button" onClick={() => changeView('mis-compras')}>Mis compras</button>
-              <button type="button" onClick={() => changeView('mis-sugerencias')}>Mis sugerencias</button>
-              <button type="button" onClick={() => changeView('mi-perfil')}>Mi perfil</button>
+              {isAdmin ? <AccountMenu view={view} /> : <>
+              <NavLink to="/mis-compras">Mis compras</NavLink>
+              <NavLink to="/mis-sugerencias">Mis sugerencias</NavLink>
+              <NavLink to="/mi-perfil">Mi perfil</NavLink>
               </>}
             </>
           )}
@@ -463,37 +466,53 @@ function App() {
             showDiscountInfo={canOrder && !isAdmin}
             showToast={showToast}
           />} />
-          <Route path="/admin/pedidos" element={isAdmin ? (
-            <AdminOrders token={currentUser.token} showToast={showToast} />
-          ) : <Navigate to="/catalogo" replace />} />
-          <Route path="/admin/clientes" element={isAdmin ? (
-            <AdminClients token={currentUser.token} showToast={showToast} />
-          ) : <Navigate to="/catalogo" replace />} />
-          <Route path="/admin/descuentos" element={isAdmin ? (
-            <AdminDiscounts token={currentUser.token} showToast={showToast} />
-          ) : <Navigate to="/catalogo" replace />} />
-          <Route path="/admin/administradores" element={isAdmin ? (
-            <AdminAdministrators currentUser={currentUser} showToast={showToast} onSelfUpdated={handleProfileUpdated} />
-          ) : <Navigate to="/catalogo" replace />} />
-          <Route path="/admin/productos" element={isAdmin ? (
-            <AdminProducts token={currentUser.token} showToast={showToast} />
-          ) : <Navigate to="/catalogo" replace />} />
-          <Route path="/mis-compras" element={canOrder ? (
-            <MyOrders token={currentUser.token} showToast={showToast} />
-          ) : <Navigate to="/catalogo" replace />} />
-          <Route path="/mis-sugerencias" element={canOrder ? (
-            <MySuggestions
-            cart={cart}
-            cartQuantities={cartQuantities}
-            token={currentUser.token}
-            addProductsToCart={addProductsToCart}
-            onGoToProfile={() => changeView('mi-perfil')}
-            showToast={showToast}
-          />
-          ) : <Navigate to="/catalogo" replace />} />
-          <Route path="/mi-perfil" element={canOrder ? (
-            <ClientProfile currentUser={currentUser} onProfileUpdated={handleProfileUpdated} showToast={showToast} />
-          ) : <Navigate to="/catalogo" replace />} />
+          <Route path="/admin/pedidos" element={
+            <ProtectedRoute currentUser={currentUser} allowed={isAdmin}>
+              <AdminOrders token={currentUser?.token} showToast={showToast} />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/clientes" element={
+            <ProtectedRoute currentUser={currentUser} allowed={isAdmin}>
+              <AdminClients token={currentUser?.token} showToast={showToast} />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/descuentos" element={
+            <ProtectedRoute currentUser={currentUser} allowed={isAdmin}>
+              <AdminDiscounts token={currentUser?.token} showToast={showToast} />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/administradores" element={
+            <ProtectedRoute currentUser={currentUser} allowed={isAdmin}>
+              <AdminAdministrators currentUser={currentUser} showToast={showToast} onSelfUpdated={handleProfileUpdated} />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/productos" element={
+            <ProtectedRoute currentUser={currentUser} allowed={isAdmin}>
+              <AdminProducts token={currentUser?.token} showToast={showToast} />
+            </ProtectedRoute>
+          } />
+          <Route path="/mis-compras" element={
+            <ProtectedRoute currentUser={currentUser} allowed={canOrder}>
+              <MyOrders token={currentUser?.token} showToast={showToast} />
+            </ProtectedRoute>
+          } />
+          <Route path="/mis-sugerencias" element={
+            <ProtectedRoute currentUser={currentUser} allowed={canOrder}>
+              <MySuggestions
+                cart={cart}
+                cartQuantities={cartQuantities}
+                token={currentUser?.token}
+                addProductsToCart={addProductsToCart}
+                onGoToProfile={() => goToView('mi-perfil')}
+                showToast={showToast}
+              />
+            </ProtectedRoute>
+          } />
+          <Route path="/mi-perfil" element={
+            <ProtectedRoute currentUser={currentUser} allowed={canOrder}>
+              <ClientProfile currentUser={currentUser} onProfileUpdated={handleProfileUpdated} showToast={showToast} />
+            </ProtectedRoute>
+          } />
           <Route path="*" element={<Navigate to="/catalogo" replace />} />
         </Routes>
       </main>
@@ -506,7 +525,7 @@ function App() {
           </div>
           <div className="footer-col">
             <h4>Productos</h4>
-            <button type="button" onClick={() => changeView('catalogo')}>Catálogo</button>
+            <Link to="/catalogo">Catálogo</Link>
           </div>
           <div className="footer-col">
             <h4>Cuenta</h4>
@@ -543,7 +562,7 @@ function App() {
           addProductsToCart={addProductsToCart}
           onGoToProfile={() => {
             closeCart()
-            changeView('mi-perfil')
+            goToView('mi-perfil')
           }}
           onUpdateQuantity={updateCartQuantity}
           onRemoveItem={removeFromCart}

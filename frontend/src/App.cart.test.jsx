@@ -30,6 +30,7 @@ vi.mock('./components/ProductCatalog', () => ({
     </button>
   ),
 }))
+vi.mock('./components/MyOrders', () => ({ default: () => <h1>Mis compras</h1> }))
 
 function apiProduct(changes) {
   return { id_producto: 1, nombre: 'Whey', precio: 100, stock: 5, estado: 'disponible', ...changes }
@@ -77,6 +78,20 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   localStorage.setItem('dosis_current_user', JSON.stringify({ nombre: 'Cliente', rol: 'cliente', es_cliente: true, token: 'test' }))
+})
+
+test('keeps the cart when navigating through a client route', async () => {
+  getProducts.mockResolvedValue([apiProduct()])
+  render(<MemoryRouter><App /></MemoryRouter>)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Agregar Whey' }))
+  fireEvent.click(screen.getAllByRole('link', { name: 'Mis compras' })[0])
+
+  expect(screen.getByRole('heading', { name: 'Mis compras' })).toBeInTheDocument()
+  const cartButton = screen.getByRole('button', { name: 'Pedido1' })
+  fireEvent.click(cartButton)
+  expect(screen.getByRole('dialog')).toHaveTextContent('Whey')
+  await waitFor(() => expect(getProducts).toHaveBeenCalledTimes(1))
 })
 
 test('keeps a quantity edited while the stock revalidation is pending', async () => {
