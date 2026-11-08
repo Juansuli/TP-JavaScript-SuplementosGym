@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import ProductForm from './ProductForm'
 import ConfirmModal from './ConfirmModal'
 import ProductImage from './ProductImage'
 import {
-  getProducts,
+  getAdminProducts,
+  restoreProduct,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -15,6 +16,9 @@ function AdminProducts({ token, showToast }) {
   const [error, setError] = useState(null)
   const [editingProduct, setEditingProduct] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [productPendingRestore, setProductPendingRestore] = useState(null)
+  const [isRestoring, setIsRestoring] = useState(false)
+  const restoreBusy = useRef(false)
   const [productPendingDelete, setProductPendingDelete] = useState(null)
   const [nameFilter, setNameFilter] = useState('')
   const [minPrice, setMinPrice] = useState('')
@@ -39,23 +43,23 @@ function AdminProducts({ token, showToast }) {
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id))
   const someVisibleSelected = visibleIds.some((id) => selectedIds.has(id))
 
-  async function loadProducts() {
+  const loadProducts = useCallback(async () => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const data = await getProducts()
+      const data = await getAdminProducts(token)
       setProducts(data)
     } catch (err) {
       setError(err.message)
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     loadProducts()
-  }, [])
+  }, [loadProducts])
 
   useEffect(() => {
     if (selectAllRef.current) {
@@ -126,17 +130,8 @@ function AdminProducts({ token, showToast }) {
     try {
       const result = await deleteProduct(product.id_producto, token)
 
-      if (result) {
-        // El backend no lo borró: tiene pedidos asociados y lo marcó
-        // "descontinuado" en vez de eliminarlo (CUU1).
-        setProducts((prev) =>
-          prev.map((item) => (item.id_producto === result.id_producto ? result : item))
-        )
-        showToast(`"${product.nombre}" tiene pedidos asociados: quedó marcado como "descontinuado" en vez de eliminarse.`)
-      } else {
-        setProducts((prev) => prev.filter((item) => item.id_producto !== product.id_producto))
-        showToast(`"${product.nombre}" se eliminó correctamente.`)
-      }
+      setProducts((prev) => prev.map((item) => item.id_producto === result.id_producto ? result : item))
+      showToast('El producto fue dado de baja. Podés restablecerlo cuando quieras.')
       setSelectedIds((prev) => {
         const next = new Set(prev)
         next.delete(product.id_producto)
@@ -144,6 +139,24 @@ function AdminProducts({ token, showToast }) {
       })
     } catch (err) {
       showToast(err.message, 'error')
+    }
+  }
+
+  async function confirmRestore() {
+    if (!productPendingRestore || restoreBusy.current) return
+    restoreBusy.current = true
+    setIsRestoring(true)
+    const product = productPendingRestore
+    setProductPendingRestore(null)
+    try {
+      const restored = await restoreProduct(product.id_producto, token)
+      setProducts((prev) => prev.map((item) => item.id_producto === restored.id_producto ? restored : item))
+      showToast('El producto fue restablecido correctamente.')
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      restoreBusy.current = false
+      setIsRestoring(false)
     }
   }
 
@@ -177,7 +190,6 @@ function AdminProducts({ token, showToast }) {
     setIsBulkDeleting(true)
 
     const results = await Promise.allSettled(ids.map((id) => deleteProduct(id, token)))
-    const deletedIds = new Set()
     const discontinuedProducts = new Map()
     const failedIds = new Set()
     const failureMessages = new Set()
@@ -187,26 +199,20 @@ function AdminProducts({ token, showToast }) {
       if (result.status === 'rejected') {
         failedIds.add(id)
         failureMessages.add(result.reason.message)
-      } else if (result.value) {
-        discontinuedProducts.set(id, result.value)
       } else {
-        deletedIds.add(id)
+        discontinuedProducts.set(id, result.value)
       }
     })
 
     setProducts((prev) => prev
-      .filter((product) => !deletedIds.has(product.id_producto))
       .map((product) => discontinuedProducts.get(product.id_producto) ?? product))
     setSelectedIds(failedIds)
 
     const summary = []
-    if (deletedIds.size > 0) {
-      summary.push(deletedIds.size === 1 ? '1 eliminado' : `${deletedIds.size} eliminados`)
-    }
     if (discontinuedProducts.size > 0) {
       summary.push(discontinuedProducts.size === 1
-        ? '1 marcado como descontinuado'
-        : `${discontinuedProducts.size} marcados como descontinuados`)
+        ? '1 inhabilitado'
+        : `${discontinuedProducts.size} inhabilitados`)
     }
     if (summary.length > 0) showToast(`${summary.join(', ')}.`)
     if (failedIds.size > 0) {
@@ -281,7 +287,7 @@ function AdminProducts({ token, showToast }) {
               <span>{selectedIds.size} seleccionados</span>
               <button
                 type="button"
-                disabled={selectedIds.size === 0 || isBulkDeleting}
+                disabled={selectedIds.size === 0 || isBulkDeleting || isRestoring}
                 onClick={() => setIsBulkDeletePending(true)}
               >
                 {isBulkDeleting ? 'Eliminando...' : 'Eliminar seleccionados'}
@@ -300,7 +306,7 @@ function AdminProducts({ token, showToast }) {
                       ref={selectAllRef}
                       type="checkbox"
                       checked={allVisibleSelected}
-                      disabled={isBulkDeleting}
+                      disabled={isBulkDeleting || isRestoring}
                       onChange={toggleAllVisible}
                       aria-label="Seleccionar todos los productos visibles"
                     />
@@ -320,7 +326,7 @@ function AdminProducts({ token, showToast }) {
                       <input
                         type="checkbox"
                         checked={selectedIds.has(product.id_producto)}
-                        disabled={isBulkDeleting}
+                        disabled={isBulkDeleting || isRestoring}
                         onChange={() => toggleProductSelection(product.id_producto)}
                         aria-label={`Seleccionar ${product.nombre}`}
                       />
@@ -331,12 +337,18 @@ function AdminProducts({ token, showToast }) {
                     <td>{product.stock}</td>
                     <td><span className="admin-product-status">{product.estado ?? '—'}</span></td>
                     <td className="admin-products-actions">
-                      <button type="button" disabled={isBulkDeleting} onClick={() => openEditForm(product)}>
+                      <button type="button" disabled={isBulkDeleting || isRestoring} onClick={() => openEditForm(product)}>
                         Editar
                       </button>
-                      <button type="button" disabled={isBulkDeleting} onClick={() => requestDelete(product)}>
-                        Eliminar
-                      </button>
+                      {['inhabilitado', 'descontinuado'].includes(product.estado) ? (
+                        <button type="button" disabled={isBulkDeleting || isRestoring} onClick={() => setProductPendingRestore(product)}>
+                          Restablecer
+                        </button>
+                      ) : (
+                        <button type="button" disabled={isBulkDeleting || isRestoring} onClick={() => requestDelete(product)}>
+                          Borrar
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -350,11 +362,21 @@ function AdminProducts({ token, showToast }) {
         <ProductForm product={editingProduct} onSubmit={handleFormSubmit} onCancel={closeForm} />
       )}
 
+      {productPendingRestore && (
+        <ConfirmModal
+          title="Restablecer producto"
+          message={`Restablecer "${productPendingRestore.nombre}"? Se habilitar\u00e1 y volver\u00e1 a mostrarse en el cat\u00e1logo.`}
+          confirmLabel="Restablecer"
+          onConfirm={confirmRestore}
+          onCancel={() => setProductPendingRestore(null)}
+        />
+      )}
+
       {productPendingDelete && (
         <ConfirmModal
           title="Eliminar producto"
-          message={`¿Seguro que querés eliminar "${productPendingDelete.nombre}"?`}
-          confirmLabel="Eliminar"
+          message={`Dar de baja "${productPendingDelete.nombre}"? Se ocultar\u00e1 del cat\u00e1logo y podr\u00e1s restablecerlo m\u00e1s adelante.`}
+          confirmLabel="Borrar"
           isDanger
           onConfirm={confirmDelete}
           onCancel={cancelDelete}
@@ -364,7 +386,7 @@ function AdminProducts({ token, showToast }) {
       {isBulkDeletePending && (
         <ConfirmModal
           title="Eliminar productos"
-          message={`¿Seguro que querés eliminar ${selectedIds.size} productos?`}
+          message={`Dar de baja ${selectedIds.size} productos? Se ocultar\u00e1n del cat\u00e1logo y podr\u00e1s restablecerlos m\u00e1s adelante.`}
           confirmLabel="Eliminar seleccionados"
           isDanger
           onConfirm={confirmBulkDelete}
